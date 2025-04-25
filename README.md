@@ -1,4 +1,4 @@
-# 10x Astro Starter
+# 10x Healthy Food
 
 A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
 
@@ -18,9 +18,9 @@ A modern, opinionated starter template for building fast, accessible, and AI-fri
 
 1. Clone the repository:
 
-```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
+```bash 
+git clone https://github.com/Rasp228/10x-HealthyFood.git
+cd 10x-HealthyFood
 ```
 
 2. Install dependencies:
