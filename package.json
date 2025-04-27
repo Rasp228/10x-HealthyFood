@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
+    "supabase:init": "supabase init",
+    "supabase:gen": "supabase gen types typescript > src/db/database.types.ts",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link",
     "supabase:push": "supabase db push",
