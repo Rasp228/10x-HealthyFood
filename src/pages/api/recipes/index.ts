@@ -23,15 +23,9 @@ const paginationSchema = z.object({
 export const GET: APIRoute = async ({ locals, url }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
-      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const userId = session.data.session.user.id;
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
 
     // Pobierz i zwaliduj parametry paginacji i sortowania
     const params = Object.fromEntries(url.searchParams.entries());
@@ -51,7 +45,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
     // Użyj serwisu do pobrania przepisów
     const recipeService = new RecipeService();
-    const result = await recipeService.getUserRecipes(userId, { limit, offset }, { sort, order });
+    const result = await recipeService.getUserRecipes(user.id, { limit, offset }, { sort, order });
 
     // Zwróć listę przepisów
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -73,15 +67,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
-      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const userId = session.data.session.user.id;
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
 
     // Pobierz i zwaliduj dane wejściowe
     const rawData = await request.json();
@@ -106,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Użyj serwisu do utworzenia przepisu
     const recipeService = new RecipeService();
-    const result = await recipeService.createRecipe(userId, command);
+    const result = await recipeService.createRecipe(user.id, command);
 
     // Zwróć utworzony przepis
     return new Response(JSON.stringify(result), { status: 201, headers: { "Content-Type": "application/json" } });
