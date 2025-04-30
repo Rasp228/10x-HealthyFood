@@ -1,0 +1,25 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+import RecipeDetailPage from "../../components/RecipeDetailPage";
+
+const { id } = Astro.params;
+---
+
+<AppLayout title="Szczegóły przepisu - HealthyMeal">
+  {
+    id ? (
+      <RecipeDetailPage id={id} client:load />
+    ) : (
+      <div class="rounded-lg border-2 border-dashed border-muted p-8 text-center">
+        <h3 class="mb-2 text-lg font-medium">Nie znaleziono przepisu</h3>
+        <p class="mb-4 text-sm text-muted-foreground">Brak identyfikatora przepisu w adresie URL.</p>
+        <a
+          href="/"
+          class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Powrót do strony głównej
+        </a>
+      </div>
+    )
+  }
+</AppLayout>

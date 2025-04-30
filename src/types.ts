@@ -8,7 +8,10 @@ import type { Database, Tables } from "./db/database.types";
 export type PreferenceDto = Tables<"preferences">;
 
 // Typ przepisu z bazy danych
-export type RecipeDto = Tables<"recipes">;
+export interface RecipeDto extends Tables<"recipes"> {
+  ai_generated?: boolean;
+  original_recipe_id?: number | null;
+}
 
 // Typ logu z bazy danych
 export type LogDto = Tables<"logs">;

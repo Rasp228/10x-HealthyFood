@@ -1,8 +1,8 @@
 ---
-import Welcome from "../components/Welcome.astro";
-import Layout from "../layouts/Layout.astro";
+import AppLayout from "../layouts/AppLayout.astro";
+import HomePage from "../components/HomePage";
 ---
 
-<Layout>
-  <Welcome />
-</Layout>
+<AppLayout title="HealthyMeal - Przepisy na zdrowe posiłki">
+  <HomePage client:load />
+</AppLayout>
