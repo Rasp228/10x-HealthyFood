@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import type {
   RecipeDto,
@@ -10,6 +10,8 @@ import type {
   ModifyRecipeCommand,
   SaveRecipeCommand,
 } from "../types";
+import { useAI } from "../hooks/useAI";
+import { useToast } from "../hooks/useToast";
 
 // Hook do obsługi operacji AI będzie tutaj zamiast faktycznych wywołań API
 // W rzeczywistej implementacji powinien być przeniesiony do osobnego pliku
@@ -147,101 +149,138 @@ function useAI() {
   };
 }
 
+interface AIModalFormValues {
+  additional_params: string;
+}
+
 interface AIModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: "generate" | "modify";
-  recipe?: RecipeDto; // Tylko w trybie "modify"
-  onSuccess?: () => void;
+  originalRecipe?: RecipeReferenceDto;
+  onSuccess?: (savedRecipe: RecipeDto) => void;
 }
 
-export default function AIModal({ isOpen, onClose, mode, recipe, onSuccess }: AIModalProps) {
-  const [formValues, setFormValues] = useState<{ additional_params: string }>({
+export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSuccess }: AIModalProps) {
+  const [formValues, setFormValues] = useState<AIModalFormValues>({
     additional_params: "",
   });
-  const [generatedResult, setGeneratedResult] = useState<{
-    recipe: RecipeBasicDto;
-    isReady: boolean;
-  } | null>(null);
 
-  const { generateRecipe, modifyRecipe, saveAIRecipe, isLoading, error } = useAI();
+  const {
+    generateRecipe,
+    modifyRecipe,
+    saveAIRecipe,
+    resetAIState,
+    isGenerating,
+    isModifying,
+    isSaving,
+    generatedRecipe,
+    modifiedRecipe,
+    error,
+  } = useAI();
 
-  // Obsługa zmiany pola dodatkowych parametrów
+  const { showToast } = useToast();
+
+  // Reset stanu przy otwarciu/zamknięciu modala
+  useEffect(() => {
+    if (isOpen) {
+      setFormValues({
+        additional_params: "",
+      });
+      resetAIState();
+    }
+  }, [isOpen, resetAIState]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setFormValues({ ...formValues, additional_params: e.target.value });
+    const { name, value } = e.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Funkcja do generowania lub modyfikacji przepisu
   const handleGenerate = async () => {
     try {
-      if (mode === "generate") {
-        // Tryb generowania nowego przepisu
-        const result = await generateRecipe({
-          additional_params: formValues.additional_params || null,
-        });
-
-        setGeneratedResult({
-          recipe: result.recipe,
-          isReady: true,
-        });
-      } else if (mode === "modify" && recipe) {
-        // Tryb modyfikacji istniejącego przepisu
-        const result = await modifyRecipe(recipe.id, {
-          additional_params: formValues.additional_params || null,
-        });
-
-        setGeneratedResult({
-          recipe: result.modified_recipe,
-          isReady: true,
-        });
-      }
-    } catch (err) {
-      console.error("Błąd podczas operacji AI:", err);
-    }
-  };
-
-  // Funkcja do zapisania wygenerowanego przepisu
-  const handleSave = async () => {
-    if (!generatedResult) return;
-
-    try {
-      const saveParams: SaveRecipeCommand = {
-        recipe: generatedResult.recipe,
-        original_recipe_id: mode === "modify" && recipe ? recipe.id : undefined,
-        is_new: mode === "generate",
+      const params: GenerateRecipeCommand = {
+        additional_params: formValues.additional_params || null,
       };
 
-      await saveAIRecipe(saveParams);
-
-      // Zamykamy modal i wywołujemy callback sukcesu
-      onClose();
-      if (onSuccess) onSuccess();
+      await generateRecipe(params);
     } catch (err) {
-      console.error("Błąd podczas zapisywania przepisu:", err);
+      console.error("Błąd podczas generowania przepisu:", err);
+      showToast("Wystąpił błąd podczas generowania przepisu", "error");
     }
   };
 
-  // Resetujemy stan przy zamknięciu modalu
-  const handleClose = () => {
-    setFormValues({ additional_params: "" });
-    setGeneratedResult(null);
-    onClose();
+  const handleModify = async () => {
+    if (!originalRecipe) {
+      showToast("Brak oryginalnego przepisu do modyfikacji", "error");
+      return;
+    }
+
+    try {
+      const params: ModifyRecipeCommand = {
+        additional_params: formValues.additional_params || null,
+      };
+
+      await modifyRecipe(originalRecipe.id, params);
+    } catch (err) {
+      console.error("Błąd podczas modyfikacji przepisu:", err);
+      showToast("Wystąpił błąd podczas modyfikacji przepisu", "error");
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const recipeToSave = generatedRecipe?.recipe || modifiedRecipe?.modified_recipe;
+      const isNewRecipe = mode === "generate";
+
+      if (!recipeToSave) {
+        showToast("Brak przepisu do zapisania", "error");
+        return;
+      }
+
+      const saveParams: SaveRecipeCommand = {
+        recipe: recipeToSave,
+        original_recipe_id: isNewRecipe ? undefined : originalRecipe?.id,
+        is_new: isNewRecipe,
+      };
+
+      const savedRecipe = await saveAIRecipe(saveParams);
+
+      if (savedRecipe) {
+        showToast(`Przepis ${isNewRecipe ? "wygenerowany" : "zmodyfikowany"} pomyślnie`, "success");
+
+        if (onSuccess) {
+          onSuccess(savedRecipe);
+        }
+
+        onClose();
+      }
+    } catch (err) {
+      console.error("Błąd podczas zapisywania przepisu:", err);
+      showToast("Wystąpił błąd podczas zapisywania przepisu", "error");
+    }
   };
 
   // Jeśli modal nie jest otwarty, nie renderujemy zawartości
   if (!isOpen) return null;
+
+  // Rezultat operacji AI, który można zapisać
+  const aiResult = generatedRecipe || modifiedRecipe;
+  const isLoading = isGenerating || isModifying;
+  const isSaveLoading = isSaving;
+  const recipeToDisplay = generatedRecipe?.recipe || modifiedRecipe?.modified_recipe;
+  const hasGenerationResult = !!aiResult;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-3xl rounded-lg bg-card p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold">
-            {mode === "generate" ? "Generuj nowy przepis z AI" : "Modyfikuj przepis przez AI"}
+            {mode === "generate" ? "Generuj przepis z AI" : "Modyfikuj przepis z AI"}
           </h2>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="rounded-full p-2 hover:bg-muted"
-            disabled={isLoading}
+            disabled={isLoading || isSaveLoading}
             aria-label="Zamknij"
           >
             <svg
@@ -263,143 +302,131 @@ export default function AIModal({ isOpen, onClose, mode, recipe, onSuccess }: AI
 
         {error && (
           <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-            {error.message}
+            {error.message || "Wystąpił błąd podczas operacji AI"}
           </div>
         )}
 
-        <div className="space-y-6">
-          {/* Sekcja opisu istniejącego przepisu (tylko w trybie modify) */}
-          {mode === "modify" && recipe && !generatedResult && (
-            <div className="rounded-md border p-4">
-              <h3 className="mb-2 text-lg font-semibold">{recipe.title}</h3>
-              <p className="mb-2 text-sm text-muted-foreground">
-                Ten przepis zostanie zmodyfikowany według podanych parametrów.
-              </p>
-            </div>
-          )}
-
-          {/* Sekcja parametrów (widoczna tylko przed generowaniem) */}
-          {!generatedResult?.isReady && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="additional_params" className="text-sm font-medium">
-                  Parametry dla AI{" "}
-                  {mode === "generate" ? "(co chcesz przygotować?)" : "(jak chcesz zmodyfikować przepis?)"}
-                </label>
-                <textarea
-                  id="additional_params"
-                  value={formValues.additional_params}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-md border border-input p-2"
-                  placeholder={
-                    mode === "generate"
-                      ? "np. Śniadanie na słodko z owocami, bez glutenu, szybki w przygotowaniu"
-                      : "np. Zamień na wersję wegetariańską, dodaj więcej warzyw"
-                  }
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Opisz swoje preferencje, ograniczenia dietetyczne lub inne wskazówki dla AI.
+        {!hasGenerationResult ? (
+          <div className="space-y-4">
+            {mode === "modify" && originalRecipe && (
+              <div className="rounded-md border p-4">
+                <h3 className="mb-2 font-medium">{originalRecipe.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {originalRecipe.content.substring(0, 200)}
+                  {originalRecipe.content.length > 200 ? "..." : ""}
                 </p>
               </div>
+            )}
 
-              <div className="flex justify-end">
-                <Button onClick={handleGenerate} disabled={isLoading} className="gap-2">
-                  {isLoading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      AI pracuje...
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
+            <div className="space-y-2">
+              <label htmlFor="additional_params" className="text-sm font-medium">
+                Dodatkowe parametry
+              </label>
+              <textarea
+                id="additional_params"
+                name="additional_params"
+                value={formValues.additional_params}
+                onChange={handleChange}
+                rows={4}
+                className="w-full rounded-md border p-2"
+                placeholder={
+                  mode === "generate"
+                    ? "Wprowadź dodatkowe parametry dla AI, np. 'wegetariański', 'bezglutenowy', 'na lato'..."
+                    : "Wprowadź instrukcje modyfikacji, np. 'zrób wersję bezglutenową', 'dodaj więcej warzyw'..."
+                }
+                disabled={isLoading}
+                maxLength={5000}
+              />
+              <p className="text-xs text-muted-foreground">{formValues.additional_params.length}/5000 znaków</p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={mode === "generate" ? handleGenerate : handleModify}
+                disabled={isLoading}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
                         stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                        <polyline points="3.29 7 12 12 20.71 7"></polyline>
-                        <line x1="12" y1="22" x2="12" y2="12"></line>
-                      </svg>
-                      {mode === "generate" ? "Generuj przepis" : "Modyfikuj przepis"}
-                    </>
-                  )}
-                </Button>
-              </div>
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Przetwarzanie...
+                  </span>
+                ) : mode === "generate" ? (
+                  "Generuj przepis"
+                ) : (
+                  "Modyfikuj przepis"
+                )}
+              </Button>
             </div>
-          )}
-
-          {/* Sekcja wyników (widoczna po generowaniu) */}
-          {generatedResult?.isReady && (
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">{generatedResult.recipe.title}</h3>
-
-              <div className="max-h-96 overflow-y-auto rounded-md border p-4">
-                <div className="prose prose-sm dark:prose-invert">
-                  {generatedResult.recipe.content.split("\n").map((line, index) => (
-                    <React.Fragment key={index}>
-                      {line}
-                      <br />
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setGeneratedResult(null)} disabled={isLoading}>
-                  Wróć i edytuj
-                </Button>
-                <Button onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Zapisywanie...
-                    </span>
-                  ) : (
-                    "Zapisz przepis"
-                  )}
-                </Button>
-              </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="rounded-md border p-6">
+              <h3 className="mb-2 text-xl font-bold">{recipeToDisplay?.title}</h3>
+              <div className="whitespace-pre-wrap text-sm">{recipeToDisplay?.content}</div>
             </div>
-          )}
-        </div>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => resetAIState()} disabled={isSaveLoading}>
+                Odrzuć i zacznij ponownie
+              </Button>
+
+              <Button
+                onClick={handleSave}
+                disabled={isSaveLoading}
+                className="bg-green-600 text-white hover:bg-green-700"
+              >
+                {isSaveLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Zapisywanie...
+                  </span>
+                ) : (
+                  "Akceptuj i zapisz"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {hasGenerationResult && (
+          <div className="mt-4 text-xs text-muted-foreground">
+            <p>Model AI: {generatedRecipe?.ai_model || modifiedRecipe?.ai_model}</p>
+            <p>
+              Czas przetwarzania: {generatedRecipe?.generate_response_time || modifiedRecipe?.generate_response_time}ms
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,80 @@
+---
+import AppLayout from "../../../layouts/AppLayout.astro";
+
+const { id } = Astro.params;
+---
+
+<AppLayout title="Edytuj przepis - HealthyMeal">
+  <div id="recipe-form-container" data-recipe-id={id}></div>
+</AppLayout>
+
+<script>
+  // Skrypt kliencki do obsługi formularza edycji
+  import { createRoot } from "react-dom/client";
+  import { createElement, useEffect, useState } from "react";
+  import RecipeFormModal from "../../../components/RecipeFormModal";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const container = document.getElementById("recipe-form-container");
+    if (container) {
+      const recipeId = container.getAttribute("data-recipe-id");
+      const root = createRoot(container);
+
+      // Funkcja pobierająca dane przepisu
+      const fetchRecipe = async (id) => {
+        try {
+          const response = await fetch(`/api/recipes/${id}`);
+          if (!response.ok) {
+            throw new Error(`Błąd pobierania przepisu: ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          console.error("Błąd podczas pobierania przepisu:", error);
+          return null;
+        }
+      };
+
+      // Pobieramy dane przepisu
+      if (recipeId) {
+        const recipe = await fetchRecipe(recipeId);
+
+        if (recipe) {
+          // Renderujemy komponent z otwartym modalem i danymi przepisu
+          root.render(
+            createElement(RecipeFormModal, {
+              isOpen: true,
+              recipe: recipe,
+              onClose: () => {
+                // Przekierowanie na stronę szczegółów przepisu po zamknięciu
+                window.location.href = `/recipes/${recipeId}`;
+              },
+            })
+          );
+        } else {
+          // Obsługa błędu, gdy nie znaleziono przepisu
+          root.render(
+            createElement(
+              "div",
+              { className: "p-4 rounded-lg border-2 border-red-300 text-center" },
+              createElement("h3", { className: "text-lg font-medium mb-2" }, "Nie znaleziono przepisu"),
+              createElement(
+                "p",
+                { className: "text-sm text-muted-foreground mb-4" },
+                "Przepis o podanym ID nie istnieje lub wystąpił błąd podczas jego pobierania."
+              ),
+              createElement(
+                "a",
+                {
+                  href: "/",
+                  className:
+                    "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90",
+                },
+                "Powrót do strony głównej"
+              )
+            )
+          );
+        }
+      }
+    }
+  });
+</script>
