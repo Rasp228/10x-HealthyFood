@@ -53,13 +53,13 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
-  // Kategorie i ich kolory tła
+  // Kategorie i ich kolory tła - dostosowane do nowych kategorii
   const categoryColors: Record<string, string> = {
     diet: "bg-green-100 dark:bg-green-900",
     allergy: "bg-red-100 dark:bg-red-900",
     dislike: "bg-orange-100 dark:bg-orange-900",
     like: "bg-blue-100 dark:bg-blue-900",
-    cuisine: "bg-purple-100 dark:bg-purple-900",
+    excluded: "bg-purple-100 dark:bg-purple-900",
     other: "bg-gray-100 dark:bg-gray-800",
   };
 

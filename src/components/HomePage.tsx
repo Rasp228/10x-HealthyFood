@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import RecipeCard from "./RecipeCard";
 import ConfirmDialog from "./ConfirmDialog";
+import RecipeFormModal from "./RecipeFormModal";
+import AIModal from "./AIModal";
 import { useToast } from "../hooks/useToast";
 import { useFetchRecipes } from "../hooks/useRecipes";
 
@@ -9,6 +11,7 @@ export default function HomePage() {
   const [filterText, setFilterText] = useState("");
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
   const [paginationParams, setPaginationParams] = useState({
     limit: 9,
     offset: 0,
@@ -51,8 +54,8 @@ export default function HomePage() {
   // Obsługa akcji na przepisach
   const handleEditRecipe = (id: number) => {
     console.log(`Edycja przepisu o id ${id}`);
+    setSelectedRecipeId(id);
     setIsRecipeFormOpen(true);
-    // W rzeczywistej implementacji przekazalibyśmy id do modalu formularza
   };
 
   const handleDeleteRecipe = (id: number) => {
@@ -95,8 +98,14 @@ export default function HomePage() {
 
   const handleAIRecipe = (id: number) => {
     console.log(`Modyfikacja przepisu przez AI dla id ${id}`);
+    setSelectedRecipeId(id);
     setIsAIModalOpen(true);
-    // W rzeczywistej implementacji przekazalibyśmy id do modalu AI
+  };
+
+  // Obsługa sukcesu po dodaniu/edycji/AI modyfikacji
+  const handleRecipeSuccess = () => {
+    refetch();
+    showToast("Operacja zakończona pomyślnie", "success");
   };
 
   // Renderowanie stanu ładowania
@@ -127,6 +136,9 @@ export default function HomePage() {
       </div>
     );
   }
+
+  // Znajdź wybrany przepis (dla modalu edycji lub AI)
+  const selectedRecipe = selectedRecipeId ? recipes.find((recipe) => recipe.id === selectedRecipeId) : null;
 
   return (
     <div>
@@ -179,7 +191,14 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsAIModalOpen(true)} className="gap-2 text-purple-500">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedRecipeId(null);
+              setIsAIModalOpen(true);
+            }}
+            className="gap-2 text-purple-500"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -199,7 +218,14 @@ export default function HomePage() {
             Wygeneruj z AI
           </Button>
 
-          <Button variant="default" onClick={() => setIsRecipeFormOpen(true)} className="gap-2">
+          <Button
+            variant="default"
+            onClick={() => {
+              setSelectedRecipeId(null);
+              setIsRecipeFormOpen(true);
+            }}
+            className="gap-2"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -227,7 +253,14 @@ export default function HomePage() {
             Nie znaleziono żadnych przepisów. Dodaj nowy przepis lub wygeneruj z pomocą AI.
           </p>
           <div className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => setIsAIModalOpen(true)} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedRecipeId(null);
+                setIsAIModalOpen(true);
+              }}
+              className="gap-2"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -247,7 +280,14 @@ export default function HomePage() {
               Wygeneruj z AI
             </Button>
 
-            <Button variant="default" onClick={() => setIsRecipeFormOpen(true)} className="gap-2">
+            <Button
+              variant="default"
+              onClick={() => {
+                setSelectedRecipeId(null);
+                setIsRecipeFormOpen(true);
+              }}
+              className="gap-2"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -341,6 +381,29 @@ export default function HomePage() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         severity="danger"
+      />
+
+      {/* Modal formularza przepisu */}
+      <RecipeFormModal
+        isOpen={isRecipeFormOpen}
+        onClose={() => {
+          setIsRecipeFormOpen(false);
+          setSelectedRecipeId(null);
+        }}
+        recipe={selectedRecipe || undefined}
+        onSuccess={handleRecipeSuccess}
+      />
+
+      {/* Modal AI */}
+      <AIModal
+        isOpen={isAIModalOpen}
+        onClose={() => {
+          setIsAIModalOpen(false);
+          setSelectedRecipeId(null);
+        }}
+        mode={selectedRecipeId ? "modify" : "generate"}
+        originalRecipe={selectedRecipe || undefined}
+        onSuccess={handleRecipeSuccess}
       />
     </div>
   );

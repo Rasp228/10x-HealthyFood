@@ -57,10 +57,17 @@ function usePreferences() {
         },
         {
           id: 4,
-          category: "cuisine",
-          value: "Włoska",
+          category: "like",
+          value: "Truskawki",
           user_id: "123",
           created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+        },
+        {
+          id: 5,
+          category: "excluded",
+          value: "Gluten",
+          user_id: "123",
+          created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
         },
       ];
 
@@ -209,13 +216,13 @@ export default function ProfilePage() {
     return acc;
   }, {});
 
-  // Mapowanie kategorii na etykiety dla UI
+  // Mapowanie kategorii na etykiety dla UI - NOWE KATEGORIE
   const categoryLabels: Record<string, string> = {
-    diet: "Dieta",
+    diet: "Diety",
     allergy: "Alergie",
-    dislike: "Nie lubię",
-    like: "Lubię",
-    cuisine: "Kuchnia",
+    like: "Produkty lubiane",
+    dislike: "Produkty nielubiane",
+    excluded: "Produkty wykluczone",
     other: "Inne",
   };
 
@@ -251,38 +258,35 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      {/* Nagłówek profilu */}
+      {/* Profil użytkownika */}
       <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <h1 className="mb-4 text-2xl font-bold">Profil użytkownika</h1>
+        <h2 className="mb-6 text-xl font-bold">Profil użytkownika</h2>
 
         <div className="space-y-4">
           <div>
-            <span className="text-sm font-medium text-muted-foreground">Email:</span>
-            <span className="ml-2">{user?.email || "Użytkownik anonimowy"}</span>
+            <div className="text-sm font-medium text-muted-foreground">Adres email</div>
+            <div>{user?.email || "przykład@mail.com"}</div>
           </div>
 
-          {user?.id && (
-            <div>
-              <span className="text-sm font-medium text-muted-foreground">Data rejestracji:</span>
-              <span className="ml-2">{formatDate(new Date().toISOString())}</span>
-            </div>
-          )}
+          <div>
+            <div className="text-sm font-medium text-muted-foreground">Data dołączenia</div>
+            <div>{formatDate(user?.created_at || new Date(Date.now() - 180 * 86400000).toISOString())}</div>
+          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-md border bg-card p-4">
-              <div className="mb-2 text-sm font-medium text-muted-foreground">Przepisy</div>
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="rounded-lg border p-4 text-center">
               <div className="text-2xl font-bold">{stats.totalRecipes}</div>
+              <div className="text-sm text-muted-foreground">Łącznie przepisów</div>
             </div>
-
-            <div className="rounded-md border bg-card p-4">
-              <div className="mb-2 text-sm font-medium text-muted-foreground">Wygenerowane AI</div>
+            <div className="rounded-lg border p-4 text-center">
               <div className="text-2xl font-bold">{stats.aiGenerated}</div>
+              <div className="text-sm text-muted-foreground">Wygenerowanych przez AI</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Preferencje */}
+      {/* Preferencje kulinarne */}
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <h2 className="mb-6 text-xl font-bold">Preferencje kulinarne</h2>
 

@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useRecipe } from "../hooks/useRecipe";
 import ActionPanel from "./ActionPanel";
 import ConfirmDialog from "./ConfirmDialog";
+import RecipeFormModal from "./RecipeFormModal";
+import AIModal from "./AIModal";
 import { useToast } from "../hooks/useToast";
 import * as marked from "marked";
 
@@ -55,6 +57,12 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
 
   const handleAIModify = () => {
     setIsAIModalOpen(true);
+  };
+
+  // Obsługa sukcesu po edycji/AI modyfikacji
+  const handleSuccess = () => {
+    refetch();
+    showToast("Operacja zakończona pomyślnie", "success");
   };
 
   // Renderowanie stanu ładowania
@@ -187,10 +195,22 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
         severity="danger"
       />
 
-      {/* Tu w rzeczywistej implementacji byłyby modale:
-          - Modal formularza przepisu (RecipeFormModal) 
-          - Modal AI (AIModal)
-      */}
+      {/* Modal formularza edycji przepisu */}
+      <RecipeFormModal
+        isOpen={isRecipeFormOpen}
+        onClose={() => setIsRecipeFormOpen(false)}
+        recipe={recipe}
+        onSuccess={handleSuccess}
+      />
+
+      {/* Modal AI do modyfikacji przepisu */}
+      <AIModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        mode="modify"
+        originalRecipe={recipe}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }
