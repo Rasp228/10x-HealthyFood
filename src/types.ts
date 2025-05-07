@@ -73,7 +73,10 @@ export type RecipeBasicDto = Pick<RecipeDto, "title" | "content" | "additional_p
 export type RecipeReferenceDto = Pick<RecipeDto, "id" | "title" | "content">;
 
 // Command do generacji przepisu
-export type GenerateRecipeCommand = Pick<RecipeDto, "additional_params">;
+export interface GenerateRecipeCommand {
+  additional_params: string | null;
+  base_recipe?: string;
+}
 
 // Wygenerowany przepis
 export interface GeneratedRecipeDto {
@@ -83,7 +86,10 @@ export interface GeneratedRecipeDto {
 }
 
 // Command do modyfikacji przepisu
-export type ModifyRecipeCommand = Pick<RecipeDto, "additional_params">;
+export interface ModifyRecipeCommand {
+  additional_params: string | null;
+  base_recipe?: string;
+}
 
 // Zmodyfikowany przepis
 export interface ModifiedRecipeDto {

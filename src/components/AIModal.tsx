@@ -6,6 +6,9 @@ import { useToast } from "../hooks/useToast";
 
 interface AIModalFormValues {
   additional_params: string;
+  base_recipe?: string;
+  temp_title?: string;
+  temp_content?: string;
 }
 
 interface AIModalProps {
@@ -19,8 +22,13 @@ interface AIModalProps {
 export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSuccess }: AIModalProps) {
   const [formValues, setFormValues] = useState<AIModalFormValues>({
     additional_params: "",
+    base_recipe: "",
+    temp_title: "",
+    temp_content: "",
   });
   const [step, setStep] = useState<"input" | "preview">("input");
+  const [showBaseRecipe, setShowBaseRecipe] = useState(false);
+  const [editingOriginal, setEditingOriginal] = useState(false);
 
   const {
     generateRecipe,
@@ -42,13 +50,26 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
     if (!isOpen) {
       setStep("input");
       resetAIState();
+      setShowBaseRecipe(false);
+      setEditingOriginal(false);
       setFormValues({
         additional_params: "",
+        base_recipe: "",
+        temp_title: "",
+        temp_content: "",
+      });
+    } else if (isOpen && originalRecipe) {
+      // Jeśli otwieramy modal z przepisem do modyfikacji, ustawiamy pola tymczasowej edycji
+      setFormValues({
+        additional_params: "",
+        base_recipe: "",
+        temp_title: originalRecipe.title,
+        temp_content: originalRecipe.content,
       });
     }
-  }, [isOpen, resetAIState]);
+  }, [isOpen, originalRecipe, resetAIState]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({
       ...prev,
@@ -62,11 +83,22 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
       if (mode === "generate") {
         const params: GenerateRecipeCommand = {
           additional_params: formValues.additional_params,
+          base_recipe: showBaseRecipe && formValues.base_recipe ? formValues.base_recipe : undefined,
         };
         await generateRecipe(params);
       } else if (mode === "modify" && originalRecipe) {
+        // Jeśli przepis był tymczasowo edytowany, używamy tej wersji
+        const modifiedOriginalRecipe = editingOriginal
+          ? {
+              ...originalRecipe,
+              title: formValues.temp_title || originalRecipe.title,
+              content: formValues.temp_content || originalRecipe.content,
+            }
+          : originalRecipe;
+
         const params: ModifyRecipeCommand = {
           additional_params: formValues.additional_params,
+          base_recipe: JSON.stringify(modifiedOriginalRecipe),
         };
         await modifyRecipe(originalRecipe.id, params);
       }
@@ -143,15 +175,103 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
 
         {step === "input" ? (
           <div className="space-y-4">
+            {/* Tryb modyfikacji przepisu */}
             {mode === "modify" && originalRecipe && (
-              <div className="rounded-lg border bg-muted/50 p-3">
-                <p className="font-medium">Modyfikujesz przepis: {originalRecipe.title}</p>
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="font-medium">Modyfikujesz przepis: {originalRecipe.title}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingOriginal(!editingOriginal)}
+                    className="text-xs"
+                  >
+                    {editingOriginal ? "Anuluj edycję" : "Edytuj przed wysłaniem do AI"}
+                  </Button>
+                </div>
+
+                {editingOriginal ? (
+                  <div className="space-y-2">
+                    <div>
+                      <label htmlFor="temp_title" className="block text-sm font-medium">
+                        Tytuł
+                      </label>
+                      <input
+                        type="text"
+                        id="temp_title"
+                        name="temp_title"
+                        value={formValues.temp_title}
+                        onChange={handleChange}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="temp_content" className="block text-sm font-medium">
+                        Treść przepisu
+                      </label>
+                      <textarea
+                        id="temp_content"
+                        name="temp_content"
+                        value={formValues.temp_content}
+                        onChange={handleChange}
+                        className="h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        rows={10}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Ta edycja jest tymczasowa i zostanie użyta tylko do wygenerowania nowej wersji przez AI.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto rounded bg-background/50 p-2 text-sm">
+                    <p className="font-medium">{originalRecipe.title}</p>
+                    <p className="line-clamp-3 text-muted-foreground">
+                      {originalRecipe.content.substring(0, 200)}
+                      {originalRecipe.content.length > 200 ? "..." : ""}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Opcjonalny przepis bazowy (tylko dla trybu generowania) */}
+            {mode === "generate" && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="show_base_recipe"
+                    checked={showBaseRecipe}
+                    onChange={(e) => setShowBaseRecipe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="show_base_recipe" className="text-sm font-medium">
+                    Chcę podać przepis bazowy do inspiracji dla AI
+                  </label>
+                </div>
+
+                {showBaseRecipe && (
+                  <div className="rounded-lg border p-3">
+                    <label htmlFor="base_recipe" className="block text-sm font-medium">
+                      Przepis bazowy (opcjonalnie)
+                    </label>
+                    <textarea
+                      id="base_recipe"
+                      name="base_recipe"
+                      value={formValues.base_recipe}
+                      onChange={handleChange}
+                      className="mt-1 h-32 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Wklej tutaj przepis, który posłuży jako inspiracja dla AI..."
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dodatkowe parametry - wspólne dla obu trybów */}
             <div className="space-y-2">
               <label htmlFor="additional_params" className="block text-sm font-medium">
-                Dodatkowe parametry lub instrukcje dla AI
+                Dodatkowe parametry (opcjonalnie)
               </label>
               <textarea
                 id="additional_params"
