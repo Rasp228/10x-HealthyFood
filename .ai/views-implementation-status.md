@@ -31,6 +31,7 @@
    - Zmieniono etykietę pola dodatkowych parametrów na "Dodatkowe parametry (opcjonalnie)"
    - Dodano możliwość podglądu i tymczasowej edycji istniejącego przepisu przed wysłaniem go do AI
    - Rozszerzono interfejsy `GenerateRecipeCommand` i `ModifyRecipeCommand` o nowe pole `base_recipe`
+   - Dodano informację o generowaniu losowego przepisu na podstawie preferencji użytkownika
 
 7. **Refaktoryzacja kodu**
    - Naprawiono problem z duplikacją funkcji useAI, korzystając z istniejącego hooka
@@ -48,16 +49,20 @@
    - Uproszczono logikę sortowania i filtrowania
    - Zaktualizowano interfejs do bardziej intuicyjnego użytkowania
    - Poprawiono typy dla parametrów sortowania
+   - Ulepszono animację wczytywania na stronie głównej
+   - Naprawiono filtrowanie na mockowanych danych
 
-## Kolejne kroki
+10. **Udoskonalenie nawigacji i interakcji użytkownika**
+    - Dodano przycisk "Strona Główna" do górnego menu nawigacyjnego
+    - Zmodyfikowano komponent TopNav, dodając spójny styl przycisków
+    - Usunięto duplikację kodu wylogowania między AppLayout i TopNav
 
-1. **Rozszerzenie formularza dodawania/edycji przepisu**:
-   - Dodanie walidacji pól formularza za pomocą biblioteki zod
-   - Dodanie walidacji na poziomie UI dla pól wymaganych
+11. **Implementacja mockowanych danych**
+    - Zaimplementowano mockowane dane w hooku usePreferences zamiast korzystania z API
+    - Zaktualizowano logikę filtrowania i sortowania dla mockowanych przepisów
+    - Dodano mechanizm symulacji opóźnień sieci dla realistycznego doświadczenia
 
-2. **Implementacja widoku profilu użytkownika**:
-   - Uzupełnienie funkcjonalności zarządzania preferencjami
-   - Dodanie możliwości edycji profilu użytkownika
-
-3. **Dostępność i responsywność**:
-   - Dodanie atrybutów ARIA tam, gdzie są potrzebne
+12. **Dostępność i responsywność**
+    - Dodanie atrybutów ARIA tam, gdzie są potrzebne
+    - Poprawa struktury komponentów dla lepszej dostępności
+    - Ulepszenie walidacji formularzy z odpowiednimi komunikatami błędów
