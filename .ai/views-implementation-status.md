@@ -23,18 +23,29 @@
 
 5. **Implementacja głównych komponentów funkcjonalnych**
    - Zaimplementowano komponent `AIModal` do generowania i modyfikacji przepisów przez AI
+   - Zintegrowano `ConfirmDialog` z akcjami usuwania w różnych komponentach (RecipeCard, PreferenceChip)
+   - Dodano obsługę powiadomień w istniejących komponentach
+
+6. **Rozszerzenie funkcjonalności AIModal**
+   - Dodano opcjonalne pole na wklejenie przepisu bazowego w trybie generowania
+   - Zmieniono etykietę pola dodatkowych parametrów na "Dodatkowe parametry (opcjonalnie)"
+   - Dodano możliwość podglądu i tymczasowej edycji istniejącego przepisu przed wysłaniem go do AI
+   - Rozszerzono interfejsy `GenerateRecipeCommand` i `ModifyRecipeCommand` o nowe pole `base_recipe`
+
+7. **Refaktoryzacja kodu**
+   - Naprawiono problem z duplikacją funkcji useAI, korzystając z istniejącego hooka
+   - Usunięto niepotrzebne importy i zmienne w komponencie AIModal
+   - Poprawiono wywołania funkcji showToast zgodnie z sygnaturą w useToast.ts
 
 ## Kolejne kroki
 
-1. **Uzupełnienie brakującej funkcjonalności**:
-   - Zintegrować `ConfirmDialog` z akcjami usuwania w różnych komponentach (RecipeCard, PreferenceChip)
-   - Dodać obsługę powiadomień w istniejących komponentach
+1. **Rozszerzenie formularza dodawania/edycji przepisu**:
+   - Dodanie walidacji pól formularza
 
-2. **Testy i poprawki**:
-   - Przeprowadzić testy manualne interfejsu
-   - Testowanie responsywności i dostępności
-   - Weryfikacja spójności z designem
+2. **Implementacja widoku profilu użytkownika**:
+   - Uzupełnienie funkcjonalności zarządzania preferencjami
 
-3. **Ocena brakujących elementów i dalsza implementacja**:
-   - Ocena spójności aktualnego stanu implementacji z planem
-   - Dalsze dodawanie brakujących elementów
+3. **Optymalizacja, poprawa UX i brakujące funkcjonalności**:
+   - Dodanie animacji przejść między widokami
+   - Implementacja wyszukiwania
+   - Sprawienie aby zmiana motywu nie zmieniała się po zmianie strony lub odświerzeniu

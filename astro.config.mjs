@@ -10,9 +10,9 @@ import node from "@astrojs/node";
 export default defineConfig({
   output: "server",
   integrations: [react(), sitemap()],
-  server: { 
+  server: {
     host: true,
-    port: 3000 
+    port: 3000,
   },
   vite: {
     plugins: [tailwindcss()],
@@ -20,5 +20,11 @@ export default defineConfig({
   adapter: node({
     mode: "standalone",
   }),
-  experimental: { session: true },
+  experimental: {
+    session: true,
+  },
+  // Włączamy obsługę przejść między widokami
+  viewTransitions: true,
+  // Włączamy prefetch dla lepszego doświadczenia użytkownika
+  prefetch: true,
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import RecipeCard from "./RecipeCard";
 import ConfirmDialog from "./ConfirmDialog";
@@ -9,6 +9,7 @@ import { useFetchRecipes } from "../hooks/useRecipes";
 
 export default function HomePage() {
   const [filterText, setFilterText] = useState("");
+  const [debouncedFilterText, setDebouncedFilterText] = useState("");
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
@@ -22,15 +23,47 @@ export default function HomePage() {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const { showToast } = useToast();
 
-  // Użycie hooka do pobrania przepisów
-  const { data: recipes, total, isLoading, error, refetch } = useFetchRecipes(paginationParams);
+  // Użycie hooka do pobrania przepisów z uwzględnieniem wyszukiwania
+  const {
+    data: recipes,
+    total,
+    isLoading,
+    error,
+    refetch,
+  } = useFetchRecipes({
+    ...paginationParams,
+    search: debouncedFilterText,
+  });
+
+  // Implementacja debounce dla wyszukiwania
+  useEffect(() => {
+    // Resetujemy offset przy zmianie wyszukiwania
+    if (debouncedFilterText !== filterText) {
+      setPaginationParams((prev) => ({
+        ...prev,
+        offset: 0, // Wracamy do pierwszej strony przy zmianie wyszukiwania
+      }));
+    }
+
+    // Ustawiamy timeout dla debounce
+    const timeoutId = setTimeout(() => {
+      setDebouncedFilterText(filterText);
+    }, 500); // 500ms opóźnienia
+
+    // Sprzątamy timeout jeśli komponent zostanie odmontowany lub zmieni się filterText
+    return () => clearTimeout(timeoutId);
+  }, [filterText, debouncedFilterText]);
 
   // Obsługa zmiany filtra
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilterText(e.target.value);
-    // W rzeczywistej implementacji użylibyśmy debounce
-    // i wysłalibyśmy zapytanie do API z parametrem filtrowania
   };
+
+  // Resetowanie wyszukiwania
+  const handleClearSearch = useCallback(() => {
+    setFilterText("");
+    setDebouncedFilterText("");
+  }, []);
 
   // Obsługa stronicowania
   const handleNextPage = () => {
@@ -49,6 +82,23 @@ export default function HomePage() {
         offset: Math.max(0, prev.offset - prev.limit),
       }));
     }
+  };
+
+  // Obsługa sortowania
+  const handleSortChange = (sortField: "created_at" | "updated_at" | "title") => {
+    setPaginationParams((prev) => ({
+      ...prev,
+      sort: sortField,
+      offset: 0, // Resetujemy stronę przy zmianie sortowania
+    }));
+  };
+
+  const handleOrderChange = () => {
+    setPaginationParams((prev) => ({
+      ...prev,
+      order: prev.order === "asc" ? "desc" : "asc",
+      offset: 0, // Resetujemy stronę przy zmianie kierunku sortowania
+    }));
   };
 
   // Obsługa akcji na przepisach
@@ -108,8 +158,11 @@ export default function HomePage() {
     showToast("Operacja zakończona pomyślnie", "success");
   };
 
-  // Renderowanie stanu ładowania
-  if (isLoading && recipes.length === 0) {
+  // Status wyszukiwania
+  const isSearching = debouncedFilterText !== "" && isLoading;
+
+  // Renderowanie stanu ładowania przy pierwszym ładowaniu
+  if (isLoading && recipes.length === 0 && !debouncedFilterText) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
@@ -166,11 +219,33 @@ export default function HomePage() {
             className="w-full rounded-md border border-input bg-background px-10 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={filterText}
             onChange={handleFilterChange}
+            aria-label="Wyszukaj przepisy"
           />
-          {filterText && (
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg className="h-4 w-4 animate-spin text-muted-foreground" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            </div>
+          )}
+          {filterText && !isSearching && (
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              onClick={() => setFilterText("")}
+              onClick={handleClearSearch}
+              aria-label="Wyczyść wyszukiwanie"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -191,6 +266,63 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Sortowanie */}
+          <div className="relative mr-2">
+            <select
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={paginationParams.sort}
+              onChange={(e) => handleSortChange(e.target.value as "created_at" | "updated_at" | "title")}
+              aria-label="Sortuj według"
+            >
+              <option value="created_at">Data utworzenia</option>
+              <option value="updated_at">Data aktualizacji</option>
+              <option value="title">Tytuł</option>
+            </select>
+            <button
+              onClick={handleOrderChange}
+              className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md border border-input hover:bg-muted"
+              aria-label={paginationParams.order === "asc" ? "Sortuj malejąco" : "Sortuj rosnąco"}
+            >
+              {paginationParams.order === "asc" ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m3 8 4-4 4 4" />
+                  <path d="M7 4v16" />
+                  <path d="M11 12h4" />
+                  <path d="M11 16h7" />
+                  <path d="M11 20h10" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m3 16 4 4 4-4" />
+                  <path d="M7 20V4" />
+                  <path d="M11 4h4" />
+                  <path d="M11 8h7" />
+                  <path d="M11 12h10" />
+                </svg>
+              )}
+            </button>
+          </div>
+
           <Button
             variant="outline"
             onClick={() => {
@@ -245,131 +377,91 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Informacja o wynikach wyszukiwania */}
+      {debouncedFilterText && (
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Znaleziono {total} wyników dla "{debouncedFilterText}"
+          </p>
+        </div>
+      )}
+
       {/* Lista przepisów */}
       {recipes.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-muted p-12 text-center">
-          <h3 className="mb-2 text-lg font-medium">Brak przepisów</h3>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Nie znaleziono żadnych przepisów. Dodaj nowy przepis lub wygeneruj z pomocą AI.
+          <h3 className="mb-2 text-xl font-medium">
+            {debouncedFilterText ? "Nie znaleziono przepisów" : "Brak przepisów"}
+          </h3>
+          <p className="mb-6 text-muted-foreground">
+            {debouncedFilterText
+              ? `Nie znaleziono przepisów pasujących do "${debouncedFilterText}".`
+              : "Nie dodano jeszcze żadnych przepisów."}
           </p>
-          <div className="flex justify-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedRecipeId(null);
-                setIsAIModalOpen(true);
-              }}
-              className="gap-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="m4.9 4.9 14.2 14.2"></path>
-                <path d="M9 9h.01"></path>
-                <path d="M15 15h.01"></path>
-              </svg>
-              Wygeneruj z AI
-            </Button>
-
-            <Button
-              variant="default"
-              onClick={() => {
-                setSelectedRecipeId(null);
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (debouncedFilterText) {
+                handleClearSearch();
+              } else {
                 setIsRecipeFormOpen(true);
-              }}
-              className="gap-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 5v14"></path>
-                <path d="M5 12h14"></path>
-              </svg>
-              Dodaj przepis
-            </Button>
-          </div>
+              }
+            }}
+          >
+            {debouncedFilterText ? "Wyczyść wyszukiwanie" : "Dodaj pierwszy przepis"}
+          </Button>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {recipes.map((recipe) => (
               <RecipeCard
                 key={recipe.id}
                 recipe={recipe}
-                onEdit={handleEditRecipe}
-                onDelete={handleDeleteRecipe}
-                onAI={handleAIRecipe}
+                onEdit={() => handleEditRecipe(recipe.id)}
+                onDelete={() => handleDeleteRecipe(recipe.id)}
+                onAI={() => handleAIRecipe(recipe.id)}
               />
             ))}
           </div>
 
           {/* Paginacja */}
-          <div className="mt-8 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Wyświetlanie {paginationParams.offset + 1}-{Math.min(paginationParams.offset + recipes.length, total)} z{" "}
-              {total}
-            </div>
-            <div className="flex gap-2">
+          {total > paginationParams.limit && (
+            <div className="mt-8 flex items-center justify-between">
               <Button variant="outline" onClick={handlePrevPage} disabled={paginationParams.offset === 0}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-2"
-                >
-                  <path d="m15 18-6-6 6-6"></path>
-                </svg>
-                Poprzednia
+                Poprzednia strona
               </Button>
-
+              <span className="text-sm text-muted-foreground">
+                Strona {Math.floor(paginationParams.offset / paginationParams.limit) + 1} z{" "}
+                {Math.ceil(total / paginationParams.limit)}
+              </span>
               <Button
                 variant="outline"
                 onClick={handleNextPage}
                 disabled={paginationParams.offset + paginationParams.limit >= total}
               >
-                Następna
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="ml-2"
-                >
-                  <path d="m9 18 6-6-6-6"></path>
-                </svg>
+                Następna strona
               </Button>
             </div>
-          </div>
-        </>
+          )}
+        </div>
       )}
+
+      {/* Modal formularza dodawania/edycji przepisu */}
+      <RecipeFormModal
+        isOpen={isRecipeFormOpen}
+        onClose={() => setIsRecipeFormOpen(false)}
+        recipe={selectedRecipe || undefined}
+        onSuccess={handleRecipeSuccess}
+      />
+
+      {/* Modal AI */}
+      <AIModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        mode={selectedRecipeId ? "modify" : "generate"}
+        originalRecipe={selectedRecipe || undefined}
+        onSuccess={handleRecipeSuccess}
+      />
 
       {/* Dialog potwierdzenia usunięcia */}
       <ConfirmDialog
@@ -381,29 +473,6 @@ export default function HomePage() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         severity="danger"
-      />
-
-      {/* Modal formularza przepisu */}
-      <RecipeFormModal
-        isOpen={isRecipeFormOpen}
-        onClose={() => {
-          setIsRecipeFormOpen(false);
-          setSelectedRecipeId(null);
-        }}
-        recipe={selectedRecipe || undefined}
-        onSuccess={handleRecipeSuccess}
-      />
-
-      {/* Modal AI */}
-      <AIModal
-        isOpen={isAIModalOpen}
-        onClose={() => {
-          setIsAIModalOpen(false);
-          setSelectedRecipeId(null);
-        }}
-        mode={selectedRecipeId ? "modify" : "generate"}
-        originalRecipe={selectedRecipe || undefined}
-        onSuccess={handleRecipeSuccess}
       />
     </div>
   );

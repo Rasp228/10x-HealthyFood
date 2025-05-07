@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import type { PaginatedRecipesDto, RecipeDto, RecipeSortParams, PaginationParams } from "../types";
 
-interface UseFetchRecipesParams extends PaginationParams, RecipeSortParams {}
+interface UseFetchRecipesParams extends PaginationParams, RecipeSortParams {
+  search?: string;
+}
 
 interface UseFetchRecipesResult {
   data: RecipeDto[];
@@ -11,7 +13,7 @@ interface UseFetchRecipesResult {
   refetch: () => void;
 }
 
-// Hook do pobierania listy przepisów z paginacją i sortowaniem
+// Hook do pobierania listy przepisów z paginacją, sortowaniem i wyszukiwaniem
 export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRecipesResult {
   const [data, setData] = useState<RecipeDto[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -19,7 +21,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<number>(0);
 
-  const { limit = 10, offset = 0, sort = "created_at", order = "desc" } = params;
+  const { limit = 10, offset = 0, sort = "created_at", order = "desc", search = "" } = params;
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -33,6 +35,9 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
         queryParams.append("offset", offset.toString());
         queryParams.append("sort", sort);
         queryParams.append("order", order);
+        if (search) {
+          queryParams.append("search", search.trim());
+        }
 
         // Tu będzie rzeczywiste wywołanie API
         // const response = await fetch(`/api/recipes?${queryParams.toString()}`);
@@ -41,7 +46,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
         await new Promise((resolve) => setTimeout(resolve, 800));
 
         // Tworzymy przykładowe dane
-        const mockRecipes: RecipeDto[] = Array.from({ length: limit }, (_, i) => ({
+        let mockRecipes: RecipeDto[] = Array.from({ length: limit }, (_, i) => ({
           id: offset + i + 1,
           title: `Przepis ${offset + i + 1}`,
           content: `Zawartość przepisu ${offset + i + 1}. To jest przykładowy opis.`,
@@ -53,9 +58,40 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
           original_recipe_id: i % 5 === 0 ? 1 : null,
         }));
 
+        // Symulacja filtrowania jeśli podano wyszukiwanie
+        if (search) {
+          const searchLower = search.toLowerCase();
+          mockRecipes = mockRecipes.filter(
+            (recipe) =>
+              recipe.title.toLowerCase().includes(searchLower) ||
+              recipe.content.toLowerCase().includes(searchLower) ||
+              (recipe.additional_params && recipe.additional_params.toLowerCase().includes(searchLower))
+          );
+
+          // Dodajmy kilka przepisów tematycznych, gdy użytkownik czegoś szuka
+          if (mockRecipes.length < 3) {
+            for (let i = 0; i < 3; i++) {
+              mockRecipes.push({
+                id: 1000 + i,
+                title: `${search} specjalny ${i + 1}`,
+                content: `Specjalny przepis zawierający "${search}". Przygotowanie: [...]`,
+                additional_params: "dopasowany wynik wyszukiwania",
+                user_id: "123",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                ai_generated: true,
+                original_recipe_id: null,
+              });
+            }
+          }
+        }
+
+        // Symulacja mniejszej liczby wyników przy wyszukiwaniu
+        const mockTotal = search ? Math.min(mockRecipes.length + 5, 30) : 100;
+
         const mockResponse: PaginatedRecipesDto = {
-          data: mockRecipes,
-          total: 100,
+          data: mockRecipes.slice(0, limit),
+          total: mockTotal,
           limit,
           offset,
         };
@@ -71,7 +107,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
     };
 
     fetchRecipes();
-  }, [limit, offset, sort, order, refresh]);
+  }, [limit, offset, sort, order, search, refresh]);
 
   const refetch = () => setRefresh((prev) => prev + 1);
 

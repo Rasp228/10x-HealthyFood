@@ -118,3 +118,60 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Animacje View Transitions */
+@keyframes slide-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-to-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(root) {
+  animation: fade-out 0.5s ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+::view-transition-old(slide) {
+  animation: slide-to-left 0.4s ease-out forwards;
+}
+
+::view-transition-new(slide) {
+  animation: slide-from-right 0.4s ease-out forwards;
+}

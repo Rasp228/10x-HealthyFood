@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from "react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../types";
 import { useRecipeMutations } from "../hooks/useRecipeMutations";
+
+// Schemat walidacji Zod
+const recipeSchema = z.object({
+  title: z.string().min(1, "Tytuł jest wymagany"),
+  content: z
+    .string()
+    .min(1, "Treść przepisu jest wymagana")
+    .max(5000, "Treść przepisu nie może przekraczać 5000 znaków"),
+  additional_params: z
+    .string()
+    .max(5000, "Dodatkowe parametry nie mogą przekraczać 5000 znaków")
+    .optional()
+    .nullable()
+    .transform((val) => (val === "" ? null : val)),
+});
 
 interface RecipeFormValues {
   title: string;
@@ -55,33 +71,31 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
     // Usuwamy błąd po zmianie wartości pola
     if (errors[name]) {
       setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [name]: removed, ...rest } = prev;
+        return rest;
       });
     }
   };
 
-  // Walidacja formularza
+  // Walidacja formularza z użyciem Zod
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formValues.title.trim()) {
-      newErrors.title = "Tytuł jest wymagany";
+    try {
+      recipeSchema.parse(formValues);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0].toString()] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
     }
-
-    if (!formValues.content.trim()) {
-      newErrors.content = "Treść przepisu jest wymagana";
-    } else if (formValues.content.length > 5000) {
-      newErrors.content = "Treść przepisu nie może przekraczać 5000 znaków";
-    }
-
-    if (formValues.additional_params && formValues.additional_params.length > 5000) {
-      newErrors.additional_params = "Dodatkowe parametry nie mogą przekraczać 5000 znaków";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   // Obsługa zatwierdzenia formularza
@@ -182,8 +196,14 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               className={`w-full rounded-md border p-2 ${errors.title ? "border-red-300" : "border-input"}`}
               placeholder="Wprowadź tytuł przepisu"
               disabled={isLoading}
+              aria-invalid={!!errors.title}
+              aria-describedby={errors.title ? "title-error" : undefined}
             />
-            {errors.title && <p className="text-xs text-red-500">{errors.title}</p>}
+            {errors.title && (
+              <p className="text-xs text-red-500" id="title-error">
+                {errors.title}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -199,9 +219,17 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               className={`w-full rounded-md border p-2 ${errors.content ? "border-red-300" : "border-input"}`}
               placeholder="Wprowadź treść przepisu (możesz używać składni Markdown)"
               disabled={isLoading}
+              aria-invalid={!!errors.content}
+              aria-describedby={errors.content ? "content-error" : undefined}
             />
-            {errors.content && <p className="text-xs text-red-500">{errors.content}</p>}
-            <p className="text-xs text-muted-foreground">Możesz używać składni Markdown do formatowania treści.</p>
+            {errors.content && (
+              <p className="text-xs text-red-500" id="content-error">
+                {errors.content}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Możesz używać składni Markdown do formatowania treści. Maksymalna długość: 5000 znaków.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -217,8 +245,15 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               className={`w-full rounded-md border p-2 ${errors.additional_params ? "border-red-300" : "border-input"}`}
               placeholder="np. wegetariański, bezglutenowy (oddzielone przecinkami)"
               disabled={isLoading}
+              aria-invalid={!!errors.additional_params}
+              aria-describedby={errors.additional_params ? "params-error" : undefined}
             />
-            {errors.additional_params && <p className="text-xs text-red-500">{errors.additional_params}</p>}
+            {errors.additional_params && (
+              <p className="text-xs text-red-500" id="params-error">
+                {errors.additional_params}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">Maksymalna długość: 5000 znaków.</p>
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
