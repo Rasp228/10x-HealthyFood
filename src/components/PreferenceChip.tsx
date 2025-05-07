@@ -13,6 +13,9 @@ const Input = ({
   placeholder,
   disabled,
   maxLength,
+  "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedby,
 }: {
   type: string;
   value: string;
@@ -21,6 +24,9 @@ const Input = ({
   placeholder?: string;
   disabled?: boolean;
   maxLength?: number;
+  "aria-label"?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) => (
   <input
     type={type}
@@ -30,6 +36,9 @@ const Input = ({
     placeholder={placeholder}
     disabled={disabled}
     maxLength={maxLength}
+    aria-label={ariaLabel}
+    aria-invalid={ariaInvalid}
+    aria-describedby={ariaDescribedby}
   />
 );
 
@@ -135,7 +144,10 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
   };
 
   return (
-    <div className={`rounded-lg p-2 mb-2 ${bgColorClass} transition-all flex items-center justify-between shadow-sm`}>
+    <div
+      className={`rounded-lg p-2 mb-2 ${bgColorClass} transition-all flex items-center justify-between shadow-sm`}
+      role="listitem"
+    >
       {isEditing ? (
         <div className="flex flex-col w-full">
           <div className="flex items-center gap-2">
@@ -147,6 +159,9 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
               placeholder="Nowa wartość"
               disabled={isLoading}
               maxLength={50}
+              aria-label="Edytuj preferencję"
+              aria-invalid={!!error}
+              aria-describedby={error ? "edit-error" : undefined}
             />
             <Button
               variant="ghost"
@@ -154,6 +169,7 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
               onClick={saveChanges}
               disabled={isLoading}
               className="h-8 w-8 bg-green-200 hover:bg-green-300 dark:bg-green-800 dark:hover:bg-green-700"
+              aria-label="Zapisz preferencję"
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -163,11 +179,16 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
               onClick={cancelEditing}
               disabled={isLoading}
               className="h-8 w-8 bg-red-200 hover:bg-red-300 dark:bg-red-800 dark:hover:bg-red-700"
+              aria-label="Anuluj edycję"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-          {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+          {error && (
+            <p id="edit-error" className="text-red-500 text-xs mt-1" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       ) : (
         <>
@@ -182,6 +203,7 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
               onClick={startEditing}
               disabled={isLoading}
               className="h-7 w-7 hover:bg-black/10 dark:hover:bg-white/10"
+              aria-label={`Edytuj preferencję: ${preference.value}`}
             >
               <Edit2 className="h-3.5 w-3.5" />
             </Button>
@@ -191,6 +213,7 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
               onClick={openDeleteConfirm}
               disabled={isLoading}
               className="h-7 w-7 hover:bg-black/10 dark:hover:bg-white/10"
+              aria-label={`Usuń preferencję: ${preference.value}`}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

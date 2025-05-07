@@ -134,11 +134,9 @@ export default function HomePage() {
   // Renderowanie stanu ładowania przy pierwszym ładowaniu
   if (isLoading && recipes.length === 0 && !debouncedFilterText) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Ładowanie przepisów...</p>
-        </div>
+      <div className="text-center py-8" aria-live="polite" aria-busy="true">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="mt-2 text-muted-foreground">Ładowanie przepisów...</p>
       </div>
     );
   }

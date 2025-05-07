@@ -3,184 +3,15 @@ import { Button } from "@/components/ui/button";
 import PreferenceChip from "./PreferenceChip";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
+import { usePreferences } from "../hooks/usePreferences";
 import { z } from "zod";
-import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand } from "../types";
+import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferenceCategoryEnum } from "../types";
 
 // Schemat walidacji dla nowej preferencji
 const preferenceSchema = z.object({
   category: z.string().min(1, "Kategoria jest wymagana"),
   value: z.string().min(1, "Wartość jest wymagana").max(50, "Wartość nie może przekraczać 50 znaków"),
 });
-
-// Mock dla danych preferencji
-const mockPreferences: PreferenceDto[] = [
-  {
-    id: 1,
-    category: "diet",
-    value: "Wegetariańska",
-    user_id: "123",
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-  {
-    id: 2,
-    category: "allergy",
-    value: "Orzechy",
-    user_id: "123",
-    created_at: new Date(Date.now() - 25 * 86400000).toISOString(),
-  },
-  {
-    id: 3,
-    category: "dislike",
-    value: "Brokuły",
-    user_id: "123",
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-  },
-  {
-    id: 4,
-    category: "like",
-    value: "Truskawki",
-    user_id: "123",
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  {
-    id: 5,
-    category: "excluded",
-    value: "Gluten",
-    user_id: "123",
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-];
-
-// Hook do zarządzania preferencjami użytkownika (mockowane dane)
-function useMockPreferences() {
-  const [preferences, setPreferences] = useState<PreferenceDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  // Pobieranie preferencji (mockowane)
-  const fetchPreferences = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setPreferences(mockPreferences);
-      return { data: mockPreferences, total: mockPreferences.length, limit: 50, offset: 0 };
-    } catch (err) {
-      const thrownError = err instanceof Error ? err : new Error("Nieznany błąd podczas pobierania preferencji");
-      setError(thrownError);
-      throw thrownError;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Dodawanie nowej preferencji (mockowane)
-  const createPreference = async (preference: CreatePreferenceCommand): Promise<PreferenceDto> => {
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // Generowanie nowej preferencji
-      const newPreference: PreferenceDto = {
-        id: Math.max(0, ...preferences.map((p) => p.id)) + 1,
-        category: preference.category,
-        value: preference.value,
-        user_id: "123",
-        created_at: new Date().toISOString(),
-      };
-
-      setPreferences((prev) => [...prev, newPreference]);
-      return newPreference;
-    } catch (err) {
-      const thrownError = err instanceof Error ? err : new Error("Nieznany błąd podczas dodawania preferencji");
-      setError(thrownError);
-      throw thrownError;
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  // Aktualizacja istniejącej preferencji (mockowane)
-  const updatePreference = async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto> => {
-    setIsUpdating(true);
-    setError(null);
-
-    try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // Znalezienie i aktualizacja preferencji
-      const existingPref = preferences.find((p) => p.id === id);
-      if (!existingPref) {
-        throw new Error("Nie znaleziono preferencji o podanym ID");
-      }
-
-      const updatedPreference: PreferenceDto = {
-        ...existingPref,
-        category: preference.category,
-        value: preference.value,
-      };
-
-      setPreferences((prev) => prev.map((p) => (p.id === id ? updatedPreference : p)));
-      return updatedPreference;
-    } catch (err) {
-      const thrownError = err instanceof Error ? err : new Error("Nieznany błąd podczas aktualizacji preferencji");
-      setError(thrownError);
-      throw thrownError;
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Usuwanie preferencji (mockowane)
-  const deletePreference = async (id: number): Promise<boolean> => {
-    setIsDeleting(true);
-    setError(null);
-
-    try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Sprawdzenie czy preferencja istnieje
-      const existsIndex = preferences.findIndex((p) => p.id === id);
-      if (existsIndex === -1) {
-        throw new Error("Nie znaleziono preferencji o podanym ID");
-      }
-
-      // Aktualizacja stanu
-      setPreferences((prev) => prev.filter((p) => p.id !== id));
-      return true;
-    } catch (err) {
-      const thrownError = err instanceof Error ? err : new Error("Nieznany błąd podczas usuwania preferencji");
-      setError(thrownError);
-      throw thrownError;
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  return {
-    preferences,
-    total: preferences.length,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    error,
-    fetchPreferences,
-    createPreference,
-    updatePreference,
-    deletePreference,
-  };
-}
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -195,9 +26,12 @@ export default function ProfilePage() {
     createPreference,
     updatePreference,
     deletePreference,
-  } = useMockPreferences();
+  } = usePreferences();
 
-  const [newPreference, setNewPreference] = useState<CreatePreferenceCommand>({ category: "diet", value: "" });
+  const [newPreference, setNewPreference] = useState<CreatePreferenceCommand>({
+    category: "diety" as PreferenceCategoryEnum,
+    value: "",
+  });
   const [formError, setFormError] = useState("");
   const [stats, setStats] = useState({ totalRecipes: 0, aiGenerated: 0 });
 
@@ -205,8 +39,8 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        await fetchPreferences();
-      } catch (err) {
+        await fetchPreferences({ limit: 50 });
+      } catch {
         showToast("Błąd podczas ładowania preferencji", "error");
       }
     };
@@ -216,7 +50,7 @@ export default function ProfilePage() {
 
   // Pobieranie statystyk (mockowane)
   useEffect(() => {
-    // Mockowane dane statystyk
+    // Tymczasowo mockowane dane statystyk (docelowo należy zaimplementować API)
     setStats({
       totalRecipes: 12,
       aiGenerated: 4,
@@ -234,12 +68,10 @@ export default function ProfilePage() {
 
   // Mapowanie kategorii na etykiety dla UI
   const categoryLabels: Record<string, string> = {
-    diet: "Diety",
-    allergy: "Alergie",
-    like: "Produkty lubiane",
-    dislike: "Produkty nielubiane",
-    excluded: "Produkty wykluczone",
-    other: "Inne",
+    diety: "Diety",
+    lubiane: "Produkty lubiane",
+    nielubiane: "Produkty nielubiane",
+    wykluczone: "Produkty wykluczone",
   };
 
   // Obsługa dodawania nowej preferencji
@@ -272,8 +104,13 @@ export default function ProfilePage() {
   // Obsługa aktualizacji preferencji
   const handleUpdatePreference = async (id: number, value: string) => {
     try {
+      const preference = preferences.find((p) => p.id === id);
+      if (!preference) {
+        throw new Error("Nie znaleziono preferencji o podanym ID");
+      }
+
       const updateData: UpdatePreferenceCommand = {
-        category: preferences.find((p) => p.id === id)?.category || "other",
+        category: preference.category as PreferenceCategoryEnum,
         value,
       };
 
@@ -305,9 +142,18 @@ export default function ProfilePage() {
         day: "numeric",
       };
       return new Date(dateString).toLocaleDateString("pl", options);
-    } catch (e) {
+    } catch {
       return dateString;
     }
+  };
+
+  // Renderowanie daty utworzenia konta
+  const renderAccountCreationDate = () => {
+    if (!user) return "N/A";
+
+    // Dodajemy mockowaną datę na potrzeby implementacji (zastąpi się prawdziwą datą z Supabase)
+    const mockCreationDate = "2023-01-15T12:00:00Z";
+    return formatDate(mockCreationDate);
   };
 
   return (
@@ -325,11 +171,11 @@ export default function ProfilePage() {
             </div>
             <div>
               <span className="text-muted-foreground">Data utworzenia konta:</span>
-              <span className="ml-2">{user?.created_at ? formatDate(user.created_at) : "N/A"}</span>
+              <span className="ml-2">{renderAccountCreationDate()}</span>
             </div>
             <div className="pt-2">
               <span className="text-muted-foreground">Statystyki:</span>
-              <ul className="mt-1 ml-4 list-disc text-sm">
+              <ul className="mt-1 ml-4 list-disc text-sm" aria-label="Statystyki użytkownika">
                 <li>
                   <span className="text-muted-foreground">Liczba przepisów:</span>{" "}
                   <span className="font-medium">{stats.totalRecipes}</span>
@@ -359,16 +205,21 @@ export default function ProfilePage() {
               <select
                 id="category"
                 value={newPreference.category}
-                onChange={(e) => setNewPreference({ ...newPreference, category: e.target.value })}
+                onChange={(e) =>
+                  setNewPreference({
+                    ...newPreference,
+                    category: e.target.value as PreferenceCategoryEnum,
+                  })
+                }
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 disabled={isCreating}
+                aria-label="Wybierz kategorię preferencji"
+                aria-invalid={false}
               >
-                <option value="diet">Dieta</option>
-                <option value="allergy">Alergia</option>
-                <option value="like">Lubię</option>
-                <option value="dislike">Nie lubię</option>
-                <option value="excluded">Wykluczony produkt</option>
-                <option value="other">Inne</option>
+                <option value="diety">Dieta</option>
+                <option value="lubiane">Lubię</option>
+                <option value="nielubiane">Nie lubię</option>
+                <option value="wykluczone">Wykluczony produkt</option>
               </select>
             </div>
             <div>
@@ -385,14 +236,26 @@ export default function ProfilePage() {
                   placeholder="np. Wegetariańska"
                   maxLength={50}
                   disabled={isCreating}
+                  aria-label="Wartość preferencji"
+                  aria-invalid={!!formError}
+                  aria-describedby={formError ? "preference-error" : undefined}
+                  required
                 />
-                <Button onClick={handleAddPreference} disabled={isCreating || total >= 50}>
+                <Button
+                  onClick={handleAddPreference}
+                  disabled={isCreating || total >= 50}
+                  aria-label="Dodaj preferencję"
+                >
                   {isCreating ? "Dodawanie..." : "Dodaj"}
                 </Button>
               </div>
-              {formError && <p className="text-red-500 text-xs mt-1">{formError}</p>}
+              {formError && (
+                <p id="preference-error" className="text-red-500 text-xs mt-1" role="alert">
+                  {formError}
+                </p>
+              )}
               {total >= 50 && (
-                <p className="text-amber-500 text-xs mt-1">
+                <p className="text-amber-500 text-xs mt-1" role="alert">
                   Osiągnięto maksymalną liczbę preferencji. Usuń niektóre, aby dodać nowe.
                 </p>
               )}
@@ -406,25 +269,25 @@ export default function ProfilePage() {
         <h2 className="text-xl font-semibold mb-4">Twoje preferencje</h2>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-md mb-4 dark:bg-red-950 dark:text-red-400">
+          <div className="bg-red-50 text-red-600 p-4 rounded-md mb-4 dark:bg-red-950 dark:text-red-400" role="alert">
             {error.message}
           </div>
         )}
 
         {isLoading && !preferences.length ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8" aria-live="polite" aria-busy="true">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <p className="mt-2 text-muted-foreground">Ładowanie preferencji...</p>
           </div>
         ) : !preferences.length ? (
-          <div className="text-center py-8 bg-muted/50 rounded-lg">
+          <div className="text-center py-8 bg-muted/50 rounded-lg" aria-live="polite">
             <p className="text-muted-foreground">Nie dodano jeszcze żadnych preferencji</p>
             <p className="text-sm mt-1">
               Dodaj swoje preferencje powyżej, aby AI mogło generować lepiej dopasowane przepisy
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6" role="region" aria-label="Lista twoich preferencji">
             {Object.entries(preferencesByCategory).map(([category, preferences]) => (
               <div key={category} className="bg-card rounded-lg p-4 shadow-sm">
                 <h3 className="font-medium text-lg mb-3">{categoryLabels[category] || category}</h3>
@@ -435,6 +298,7 @@ export default function ProfilePage() {
                       preference={pref}
                       onUpdate={handleUpdatePreference}
                       onDelete={handleDeletePreference}
+                      categoryLabel={undefined}
                     />
                   ))}
                 </div>

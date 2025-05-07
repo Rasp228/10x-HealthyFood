@@ -45,53 +45,104 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
         // Mockowanie danych dla celów implementacji
         await new Promise((resolve) => setTimeout(resolve, 800));
 
-        // Tworzymy przykładowe dane
-        let mockRecipes: RecipeDto[] = Array.from({ length: limit }, (_, i) => ({
-          id: offset + i + 1,
-          title: `Przepis ${offset + i + 1}`,
-          content: `Zawartość przepisu ${offset + i + 1}. To jest przykładowy opis.`,
-          additional_params: i % 2 === 0 ? "bezglutenowy, wegetariański" : null,
-          user_id: "123",
-          created_at: new Date(Date.now() - i * 86400000).toISOString(),
-          updated_at: new Date(Date.now() - i * 43200000).toISOString(),
-          ai_generated: i % 3 === 0,
-          original_recipe_id: i % 5 === 0 ? 1 : null,
-        }));
+        // Tworzymy większy zbiór przykładowych danych dla lepszej filtracji
+        const allMockRecipes: RecipeDto[] = Array.from({ length: 50 }, (_, i) => {
+          const recipeTypes = [
+            "Sałatka",
+            "Zupa",
+            "Ciasto",
+            "Deser",
+            "Koktajl",
+            "Danie główne",
+            "Przekąska",
+            "Śniadanie",
+            "Kolacja",
+          ];
+          const ingredients = [
+            "pomidory",
+            "ogórki",
+            "cebula",
+            "czosnek",
+            "kurczak",
+            "wołowina",
+            "ryż",
+            "makaron",
+            "ziemniaki",
+            "marchew",
+            "brokuły",
+            "szpinak",
+            "jajka",
+            "mleko",
+            "śmietana",
+            "ser",
+            "masło",
+            "oliwa",
+            "mąka",
+            "cukier",
+            "sól",
+            "pieprz",
+            "bazylia",
+            "oregano",
+          ];
 
-        // Symulacja filtrowania jeśli podano wyszukiwanie
-        if (search) {
-          const searchLower = search.toLowerCase();
-          mockRecipes = mockRecipes.filter(
+          // Losowo wybieramy typ przepisu i składniki
+          const recipeType = recipeTypes[Math.floor(Math.random() * recipeTypes.length)];
+          const recipeIngredient1 = ingredients[Math.floor(Math.random() * ingredients.length)];
+          const recipeIngredient2 = ingredients[Math.floor(Math.random() * ingredients.length)];
+          const recipeIngredient3 = ingredients[Math.floor(Math.random() * ingredients.length)];
+
+          const dietary = ["wegetariański", "wegański", "bezglutenowy", "niskokaloryczny", "bez laktozy"];
+          const dietaryTags =
+            i % 3 === 0
+              ? `${dietary[i % dietary.length]}, ${dietary[(i + 1) % dietary.length]}`
+              : dietary[i % dietary.length];
+
+          return {
+            id: i + 1,
+            title: `${recipeType} z ${recipeIngredient1} i ${recipeIngredient2}`,
+            content: `Pyszny przepis na ${recipeType}. Składniki: ${recipeIngredient1}, ${recipeIngredient2}, ${recipeIngredient3}. 
+                     Przygotowanie: Pokrój wszystkie składniki, wymieszaj i gotuj przez 15 minut.`,
+            additional_params: dietaryTags,
+            user_id: "123",
+            created_at: new Date(Date.now() - i * 86400000).toISOString(),
+            updated_at: new Date(Date.now() - i * 43200000).toISOString(),
+            ai_generated: i % 3 === 0,
+            original_recipe_id: i % 5 === 0 ? 1 : null,
+          };
+        });
+
+        // Sortowanie według wybranego pola
+        const sortedRecipes = [...allMockRecipes];
+        if (sort === "title") {
+          sortedRecipes.sort((a, b) => {
+            return order === "asc" ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
+          });
+        } else if (sort === "created_at" || sort === "updated_at") {
+          sortedRecipes.sort((a, b) => {
+            const dateA = new Date(a[sort]).getTime();
+            const dateB = new Date(b[sort]).getTime();
+            return order === "asc" ? dateA - dateB : dateB - dateA;
+          });
+        }
+
+        // Filtrowanie wyników jeśli podano wyszukiwanie
+        let filteredRecipes = sortedRecipes;
+        if (search && search.trim() !== "") {
+          const searchLower = search.toLowerCase().trim();
+          filteredRecipes = sortedRecipes.filter(
             (recipe) =>
               recipe.title.toLowerCase().includes(searchLower) ||
               recipe.content.toLowerCase().includes(searchLower) ||
               (recipe.additional_params && recipe.additional_params.toLowerCase().includes(searchLower))
           );
-
-          // Dodajmy kilka przepisów tematycznych, gdy użytkownik czegoś szuka
-          if (mockRecipes.length < 3) {
-            for (let i = 0; i < 3; i++) {
-              mockRecipes.push({
-                id: 1000 + i,
-                title: `${search} specjalny ${i + 1}`,
-                content: `Specjalny przepis zawierający "${search}". Przygotowanie: [...]`,
-                additional_params: "dopasowany wynik wyszukiwania",
-                user_id: "123",
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                ai_generated: true,
-                original_recipe_id: null,
-              });
-            }
-          }
         }
 
-        // Symulacja mniejszej liczby wyników przy wyszukiwaniu
-        const mockTotal = search ? Math.min(mockRecipes.length + 5, 30) : 100;
+        // Zastosowanie paginacji
+        const paginatedRecipes = filteredRecipes.slice(offset, offset + limit);
 
         const mockResponse: PaginatedRecipesDto = {
-          data: mockRecipes.slice(0, limit),
-          total: mockTotal,
+          data: paginatedRecipes,
+          total: filteredRecipes.length,
           limit,
           offset,
         };

@@ -6,7 +6,7 @@ import { useRecipeMutations } from "../hooks/useRecipeMutations";
 
 // Schemat walidacji Zod
 const recipeSchema = z.object({
-  title: z.string().min(1, "Tytuł jest wymagany"),
+  title: z.string().min(1, "Tytuł jest wymagany").max(100, "Tytuł nie może przekraczać 100 znaków"),
   content: z
     .string()
     .min(1, "Treść przepisu jest wymagana")
@@ -64,20 +64,6 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
     setErrors({});
   }, [recipe, isOpen]);
 
-  // Obsługa zmian pól formularza
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormValues((prev) => ({ ...prev, [name]: value }));
-    // Usuwamy błąd po zmianie wartości pola
-    if (errors[name]) {
-      setErrors((prev) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [name]: removed, ...rest } = prev;
-        return rest;
-      });
-    }
-  };
-
   // Walidacja formularza z użyciem Zod
   const validate = (): boolean => {
     try {
@@ -95,6 +81,40 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
         setErrors(newErrors);
       }
       return false;
+    }
+  };
+
+  // Walidacja pojedynczego pola (dla walidacji w czasie rzeczywistym)
+  const validateField = (name: keyof RecipeFormValues, value: string): string | null => {
+    try {
+      const fieldSchema = recipeSchema.shape[name];
+      fieldSchema.parse(value);
+      return null;
+    } catch (error) {
+      if (error instanceof z.ZodError && error.errors.length > 0) {
+        return error.errors[0].message;
+      }
+      return null;
+    }
+  };
+
+  // Rozszerzona obsługa zmian pól formularza z walidacją w czasie rzeczywistym
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+
+    // Walidacja w czasie rzeczywistym tylko dla pól, które zostały już dotknięte
+    if (errors[name]) {
+      const fieldError = validateField(name as keyof RecipeFormValues, value);
+      if (fieldError) {
+        setErrors((prev) => ({ ...prev, [name]: fieldError }));
+      } else {
+        setErrors((prev) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [name]: removed, ...rest } = prev;
+          return rest;
+        });
+      }
     }
   };
 
@@ -182,7 +202,7 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
               Tytuł przepisu*
@@ -193,9 +213,18 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               name="title"
               value={formValues.title}
               onChange={handleChange}
+              onBlur={() => {
+                const error = validateField("title", formValues.title);
+                if (error) {
+                  setErrors((prev) => ({ ...prev, title: error }));
+                }
+              }}
               className={`w-full rounded-md border p-2 ${errors.title ? "border-red-300" : "border-input"}`}
               placeholder="Wprowadź tytuł przepisu"
               disabled={isLoading}
+              required
+              maxLength={100}
+              aria-required="true"
               aria-invalid={!!errors.title}
               aria-describedby={errors.title ? "title-error" : undefined}
             />
@@ -215,10 +244,19 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               name="content"
               value={formValues.content}
               onChange={handleChange}
+              onBlur={() => {
+                const error = validateField("content", formValues.content);
+                if (error) {
+                  setErrors((prev) => ({ ...prev, content: error }));
+                }
+              }}
               rows={10}
               className={`w-full rounded-md border p-2 ${errors.content ? "border-red-300" : "border-input"}`}
               placeholder="Wprowadź treść przepisu (możesz używać składni Markdown)"
               disabled={isLoading}
+              required
+              maxLength={5000}
+              aria-required="true"
               aria-invalid={!!errors.content}
               aria-describedby={errors.content ? "content-error" : undefined}
             />
@@ -242,9 +280,16 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
               name="additional_params"
               value={formValues.additional_params}
               onChange={handleChange}
+              onBlur={() => {
+                const error = validateField("additional_params", formValues.additional_params || "");
+                if (error) {
+                  setErrors((prev) => ({ ...prev, additional_params: error }));
+                }
+              }}
               className={`w-full rounded-md border p-2 ${errors.additional_params ? "border-red-300" : "border-input"}`}
               placeholder="np. wegetariański, bezglutenowy (oddzielone przecinkami)"
               disabled={isLoading}
+              maxLength={5000}
               aria-invalid={!!errors.additional_params}
               aria-describedby={errors.additional_params ? "params-error" : undefined}
             />

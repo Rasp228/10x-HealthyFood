@@ -37,15 +37,27 @@
    - Usunięto niepotrzebne importy i zmienne w komponencie AIModal
    - Poprawiono wywołania funkcji showToast zgodnie z sygnaturą w useToast.ts
 
+8. **Optymalizacja UX i brakujące funkcjonalności**
+   - Dodano animacje przejść między widokami za pomocą Astro View Transitions API
+   - Zaimplementowano mechanizm wyszukiwania przepisów z funkcją debounce
+   - Naprawiono przełącznik motywu, aby zachowywał ustawienia podczas przejść między stronami i po odświeżeniu
+   - Przebudowano strukturę zarządzania motywem, przenosząc logikę do AppLayout.astro
+
+9. **Optymalizacja strony głównej**
+   - Usunięto paginację, aby wszystkie przepisy były widoczne na jednej stronie
+   - Uproszczono logikę sortowania i filtrowania
+   - Zaktualizowano interfejs do bardziej intuicyjnego użytkowania
+   - Poprawiono typy dla parametrów sortowania
+
 ## Kolejne kroki
 
 1. **Rozszerzenie formularza dodawania/edycji przepisu**:
-   - Dodanie walidacji pól formularza
+   - Dodanie walidacji pól formularza za pomocą biblioteki zod
+   - Dodanie walidacji na poziomie UI dla pól wymaganych
 
 2. **Implementacja widoku profilu użytkownika**:
    - Uzupełnienie funkcjonalności zarządzania preferencjami
+   - Dodanie możliwości edycji profilu użytkownika
 
-3. **Optymalizacja, poprawa UX i brakujące funkcjonalności**:
-   - Dodanie animacji przejść między widokami
-   - Implementacja wyszukiwania
-   - Sprawienie aby zmiana motywu nie zmieniała się po zmianie strony lub odświerzeniu
+3. **Dostępność i responsywność**:
+   - Dodanie atrybutów ARIA tam, gdzie są potrzebne

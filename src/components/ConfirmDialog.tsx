@@ -52,10 +52,18 @@ export default function ConfirmDialog({
   const styles = getSeverityStyles();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+      aria-describedby="dialog-message"
+    >
       <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
         <div className={`mb-4 flex items-center justify-between pb-3 ${styles.headerClass}`}>
-          <h2 className="text-xl font-bold">{title}</h2>
+          <h2 className="text-xl font-bold" id="dialog-title">
+            {title}
+          </h2>
           <button onClick={onCancel} className="rounded-full p-2 hover:bg-muted" aria-label="Zamknij">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -67,6 +75,7 @@ export default function ConfirmDialog({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M18 6 6 18"></path>
               <path d="m6 6 12 12"></path>
@@ -75,7 +84,7 @@ export default function ConfirmDialog({
         </div>
 
         <div className="mb-6 flex items-start space-x-4">
-          <div className={`mt-1 ${styles.iconClass}`}>
+          <div className={`mt-1 ${styles.iconClass}`} aria-hidden="true">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -92,7 +101,9 @@ export default function ConfirmDialog({
               <line x1="12" x2="12.01" y1="17" y2="17"></line>
             </svg>
           </div>
-          <p className="text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground" id="dialog-message">
+            {message}
+          </p>
         </div>
 
         <div className="flex justify-end space-x-4">

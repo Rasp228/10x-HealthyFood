@@ -288,6 +288,14 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
               <p className="text-xs text-muted-foreground">
                 Im więcej szczegółów podasz, tym lepiej AI dostosuje przepis do Twoich potrzeb.
               </p>
+              {mode === "generate" && (
+                <div className="mt-2 rounded-lg bg-purple-50 p-3 dark:bg-purple-950">
+                  <p className="text-xs text-purple-700 dark:text-purple-300">
+                    <span className="font-medium">Wskazówka:</span> Jeśli wszystkie pola pozostawisz puste, zostanie
+                    wygenerowany losowy przepis uwzględniający Twoje preferencje z profilu użytkownika.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">
