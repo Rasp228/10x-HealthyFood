@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Edit2, Check, Trash2 } from "lucide-react";
+import ConfirmDialog from "./ConfirmDialog";
 import type { PreferenceDto } from "../types";
 
 // Tymczasowy komponent Input, dopóki nie zostanie zaimplementowany w shadcn/ui
@@ -50,6 +51,7 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
   const [newValue, setNewValue] = useState(preference.value);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   // Kategorie i ich kolory tła
   const categoryColors: Record<string, string> = {
@@ -106,21 +108,30 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
   };
 
   // Usuwanie preferencji
-  const handleDelete = async () => {
-    if (confirm("Czy na pewno chcesz usunąć tę preferencję?")) {
-      setIsLoading(true);
-      try {
-        await onDelete(preference.id);
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Wystąpił błąd podczas usuwania");
-        }
-      } finally {
-        setIsLoading(false);
+  const handleDeleteConfirm = async () => {
+    setIsLoading(true);
+    try {
+      await onDelete(preference.id);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Wystąpił błąd podczas usuwania");
       }
+    } finally {
+      setIsLoading(false);
+      setIsConfirmDeleteOpen(false);
     }
+  };
+
+  // Otwieranie dialogu potwierdzenia usunięcia
+  const openDeleteConfirm = () => {
+    setIsConfirmDeleteOpen(true);
+  };
+
+  // Zamykanie dialogu potwierdzenia usunięcia
+  const closeDeleteConfirm = () => {
+    setIsConfirmDeleteOpen(false);
   };
 
   return (
@@ -177,7 +188,7 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleDelete}
+              onClick={openDeleteConfirm}
               disabled={isLoading}
               className="h-7 w-7 hover:bg-black/10 dark:hover:bg-white/10"
             >
@@ -186,6 +197,18 @@ export default function PreferenceChip({ preference, onUpdate, onDelete, categor
           </div>
         </>
       )}
+
+      {/* Dialog potwierdzenia usunięcia */}
+      <ConfirmDialog
+        isOpen={isConfirmDeleteOpen}
+        title="Usuń preferencję"
+        message={`Czy na pewno chcesz usunąć preferencję "${preference.value}"?`}
+        confirmLabel="Usuń"
+        cancelLabel="Anuluj"
+        onConfirm={handleDeleteConfirm}
+        onCancel={closeDeleteConfirm}
+        severity="danger"
+      />
     </div>
   );
 }

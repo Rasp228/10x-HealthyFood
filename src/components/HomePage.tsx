@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import RecipeCard from "./RecipeCard";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "../hooks/useToast";
 import { useFetchRecipes } from "../hooks/useRecipes";
 
 export default function HomePage() {
@@ -13,6 +15,9 @@ export default function HomePage() {
     sort: "created_at" as const,
     order: "desc" as const,
   });
+  const [recipeToDelete, setRecipeToDelete] = useState<number | null>(null);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const { showToast } = useToast();
 
   // Użycie hooka do pobrania przepisów
   const { data: recipes, total, isLoading, error, refetch } = useFetchRecipes(paginationParams);
@@ -51,13 +56,41 @@ export default function HomePage() {
   };
 
   const handleDeleteRecipe = (id: number) => {
-    console.log(`Usuwanie przepisu o id ${id}`);
-    // W rzeczywistej implementacji otwieralibyśmy dialog potwierdzenia
-    if (window.confirm("Czy na pewno chcesz usunąć ten przepis?")) {
-      // Tutaj wykonywalibyśmy faktyczne usunięcie
-      // await deleteRecipe(id)
-      // refetch()
+    // Zapisujemy ID przepisu do usunięcia i otwieramy dialog potwierdzenia
+    setRecipeToDelete(id);
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (recipeToDelete === null) return;
+
+    try {
+      console.log(`Usuwanie przepisu o id ${recipeToDelete}`);
+      // W rzeczywistej implementacji wykonywalibyśmy faktyczne usunięcie
+      // await deleteRecipe(recipeToDelete)
+
+      // Pokazujemy powiadomienie o sukcesie
+      showToast("Przepis został pomyślnie usunięty", "success");
+
+      // Odświeżamy listę przepisów
+      refetch();
+    } catch (err) {
+      // Pokazujemy powiadomienie o błędzie
+      let errorMessage = "Wystąpił błąd podczas usuwania przepisu";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      showToast(errorMessage, "error");
+    } finally {
+      // Zamykamy dialog i resetujemy stan
+      setIsConfirmDeleteOpen(false);
+      setRecipeToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmDeleteOpen(false);
+    setRecipeToDelete(null);
   };
 
   const handleAIRecipe = (id: number) => {
@@ -144,8 +177,9 @@ export default function HomePage() {
             </button>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsAIModalOpen(true)} className="gap-2">
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsAIModalOpen(true)} className="gap-2 text-purple-500">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -157,13 +191,15 @@ export default function HomePage() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.29 7 12 12 20.71 7"></polyline>
-              <line x1="12" y1="22" x2="12" y2="12"></line>
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m4.9 4.9 14.2 14.2"></path>
+              <path d="M9 9h.01"></path>
+              <path d="M15 15h.01"></path>
             </svg>
-            Generuj z AI
+            Wygeneruj z AI
           </Button>
-          <Button onClick={() => setIsRecipeFormOpen(true)}>
+
+          <Button variant="default" onClick={() => setIsRecipeFormOpen(true)} className="gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -174,10 +210,9 @@ export default function HomePage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="mr-2"
             >
-              <path d="M5 12h14"></path>
               <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
             </svg>
             Dodaj przepis
           </Button>
@@ -186,33 +221,49 @@ export default function HomePage() {
 
       {/* Lista przepisów */}
       {recipes.length === 0 ? (
-        <div className="mt-12 rounded-lg border-2 border-dashed border-muted p-8 text-center">
-          <svg
-            className="mx-auto mb-4 h-12 w-12 text-muted-foreground"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 3v3a2 2 0 0 1-2 2H3"></path>
-            <path d="M21 8v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path>
-            <path d="M21 12H8"></path>
-            <path d="M8 16h13"></path>
-          </svg>
+        <div className="rounded-lg border-2 border-dashed border-muted p-12 text-center">
           <h3 className="mb-2 text-lg font-medium">Brak przepisów</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Nie znaleziono żadnych przepisów. Dodaj swój pierwszy przepis lub wygeneruj go za pomocą AI.
+          <p className="mb-6 text-sm text-muted-foreground">
+            Nie znaleziono żadnych przepisów. Dodaj nowy przepis lub wygeneruj z pomocą AI.
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button variant="outline" onClick={() => setIsAIModalOpen(true)}>
-              Generuj z AI
+          <div className="flex justify-center gap-4">
+            <Button variant="outline" onClick={() => setIsAIModalOpen(true)} className="gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m4.9 4.9 14.2 14.2"></path>
+                <path d="M9 9h.01"></path>
+                <path d="M15 15h.01"></path>
+              </svg>
+              Wygeneruj z AI
             </Button>
-            <Button onClick={() => setIsRecipeFormOpen(true)}>Dodaj przepis</Button>
+
+            <Button variant="default" onClick={() => setIsRecipeFormOpen(true)} className="gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+              Dodaj przepis
+            </Button>
           </div>
         </div>
       ) : (
@@ -253,6 +304,7 @@ export default function HomePage() {
                 </svg>
                 Poprzednia
               </Button>
+
               <Button
                 variant="outline"
                 onClick={handleNextPage}
@@ -279,10 +331,17 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Tu w rzeczywistej implementacji byłyby modale:
-          - Modal formularza przepisu (RecipeFormModal) 
-          - Modal AI (AIModal)
-      */}
+      {/* Dialog potwierdzenia usunięcia */}
+      <ConfirmDialog
+        isOpen={isConfirmDeleteOpen}
+        title="Usuń przepis"
+        message="Czy na pewno chcesz usunąć ten przepis? Tej operacji nie można cofnąć."
+        confirmLabel="Usuń"
+        cancelLabel="Anuluj"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        severity="danger"
+      />
     </div>
   );
 }

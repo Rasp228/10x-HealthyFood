@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRecipe } from "../hooks/useRecipe";
 import ActionPanel from "./ActionPanel";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "../hooks/useToast";
 import * as marked from "marked";
 
 interface RecipeDetailPageProps {
@@ -13,6 +15,7 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const { showToast } = useToast();
 
   // Funkcje do obsługi akcji
   const handleEdit = () => {
@@ -21,6 +24,33 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
 
   const handleDelete = () => {
     setIsConfirmDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      // W rzeczywistej implementacji tutaj byłoby wywołanie API
+      // await deleteRecipe(id)
+      console.log(`Usuwanie przepisu o id ${id}`);
+
+      // Pokazujemy powiadomienie o sukcesie
+      showToast("Przepis został pomyślnie usunięty", "success");
+
+      // Przekierowanie na stronę główną
+      window.location.href = "/";
+    } catch (err) {
+      // Pokazujemy powiadomienie o błędzie
+      let errorMessage = "Wystąpił błąd podczas usuwania przepisu";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      showToast(errorMessage, "error");
+    } finally {
+      setIsConfirmDeleteOpen(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmDeleteOpen(false);
   };
 
   const handleAIModify = () => {
@@ -145,10 +175,21 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
         <div dangerouslySetInnerHTML={{ __html: contentHtml }}></div>
       </div>
 
+      {/* Dialog potwierdzenia usunięcia */}
+      <ConfirmDialog
+        isOpen={isConfirmDeleteOpen}
+        title="Usuń przepis"
+        message={`Czy na pewno chcesz usunąć przepis "${recipe.title}"? Tej operacji nie można cofnąć.`}
+        confirmLabel="Usuń"
+        cancelLabel="Anuluj"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        severity="danger"
+      />
+
       {/* Tu w rzeczywistej implementacji byłyby modale:
           - Modal formularza przepisu (RecipeFormModal) 
           - Modal AI (AIModal)
-          - Modal potwierdzenia usunięcia (ConfirmDialog)
       */}
     </div>
   );
