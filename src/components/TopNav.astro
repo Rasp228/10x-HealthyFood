@@ -63,30 +63,26 @@
   </div>
 </header>
 
-<script is:inline>
-  // Obsługa przełączania motywu ciemny/jasny
-  const themeToggle = document.getElementById("theme-toggle");
-
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      document.documentElement.classList.toggle("dark");
-      localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
-    });
-  }
-
+<script>
   // Obsługa wylogowania
-  const logoutButton = document.getElementById("logout-button");
-
-  if (logoutButton) {
-    logoutButton.addEventListener("click", async () => {
-      try {
-        // To trzeba będzie zastąpić faktyczną implementacją wylogowania z Supabase
-        // const { error } = await supabase.auth.signOut();
+  document.addEventListener("DOMContentLoaded", function () {
+    const logoutButton = document.getElementById("logout-button");
+    if (logoutButton) {
+      logoutButton.addEventListener("click", function () {
         console.log("Wylogowano użytkownika");
         window.location.href = "/login";
-      } catch (error) {
-        console.error("Błąd podczas wylogowania:", error);
-      }
-    });
-  }
+      });
+    }
+  });
+
+  // Obsługa wylogowania przy przejściach stron
+  document.addEventListener("astro:page-load", function () {
+    const logoutButton = document.getElementById("logout-button");
+    if (logoutButton) {
+      logoutButton.addEventListener("click", function () {
+        console.log("Wylogowano użytkownika");
+        window.location.href = "/login";
+      });
+    }
+  });
 </script>

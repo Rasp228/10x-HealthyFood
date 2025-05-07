@@ -13,17 +13,15 @@ export default function HomePage() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
-  const [paginationParams, setPaginationParams] = useState({
-    limit: 9,
-    offset: 0,
-    sort: "created_at" as const,
-    order: "desc" as const,
+  const [sortParams, setSortParams] = useState({
+    sort: "created_at" as "created_at" | "updated_at" | "title",
+    order: "desc" as "desc" | "asc",
   });
   const [recipeToDelete, setRecipeToDelete] = useState<number | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const { showToast } = useToast();
 
-  // Użycie hooka do pobrania przepisów z uwzględnieniem wyszukiwania
+  // Użycie hooka do pobrania wszystkich przepisów z uwzględnieniem wyszukiwania i sortowania
   const {
     data: recipes,
     total,
@@ -31,20 +29,13 @@ export default function HomePage() {
     error,
     refetch,
   } = useFetchRecipes({
-    ...paginationParams,
+    ...sortParams,
     search: debouncedFilterText,
+    // Pobieramy wszystkie przepisy bez limitu i offsetu
   });
 
   // Implementacja debounce dla wyszukiwania
   useEffect(() => {
-    // Resetujemy offset przy zmianie wyszukiwania
-    if (debouncedFilterText !== filterText) {
-      setPaginationParams((prev) => ({
-        ...prev,
-        offset: 0, // Wracamy do pierwszej strony przy zmianie wyszukiwania
-      }));
-    }
-
     // Ustawiamy timeout dla debounce
     const timeoutId = setTimeout(() => {
       setDebouncedFilterText(filterText);
@@ -52,7 +43,7 @@ export default function HomePage() {
 
     // Sprzątamy timeout jeśli komponent zostanie odmontowany lub zmieni się filterText
     return () => clearTimeout(timeoutId);
-  }, [filterText, debouncedFilterText]);
+  }, [filterText]);
 
   // Obsługa zmiany filtra
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,39 +56,18 @@ export default function HomePage() {
     setDebouncedFilterText("");
   }, []);
 
-  // Obsługa stronicowania
-  const handleNextPage = () => {
-    if (paginationParams.offset + paginationParams.limit < total) {
-      setPaginationParams((prev) => ({
-        ...prev,
-        offset: prev.offset + prev.limit,
-      }));
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (paginationParams.offset > 0) {
-      setPaginationParams((prev) => ({
-        ...prev,
-        offset: Math.max(0, prev.offset - prev.limit),
-      }));
-    }
-  };
-
   // Obsługa sortowania
   const handleSortChange = (sortField: "created_at" | "updated_at" | "title") => {
-    setPaginationParams((prev) => ({
+    setSortParams((prev) => ({
       ...prev,
       sort: sortField,
-      offset: 0, // Resetujemy stronę przy zmianie sortowania
     }));
   };
 
   const handleOrderChange = () => {
-    setPaginationParams((prev) => ({
+    setSortParams((prev) => ({
       ...prev,
-      order: prev.order === "asc" ? "desc" : "asc",
-      offset: 0, // Resetujemy stronę przy zmianie kierunku sortowania
+      order: prev.order === "desc" ? "asc" : "desc",
     }));
   };
 
@@ -270,7 +240,7 @@ export default function HomePage() {
           <div className="relative mr-2">
             <select
               className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={paginationParams.sort}
+              value={sortParams.sort}
               onChange={(e) => handleSortChange(e.target.value as "created_at" | "updated_at" | "title")}
               aria-label="Sortuj według"
             >
@@ -281,9 +251,9 @@ export default function HomePage() {
             <button
               onClick={handleOrderChange}
               className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md border border-input hover:bg-muted"
-              aria-label={paginationParams.order === "asc" ? "Sortuj malejąco" : "Sortuj rosnąco"}
+              aria-label={sortParams.order === "desc" ? "Sortuj malejąco" : "Sortuj rosnąco"}
             >
-              {paginationParams.order === "asc" ? (
+              {sortParams.order === "desc" ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -381,7 +351,7 @@ export default function HomePage() {
       {debouncedFilterText && (
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            Znaleziono {total} wyników dla "{debouncedFilterText}"
+            Znaleziono {total} wyników dla &quot;{debouncedFilterText}&quot;
           </p>
         </div>
       )}
@@ -423,26 +393,6 @@ export default function HomePage() {
               />
             ))}
           </div>
-
-          {/* Paginacja */}
-          {total > paginationParams.limit && (
-            <div className="mt-8 flex items-center justify-between">
-              <Button variant="outline" onClick={handlePrevPage} disabled={paginationParams.offset === 0}>
-                Poprzednia strona
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Strona {Math.floor(paginationParams.offset / paginationParams.limit) + 1} z{" "}
-                {Math.ceil(total / paginationParams.limit)}
-              </span>
-              <Button
-                variant="outline"
-                onClick={handleNextPage}
-                disabled={paginationParams.offset + paginationParams.limit >= total}
-              >
-                Następna strona
-              </Button>
-            </div>
-          )}
         </div>
       )}
 

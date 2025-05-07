@@ -39,12 +39,43 @@ const { title = "HealthyMeal" } = Astro.props;
     <slot name="modals" />
 
     <script>
-      // Zachowanie stanu motywu podczas przejść między stronami
-      document.addEventListener("astro:after-swap", () => {
-        // Wczytaj preferencje motywu z localStorage
-        const theme = localStorage.getItem("theme");
+      // Obsługa przycisku motywu
+      function initThemeToggle() {
+        const themeToggle = document.getElementById("theme-toggle");
+        if (themeToggle) {
+          themeToggle.addEventListener("click", function () {
+            const isDark = document.documentElement.classList.toggle("dark");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+          });
+        }
+      }
 
-        // Zastosuj motyw do nowo załadowanej strony
+      // Obsługa przycisku wylogowania
+      function initLogoutButton() {
+        const logoutButton = document.getElementById("logout-button");
+        if (logoutButton) {
+          logoutButton.addEventListener("click", function () {
+            console.log("Wylogowano użytkownika");
+            window.location.href = "/login";
+          });
+        }
+      }
+
+      // Inicjalizacja przycisków po załadowaniu strony
+      document.addEventListener("DOMContentLoaded", function () {
+        initThemeToggle();
+        initLogoutButton();
+      });
+
+      // Inicjalizacja przycisków po przejściu między stronami
+      document.addEventListener("astro:page-load", function () {
+        initThemeToggle();
+        initLogoutButton();
+      });
+
+      // Zachowanie motywu podczas przejść między stronami
+      document.addEventListener("astro:after-swap", function () {
+        const theme = localStorage.getItem("theme");
         if (theme === "dark") {
           document.documentElement.classList.add("dark");
         } else if (theme === "light") {
