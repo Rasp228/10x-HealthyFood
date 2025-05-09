@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type {
   PreferenceDto,
   CreatePreferenceCommand,
@@ -76,7 +76,7 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
   });
 
   // Pobieranie preferencji (mockowane)
-  const fetchPreferences = async (params?: PaginationParams): Promise<PaginatedPreferencesDto | null> => {
+  const fetchPreferences = useCallback(async (params?: PaginationParams): Promise<PaginatedPreferencesDto | null> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -115,10 +115,10 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
 
       throw thrownError;
     }
-  };
+  }, []);
 
   // Dodawanie nowej preferencji (mockowane)
-  const createPreference = async (preference: CreatePreferenceCommand): Promise<PreferenceDto | null> => {
+  const createPreference = useCallback(async (preference: CreatePreferenceCommand): Promise<PreferenceDto | null> => {
     setState((prev) => ({ ...prev, isCreating: true, error: null }));
 
     try {
@@ -159,10 +159,10 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
 
       throw thrownError;
     }
-  };
+  }, []);
 
   // Aktualizacja istniejącej preferencji (mockowane)
-  const updatePreference = async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto | null> => {
+  const updatePreference = useCallback(async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto | null> => {
     setState((prev) => ({ ...prev, isUpdating: true, error: null }));
 
     try {
@@ -202,10 +202,10 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
 
       throw thrownError;
     }
-  };
+  }, []);
 
   // Usuwanie preferencji (mockowane)
-  const deletePreference = async (id: number): Promise<boolean> => {
+  const deletePreference = useCallback(async (id: number): Promise<boolean> => {
     setState((prev) => ({ ...prev, isDeleting: true, error: null }));
 
     try {
@@ -240,7 +240,7 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
 
       throw thrownError;
     }
-  };
+  }, []);
 
   return {
     ...state,

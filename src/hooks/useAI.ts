@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type {
   GenerateRecipeCommand,
   ModifyRecipeCommand,
@@ -36,7 +36,7 @@ export function useAI(): UseAIState & UseAIActions {
     error: null,
   });
 
-  const resetAIState = () => {
+  const resetAIState = useCallback(() => {
     setState({
       isGenerating: false,
       isModifying: false,
@@ -46,7 +46,7 @@ export function useAI(): UseAIState & UseAIActions {
       savedRecipe: null,
       error: null,
     });
-  };
+  }, []);
 
   const generateRecipe = async (params: GenerateRecipeCommand): Promise<GeneratedRecipeDto | null> => {
     setState((prev) => ({

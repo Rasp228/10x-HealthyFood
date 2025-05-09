@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -23,35 +23,38 @@ export function useToast(): UseToastState & UseToastActions {
     toasts: [],
   });
 
-  const showToast = (message: string, type: ToastType, duration = 5000) => {
-    const id = Date.now().toString();
-
-    const newToast: Toast = {
-      id,
-      message,
-      type,
-      duration,
-    };
-
-    setState((prev) => ({
-      ...prev,
-      toasts: [...prev.toasts, newToast],
-    }));
-
-    // Automatyczne ukrycie po czasie
-    if (duration > 0) {
-      setTimeout(() => {
-        hideToast(id);
-      }, duration);
-    }
-  };
-
-  const hideToast = (id: string) => {
+  const hideToast = useCallback((id: string) => {
     setState((prev) => ({
       ...prev,
       toasts: prev.toasts.filter((toast) => toast.id !== id),
     }));
-  };
+  }, []);
+
+  const showToast = useCallback(
+    (message: string, type: ToastType, duration = 5000) => {
+      const id = Date.now().toString();
+
+      const newToast: Toast = {
+        id,
+        message,
+        type,
+        duration,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        toasts: [...prev.toasts, newToast],
+      }));
+
+      // Automatyczne ukrycie po czasie
+      if (duration > 0) {
+        setTimeout(() => {
+          hideToast(id);
+        }, duration);
+      }
+    },
+    [hideToast]
+  );
 
   return {
     ...state,
