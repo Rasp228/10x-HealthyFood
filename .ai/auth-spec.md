@@ -217,6 +217,17 @@
 - Używana w routerach Astro do zabezpieczenia stron wymagających logowania
 - Przekierowywanie na stronę logowania z parametrem `redirectTo`
 
+#### 3.3.2 Hook zarządzania autentykacją (`/src/hooks/useAuth.ts`)
+- Główny hook integrujący React z Supabase Auth
+- Metody:
+  - `checkSession` - weryfikacja aktualnej sesji użytkownika z Supabase Auth
+  - `login` - logowanie użytkownika poprzez Supabase Auth API
+  - `register` - rejestracja nowego użytkownika poprzez Supabase Auth API
+  - `logout` - wylogowanie użytkownika poprzez Supabase Auth API
+- Obsługa błędów autentykacji z odpowiednimi komunikatami dla użytkownika
+- Zarządzanie stanem ładowania podczas operacji autentykacji
+- Komunikacja z API Supabase zamiast mockowanych danych
+
 ### 3.4. Przepływ użytkownika
 
 #### 3.4.1 Rejestracja
@@ -248,4 +259,26 @@
 4. Otrzymuje link resetujący na email
 5. Po kliknięciu w link, zostaje przekierowany do formularza ustawiania nowego hasła
 6. Ustawia nowe hasło
-7. Jest przekierowywany na stronę logowania 
+7. Jest przekierowywany na stronę logowania
+
+## 4. Komponenty interfejsu związane z autentykacją
+
+### 4.1 Komponenty nawigacyjne
+
+#### 4.1.1 Górna nawigacja (`/src/components/TopNav.astro`)
+- Komponent renderowany po stronie serwera
+- Wyświetla różne opcje w zależności od stanu autentykacji
+- Zawiera przycisk wylogowania dla zalogowanych użytkowników
+- Integracja z faktycznym API wylogowania Supabase
+- Obsługa błędów podczas procesu wylogowania
+
+### 4.2 Dialogi autentykacji
+
+#### 4.2.1 Dialog autentykacji (`/src/components/AuthDialog.tsx`)
+- Modalne okno dialogowe dla procesów logowania i rejestracji
+- Dwa tryby pracy: logowanie i rejestracja
+- Integracja z hookiem `useAuth` do komunikacji z Supabase Auth
+- Walidacja formularzy po stronie klienta
+- Obsługa błędów autentykacji z Supabase Auth
+- Renderowanie odpowiednich komunikatów błędów
+- Zarządzanie stanem ładowania podczas operacji autentykacji 
