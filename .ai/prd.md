@@ -24,14 +24,13 @@ HealthyMeal rozwiązuje te problemy poprzez wykorzystanie AI do personalizacji p
 ## 3. Wymagania funkcjonalne
 ### 3.1 Zarządzanie kontem użytkownika
 - Rejestracja i logowanie użytkowników przy użyciu domyślnych ekranów Supabase Auth
-- Zabezpieczenie danych użytkownika zgodnie z najlepszymi praktykami
 - Możliwość wylogowania z aplikacji w dowolnym momencie
 
 ### 3.2 Profil użytkownika
 - Definiowanie preferencji żywieniowych (produkty lubiane, nielubiane, wykluczone i diety)
 - Możliwość dodawania, edytowania i usuwania preferencji żywieniowych (do 50 różnych preferencji)
 - Każda preferencja może zawierać maksymalnie 50 znaków
-- Profil uznawany za ukończony po zapisaniu minimum 3 preferencji
+- Profil uznawany za ukończony po zapisaniu minimum 3 preferencji (ale są one opcjonalne i można mieć mniej)
 
 ### 3.3 Zarządzanie przepisami
 - Dodawanie nowych przepisów w formie tekstowej

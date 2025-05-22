@@ -41,7 +41,7 @@ export class OpenRouterService {
   constructor(config: OpenRouterConfig) {
     // Użyj klucza API z konfiguracji lub z zmiennej środowiskowej
     this.apiKey = config.apiKey || import.meta.env.OPENROUTER_API_KEY;
-    console.log(this.apiKey);
+
     if (!this.apiKey) {
       throw new Error(
         "Klucz API jest wymagany - podaj go w konfiguracji lub ustaw zmienną OPENROUTER_API_KEY w pliku .env"
