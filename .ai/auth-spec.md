@@ -155,11 +155,11 @@
 
 ### 2.3. Walidacja danych wejściowych
 
-#### 2.3.1 Schemat walidacji logowania (`/src/lib/validations/login.ts`)
+#### 2.3.1 Schemat walidacji logowania (`/src/lib/validations/auth/login.ts`)
 - Email (wymagany, format email)
 - Hasło (wymagane, minimum 8 znaków)
 
-#### 2.3.2 Schemat walidacji rejestracji (`/src/lib/validations/register.ts`)
+#### 2.3.2 Schemat walidacji rejestracji (`/src/lib/validations/auth/register.ts`)
 - Email (wymagany, format email)
 - Hasło (wymagane, minimum 8 znaków, zawiera cyfrę i znak specjalny)
 - Potwierdzenie hasła (wymagane, identyczne z hasłem)

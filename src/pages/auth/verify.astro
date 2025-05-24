@@ -1,0 +1,27 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+---
+
+<AuthLayout title="Weryfikacja email - HealthyMeal">
+  <div class="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
+    <div class="text-center">
+      <div class="mb-4 flex justify-center">
+        <svg class="h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <h1 class="mb-4 text-2xl font-bold text-green-700">Weryfikacja zakończona!</h1>
+      <p class="mb-6 text-sm text-muted-foreground">Twój adres email został pomyślnie zweryfikowany!</p>
+      <a
+        href="/auth/login"
+        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+      >
+        Przejdź do logowania
+      </a>
+    </div>
+  </div>
+</AuthLayout>

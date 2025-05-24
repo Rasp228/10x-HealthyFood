@@ -6,7 +6,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 ## 2. Lista widoków
 
 ### 2.1. Widok logowania / rejestracji
-- Ścieżka: `/login` i `/register`
+- Ścieżka: `/auth/login` i `/auth/register`
 - Cel: uwierzytelnienie użytkownika
 - Kluczowe informacje: formularze email + hasło, przyciski "Zaloguj", "Zarejestruj"
 - Komponenty: `Dialog.LogIn`, `Dialog.SignUp`, `Button`, `Input`, `Toast`
@@ -21,7 +21,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Komponenty: `FilterInput`, `Button`, `RecipeCard`, `ConfirmDialog`, `Spinner`
 - UX: natychmiastowy loader w miejscu siatki, dostępny infinite scroll
 - Dostępność: aria-labels dla filtrów i przycisków akcji
-- Bezpieczeństwo: obsługa błędów (500, 401) z redirectem na `/login`
+- Bezpieczeństwo: obsługa błędów (500, 401) z redirectem na `/auth/login`
 
 ### 2.3. Widok szczegółów przepisu
 - Ścieżka: `/recipes/:id`
@@ -60,14 +60,14 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: obsługa RLS, walidacja limitów (50 preferencji)
 
 ### 2.7. Widok 404 / brak autoryzacji
-- Ścieżka: `*`, `/login` przekierowanie
+- Ścieżka: `*`, `/auth/login` przekierowanie
 - Cel: informowanie o nieistniejącej stronie lub braku dostępu
 - Komponenty: `PageNotFound`, automatyczne przekierowanie po 5s
 - UX: jasny komunikat, przycisk powrotu lub logowania
 - Dostępność: aria-live dla komunikatu
 
 ## 3. Mapa podróży użytkownika
-1. Nowy użytkownik wchodzi na `/login`, widzi modal logowania
+1. Nowy użytkownik wchodzi na `/auth/login`, widzi modal logowania
 2. Rejestracja w modalnym formularzu → po sukcesie przekierowanie na `/`
 3. Automatyczne przekierowanie do `/profile` w celu zachęcenia do opcjonalnego uzupełnienia preferencji
 4. Po uzupełnieniu preferencji: przejście na Strona główna z listą przepisów (pusta kolekcja)
@@ -75,7 +75,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 6. Kliknięcie karty przepisu → przejście do `/recipes/:id`
 7. W Szczegółach użytkownik może edytować, usuwać lub modyfikować AI
 8. W menu TopNav użytkownik może przejść do Profilu lub wylogować się
-9. Wylogowanie czyści kontekst i przekierowuje na `/login`
+9. Wylogowanie czyści kontekst i przekierowuje na `/auth/login`
 
 ## 4. Układ i struktura nawigacji
 - **TopNav**: logo (link `/`), `NavLink` do `/profile`, `DarkModeToggle`, `Button` Wyloguj

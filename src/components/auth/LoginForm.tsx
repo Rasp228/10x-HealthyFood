@@ -2,24 +2,19 @@ import React, { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 
-interface AuthFormValues {
+interface LoginFormValues {
   email: string;
   password: string;
 }
 
-interface AuthDialogProps {
-  mode: "login" | "register";
-  onSuccess?: () => void;
-}
-
-// Schemat walidacji Zod
-const authSchema = z.object({
+// Schemat walidacji logowania
+const loginSchema = z.object({
   email: z.string().email("Wprowadź poprawny adres email"),
-  password: z.string().min(6, "Hasło musi mieć co najmniej 6 znaków"),
+  password: z.string().min(8, "Hasło musi mieć co najmniej 8 znaków"),
 });
 
-export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
-  const [formValues, setFormValues] = useState<AuthFormValues>({
+export default function LoginForm() {
+  const [formValues, setFormValues] = useState<LoginFormValues>({
     email: "",
     password: "",
   });
@@ -33,15 +28,15 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+        newErrors[name] = undefined;
+        return Object.fromEntries(Object.entries(newErrors).filter(([, value]) => value !== undefined));
       });
     }
   };
 
   const validate = (): boolean => {
     try {
-      authSchema.parse(formValues);
+      loginSchema.parse(formValues);
       setErrors({});
       return true;
     } catch (error) {
@@ -67,23 +62,14 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
 
     try {
       // Tutaj będzie logika integracji z Supabase Auth
-      // const { data, error } = await supabase.auth.[signUp/signIn]({
-      //   email: formValues.email,
-      //   password: formValues.password,
-      // });
+      console.log("Logowanie użytkownika:", formValues.email);
 
-      console.log(`Użytkownik ${mode === "login" ? "zalogowany" : "zarejestrowany"}`);
-
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        // Przekierowanie na stronę główną lub profil
-        window.location.href = mode === "login" ? "/" : "/profile";
-      }
+      // Przekierowanie po pomyślnym logowaniu
+      window.location.href = "/";
     } catch (error) {
-      console.error("Błąd podczas autoryzacji:", error);
+      console.error("Błąd podczas logowania:", error);
       setErrors({
-        form: "Wystąpił błąd podczas przetwarzania żądania. Spróbuj ponownie.",
+        form: "Nieprawidłowy email lub hasło. Spróbuj ponownie.",
       });
     } finally {
       setIsLoading(false);
@@ -92,7 +78,7 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
 
   return (
     <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-      <h2 className="mb-6 text-2xl font-bold">{mode === "login" ? "Logowanie" : "Rejestracja"}</h2>
+      <h1 className="mb-6 text-2xl font-bold text-center">Logowanie</h1>
 
       {errors.form && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{errors.form}</div>
@@ -111,6 +97,7 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
             onChange={handleChange}
             className={`w-full rounded-md border p-2 ${errors.email ? "border-red-300" : "border-input"}`}
             placeholder="twoj@email.com"
+            required
           />
           {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
         </div>
@@ -126,6 +113,7 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
             value={formValues.password}
             onChange={handleChange}
             className={`w-full rounded-md border p-2 ${errors.password ? "border-red-300" : "border-input"}`}
+            required
           />
           {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
         </div>
@@ -149,31 +137,23 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Przetwarzanie...
+              Logowanie...
             </span>
-          ) : mode === "login" ? (
-            "Zaloguj się"
           ) : (
-            "Zarejestruj się"
+            "Zaloguj się"
           )}
         </Button>
 
-        <div className="text-center text-sm">
-          {mode === "login" ? (
-            <p>
-              Nie masz konta?{" "}
-              <a href="/auth/register" className="text-primary hover:underline">
-                Zarejestruj się
-              </a>
-            </p>
-          ) : (
-            <p>
-              Masz już konto?{" "}
-              <a href="/auth/login" className="text-primary hover:underline">
-                Zaloguj się
-              </a>
-            </p>
-          )}
+        <div className="space-y-3 text-center text-sm">
+          <a href="/auth/reset-password" className="block text-primary hover:underline">
+            Zapomniałem hasła
+          </a>
+          <p>
+            Nie masz konta?{" "}
+            <a href="/auth/register" className="text-primary hover:underline">
+              Zarejestruj się
+            </a>
+          </p>
         </div>
       </form>
     </div>

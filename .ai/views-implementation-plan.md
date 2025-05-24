@@ -4,14 +4,14 @@
 Celem jest wdrożenie kompletnego zestawu widoków zgodnie z PRD: logowania/rejestracji, listy przepisów, szczegółów przepisu, formularza dodawania/edycji, modalu AI (generowanie/modyfikacja), profilu użytkownika oraz strony 404.
 
 ## 2. Routing widoków
-- `/login` i `/register` – modalne formularze autoryzacji
+- `/auth/login` i `/auth/register` – modalne formularze autoryzacji
 - `/` – strona główna z listą przepisów
 - `/recipes/new` – formularz dodawania (modal)
 - `/recipes/:id` – widok szczegółów przepisu
 - `/recipes/:id/edit` – formularz edycji (modal)
 - Modal AI: wywoływany z `/` i `/recipes/:id`
 - `/profile` – zarządzanie preferencjami
-- `*` – strona „404” lub przekierowanie do `/login`
+- `*` – strona „404” lub przekierowanie do `/auth/login`
 
 ## 3. Struktura komponentów
 ```
@@ -144,7 +144,7 @@ AppLayout
 - Na poziomie formularzy użyć `yup`/`zod` lub wbudowanych reguł HTML5
 
 ## 10. Obsługa błędów
-- 401 → przekierowanie do `/login`
+- 401 → przekierowanie do `/auth/login`
 - 404 → toast + nawigacja do listy lub 404 Page
 - 400/422 → wyświetlenie szczegółów walidacji pod polami
 - 500 → ogólny komunikat „Błąd serwera”, możliwość retry
