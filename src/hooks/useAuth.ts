@@ -161,6 +161,40 @@ export const useAuth = () => {
     }
   };
 
+  const updatePassword = async (token: string, password: string, confirmPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token, password, confirmPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas ustawiania nowego hasła",
+          details: data.details,
+        });
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -169,5 +203,6 @@ export const useAuth = () => {
     register,
     logout,
     requestPasswordReset,
+    updatePassword,
   };
 };

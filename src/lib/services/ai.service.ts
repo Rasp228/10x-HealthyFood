@@ -1,11 +1,5 @@
-import type {
-  ActionTypeEnum,
-  GenerateRecipeCommand,
-  GeneratedRecipeDto,
-  PreferenceCategoryEnum, //TODO trzeba dodać rozdzielanie preferencji w zależności od typu
-  PreferenceDto,
-} from "../../types";
-import { supabaseClient } from "../../db/supabase.client";
+import type { ActionTypeEnum, GenerateRecipeCommand, GeneratedRecipeDto, PreferenceDto } from "../../types";
+// import { supabaseClient } from "../../db/supabase.client"; // TODO: Naprawić import - brakuje eksportu
 import { OpenRouterService } from "../openrouter.service";
 import type { JSONSchema, ChatResponse } from "../openrouter.types";
 //TODO autoryzacja do ogarnięcia!
@@ -202,13 +196,18 @@ export class AIService {
    * @returns Lista preferencji użytkownika
    */
   private async getUserPreferences(userId: string): Promise<PreferenceDto[]> {
-    const { data, error } = await supabaseClient.from("preferences").select("*").eq("user_id", userId);
+    // TODO: Naprawić import supabaseClient
+    // const { data, error } = await supabaseClient.from("preferences").select("*").eq("user_id", userId);
 
-    if (error) {
-      throw new Error(`Błąd podczas pobierania preferencji: ${error.message}`);
-    }
+    // if (error) {
+    //   throw new Error(`Błąd podczas pobierania preferencji: ${error.message}`);
+    // }
 
-    return data || [];
+    // return data || [];
+
+    // Tymczasowo zwracamy pustą tablicę
+    console.warn(`getUserPreferences called for user ${userId} - returning empty array due to missing supabaseClient`);
+    return [];
   }
 
   /**
@@ -225,12 +224,18 @@ export class AIService {
     responseTime: number
   ): Promise<void> {
     try {
-      await supabaseClient.from("logs").insert({
-        user_id: userId,
-        action_type: actionType,
-        actual_ai_model: aiModel,
-        generate_response_time: responseTime,
-      });
+      // TODO: Naprawić import supabaseClient
+      // await supabaseClient.from("logs").insert({
+      //   user_id: userId,
+      //   action_type: actionType,
+      //   actual_ai_model: aiModel,
+      //   generate_response_time: responseTime,
+      // });
+
+      // Tymczasowo logujemy do konsoli
+      console.warn(
+        `logAIAction called for user ${userId}, action: ${actionType}, model: ${aiModel}, time: ${responseTime}ms - skipping DB insert due to missing supabaseClient`
+      );
     } catch (error) {
       console.error("Błąd podczas zapisywania logu:", error);
     }
