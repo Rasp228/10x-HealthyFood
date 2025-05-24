@@ -1,11 +1,13 @@
 # Architektura UI dla HealthyMeal
 
 ## 1. Przegląd struktury UI
+
 Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawigacyjnym, modalnych formularzy logowania/rejestracji oraz czterech kluczowych widoków: Strona główna (lista przepisów), Szczegóły przepisu, Formularz dodawania/edycji przepisu oraz Profil użytkownika.
 
 ## 2. Lista widoków
 
 ### 2.1. Widok logowania / rejestracji
+
 - Ścieżka: `/auth/login` i `/auth/register`
 - Cel: uwierzytelnienie użytkownika
 - Kluczowe informacje: formularze email + hasło, przyciski "Zaloguj", "Zarejestruj"
@@ -15,6 +17,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: walidacja front-end + obsługa błędów API (401)
 
 ### 2.2. Strona główna (lista przepisów)
+
 - Ścieżka: `/`
 - Cel: przegląd, filtrowanie i szybkie akcje na przepisach
 - Kluczowe informacje: siatka `RecipeCard`, filtr po tytule, przyciski "Dodaj przepis" i "Generuj przepis"
@@ -24,6 +27,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: obsługa błędów (500, 401) z redirectem na `/auth/login`
 
 ### 2.3. Widok szczegółów przepisu
+
 - Ścieżka: `/recipes/:id`
 - Cel: prezentacja szczegółów wybranego przepisu i dostęp do akcji edycji
 - Kluczowe informacje: tytuł, data utworzenia i modyfikacji, lista składników, lista instrukcji
@@ -33,6 +37,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: RLS via middleware, 404 dla nieistniejącego ID
 
 ### 2.4. Formularz dodawania / edycji przepisu
+
 - Ścieżki: `/recipes/new`, `/recipes/:id/edit` (modal)
 - Cel: dodawanie i aktualizacja przepisów
 - Kluczowe informacje: pola Title, Content (textarea), AdditionalParams
@@ -42,6 +47,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: walidacja, obsługa błędów 400/401/500
 
 ### 2.5. Generowanie / modyfikacja przez AI (modal)
+
 - Ścieżka: otwierany z `/` lub `/recipes/:id`
 - Cel: generowanie lub modyfikacja treści przepisu z wykorzystaniem AI
 - Kluczowe informacje: pole AdditionalParams, pole z opcjonalnym bazowym przepisem, przycisk "Generuj", podgląd wyniku, opcje zapisania
@@ -51,6 +57,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: obsługa błędów AI API
 
 ### 2.6. Profil użytkownika
+
 - Ścieżka: `/profile`
 - Cel: zarządzanie preferencjami i podgląd statystyk
 - Kluczowe informacje: Adres email i data utworzenia, `StatCard` (liczba przepisów, liczba AI-generated), lista `PreferenceChip`
@@ -60,6 +67,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Bezpieczeństwo: obsługa RLS, walidacja limitów (50 preferencji)
 
 ### 2.7. Widok 404 / brak autoryzacji
+
 - Ścieżka: `*`, `/auth/login` przekierowanie
 - Cel: informowanie o nieistniejącej stronie lub braku dostępu
 - Komponenty: `PageNotFound`, automatyczne przekierowanie po 5s
@@ -67,6 +75,7 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - Dostępność: aria-live dla komunikatu
 
 ## 3. Mapa podróży użytkownika
+
 1. Nowy użytkownik wchodzi na `/auth/login`, widzi modal logowania
 2. Rejestracja w modalnym formularzu → po sukcesie przekierowanie na `/`
 3. Automatyczne przekierowanie do `/profile` w celu zachęcenia do opcjonalnego uzupełnienia preferencji
@@ -78,12 +87,14 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 9. Wylogowanie czyści kontekst i przekierowuje na `/auth/login`
 
 ## 4. Układ i struktura nawigacji
+
 - **TopNav**: logo (link `/`), `NavLink` do `/profile`, `DarkModeToggle`, `Button` Wyloguj
 - **Akcje kontekstowe**: przyciski "Dodaj przepis" i "Generuj przepis" na Stronie głównej
 - **BreadCrumbs**: opcjonalne w `/recipes/:id` (Strona główna > Szczegóły)
 - **Modal dialogs**: ładowane w main layout, focus trap
 
 ## 5. Kluczowe komponenty
+
 - `TopNav` – pasek nawigacyjny z linkami i kontrolą dark mode
 - `PreferenceChip` – dymek z inline edycją i usuwaniem preferencji
 - `RecipeCard` – karta przepisu z hover toolbar (Edytuj, Usuń, AI)
@@ -91,4 +102,4 @@ Aplikacja HealthyMeal składa się z głównego layoutu z górnym paskiem nawiga
 - `StatCard` – wyświetlanie metryk (liczba przepisów, AI-generated)
 - `Spinner`/`Shimmer` – lokalne loadery w miejscach fetchowania
 - `Toast` – komunikaty sukcesu i błędów (shadcn/ui)
-- Custom hooks: `useFetchRecipes`, `useFetchPreferences` i konteksty `AuthContext`, `RecipesContext`, `ProfileContext` 
+- Custom hooks: `useFetchRecipes`, `useFetchPreferences` i konteksty `AuthContext`, `RecipesContext`, `ProfileContext`

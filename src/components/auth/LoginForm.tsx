@@ -1,53 +1,51 @@
 import React, { useState } from "react";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "../../hooks/useAuth.ts";
+import { loginSchema } from "../../lib/validations/auth/login.ts";
 
 interface LoginFormValues {
   email: string;
   password: string;
 }
 
-// Schemat walidacji logowania
-const loginSchema = z.object({
-  email: z.string().email("Wprowadź poprawny adres email"),
-  password: z.string().min(8, "Hasło musi mieć co najmniej 8 znaków"),
-});
-
 export default function LoginForm() {
   const [formValues, setFormValues] = useState<LoginFormValues>({
     email: "",
     password: "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { login, isLoading, error, clearError } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
-    // Usuwamy błąd po zmianie wartości pola
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        newErrors[name] = undefined;
-        return Object.fromEntries(Object.entries(newErrors).filter(([, value]) => value !== undefined));
-      });
+
+    // Usuwamy błąd walidacji po zmianie wartości pola
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== name)));
+    }
+
+    // Usuwamy błąd z API po zmianie wartości
+    if (error) {
+      clearError();
     }
   };
 
   const validate = (): boolean => {
     try {
       loginSchema.parse(formValues);
-      setErrors({});
+      setValidationErrors({});
       return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
+    } catch (validationError: unknown) {
+      if (validationError && typeof validationError === "object" && "errors" in validationError) {
+        const zodError = validationError as { errors: { path: (string | number)[]; message: string }[] };
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        zodError.errors.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }
         });
-        setErrors(newErrors);
+        setValidationErrors(newErrors);
       }
       return false;
     }
@@ -58,30 +56,15 @@ export default function LoginForm() {
 
     if (!validate()) return;
 
-    setIsLoading(true);
-
-    try {
-      // Tutaj będzie logika integracji z Supabase Auth
-      console.log("Logowanie użytkownika:", formValues.email);
-
-      // Przekierowanie po pomyślnym logowaniu
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Błąd podczas logowania:", error);
-      setErrors({
-        form: "Nieprawidłowy email lub hasło. Spróbuj ponownie.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await login(formValues);
   };
 
   return (
     <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
       <h1 className="mb-6 text-2xl font-bold text-center">Logowanie</h1>
 
-      {errors.form && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{errors.form}</div>
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error.message}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,11 +78,11 @@ export default function LoginForm() {
             name="email"
             value={formValues.email}
             onChange={handleChange}
-            className={`w-full rounded-md border p-2 ${errors.email ? "border-red-300" : "border-input"}`}
+            className={`w-full rounded-md border p-2 ${validationErrors.email ? "border-red-300" : "border-input"}`}
             placeholder="twoj@email.com"
             required
           />
-          {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+          {validationErrors.email && <p className="text-xs text-red-500">{validationErrors.email}</p>}
         </div>
 
         <div className="space-y-2">
@@ -112,10 +95,10 @@ export default function LoginForm() {
             name="password"
             value={formValues.password}
             onChange={handleChange}
-            className={`w-full rounded-md border p-2 ${errors.password ? "border-red-300" : "border-input"}`}
+            className={`w-full rounded-md border p-2 ${validationErrors.password ? "border-red-300" : "border-input"}`}
             required
           />
-          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+          {validationErrors.password && <p className="text-xs text-red-500">{validationErrors.password}</p>}
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "../../hooks/useAuth.ts";
+import { registerSchema } from "../../lib/validations/auth/register.ts";
 
 interface RegisterFormValues {
   email: string;
@@ -8,58 +9,51 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
-// Schemat walidacji rejestracji
-const registerSchema = z
-  .object({
-    email: z.string().email("Wprowadź poprawny adres email"),
-    password: z
-      .string()
-      .min(8, "Hasło musi mieć co najmniej 8 znaków")
-      .regex(/\d/, "Hasło musi zawierać co najmniej jedną cyfrę")
-      .regex(/[!@#$%^&*(),.?":{}|<>]/, "Hasło musi zawierać co najmniej jeden znak specjalny"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Hasła muszą być identyczne",
-    path: ["confirmPassword"],
-  });
-
 export default function RegisterForm() {
   const [formValues, setFormValues] = useState<RegisterFormValues>({
     email: "",
     password: "",
     confirmPassword: "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState<string>("");
+  const { register, isLoading, error, clearError } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
-    // Usuwamy błąd po zmianie wartości pola
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        newErrors[name] = undefined;
-        return Object.fromEntries(Object.entries(newErrors).filter(([, value]) => value !== undefined));
-      });
+
+    // Usuwamy błąd walidacji po zmianie wartości pola
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== name)));
+    }
+
+    // Usuwamy błąd z API po zmianie wartości
+    if (error) {
+      clearError();
+    }
+
+    // Usuwamy komunikat sukcesu po zmianie wartości
+    if (successMessage) {
+      setSuccessMessage("");
     }
   };
 
   const validate = (): boolean => {
     try {
       registerSchema.parse(formValues);
-      setErrors({});
+      setValidationErrors({});
       return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
+    } catch (validationError: unknown) {
+      if (validationError && typeof validationError === "object" && "errors" in validationError) {
+        const zodError = validationError as { errors: { path: (string | number)[]; message: string }[] };
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        zodError.errors.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }
         });
-        setErrors(newErrors);
+        setValidationErrors(newErrors);
       }
       return false;
     }
@@ -70,21 +64,15 @@ export default function RegisterForm() {
 
     if (!validate()) return;
 
-    setIsLoading(true);
+    const result = await register(formValues);
 
-    try {
-      // Tutaj będzie logika integracji z Supabase Auth
-      console.log("Rejestracja użytkownika:", formValues.email);
-
-      // Przekierowanie po pomyślnej rejestracji
-      window.location.href = "/auth/login?message=check-email";
-    } catch (error) {
-      console.error("Błąd podczas rejestracji:", error);
-      setErrors({
-        form: "Wystąpił błąd podczas rejestracji. Spróbuj ponownie.",
-      });
-    } finally {
-      setIsLoading(false);
+    if (result) {
+      if (result.requiresVerification) {
+        setSuccessMessage(result.message || "Sprawdź swoją skrzynkę pocztową i kliknij link weryfikacyjny.");
+      } else {
+        // Przekierowanie po pomyślnej rejestracji bez weryfikacji
+        window.location.href = "/";
+      }
     }
   };
 
@@ -92,8 +80,14 @@ export default function RegisterForm() {
     <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
       <h1 className="mb-6 text-2xl font-bold text-center">Rejestracja</h1>
 
-      {errors.form && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{errors.form}</div>
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error.message}</div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-600">
+          {successMessage}
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,11 +101,11 @@ export default function RegisterForm() {
             name="email"
             value={formValues.email}
             onChange={handleChange}
-            className={`w-full rounded-md border p-2 ${errors.email ? "border-red-300" : "border-input"}`}
+            className={`w-full rounded-md border p-2 ${validationErrors.email ? "border-red-300" : "border-input"}`}
             placeholder="twoj@email.com"
             required
           />
-          {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+          {validationErrors.email && <p className="text-xs text-red-500">{validationErrors.email}</p>}
         </div>
 
         <div className="space-y-2">
@@ -124,10 +118,10 @@ export default function RegisterForm() {
             name="password"
             value={formValues.password}
             onChange={handleChange}
-            className={`w-full rounded-md border p-2 ${errors.password ? "border-red-300" : "border-input"}`}
+            className={`w-full rounded-md border p-2 ${validationErrors.password ? "border-red-300" : "border-input"}`}
             required
           />
-          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+          {validationErrors.password && <p className="text-xs text-red-500">{validationErrors.password}</p>}
           <p className="text-xs text-muted-foreground">
             Hasło musi mieć co najmniej 8 znaków, zawierać cyfrę i znak specjalny
           </p>
@@ -143,10 +137,12 @@ export default function RegisterForm() {
             name="confirmPassword"
             value={formValues.confirmPassword}
             onChange={handleChange}
-            className={`w-full rounded-md border p-2 ${errors.confirmPassword ? "border-red-300" : "border-input"}`}
+            className={`w-full rounded-md border p-2 ${validationErrors.confirmPassword ? "border-red-300" : "border-input"}`}
             required
           />
-          {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
+          {validationErrors.confirmPassword && (
+            <p className="text-xs text-red-500">{validationErrors.confirmPassword}</p>
+          )}
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>

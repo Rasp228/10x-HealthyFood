@@ -3,6 +3,7 @@
 ## 1. Tabele
 
 ### 1.1 preference_category_enum (typ wyliczeniowy)
+
 ```sql
 CREATE TYPE preference_category_enum AS ENUM (
   'lubiane',
@@ -13,6 +14,7 @@ CREATE TYPE preference_category_enum AS ENUM (
 ```
 
 ### 1.2 action_type_enum (typ wyliczeniowy)
+
 ```sql
 CREATE TYPE action_type_enum AS ENUM (
   'generate_new',
@@ -23,41 +25,44 @@ CREATE TYPE action_type_enum AS ENUM (
 ---
 
 ### 1.3 preferences
-| Kolumna  | Typ                           | Ograniczenia                                                                                       |
-|----------|-------------------------------|---------------------------------------------------------------------------------------------------|
-| id       | SERIAL                        | PRIMARY KEY                                                                                       |
-| user_id  | UUID                          | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE                                 |
-| category | preference_category_enum      | NOT NULL                                                                                          |
-| value    | VARCHAR(50)                   | NOT NULL, CHECK (char_length(value) <= 50)                                                        |
-| created_at | TIMESTAMPTZ                 | NOT NULL DEFAULT now()                                                                            |
+
+| Kolumna    | Typ                      | Ograniczenia                                                      |
+| ---------- | ------------------------ | ----------------------------------------------------------------- |
+| id         | SERIAL                   | PRIMARY KEY                                                       |
+| user_id    | UUID                     | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE |
+| category   | preference_category_enum | NOT NULL                                                          |
+| value      | VARCHAR(50)              | NOT NULL, CHECK (char_length(value) <= 50)                        |
+| created_at | TIMESTAMPTZ              | NOT NULL DEFAULT now()                                            |
 
 - UNIKALNE: `(user_id, category, value)`
 
 ---
 
 ### 1.4 recipes
-| Kolumna            | Typ          | Ograniczenia                                                                                         |
-|--------------------|--------------|-----------------------------------------------------------------------------------------------------|
-| id                 | SERIAL       | PRIMARY KEY                                                                                         |
-| user_id            | UUID         | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE                                   |
-| title              | VARCHAR(255) | NOT NULL                                                                                           |
-| content            | TEXT         | NOT NULL, CHECK (char_length(content) <= 5000)                                                       |
-| additional_params  | TEXT         | CHECK (char_length(additional_params) <= 5000)                                                      |
-| created_at         | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                                                              |
-| updated_at         | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                                                              |
+
+| Kolumna           | Typ          | Ograniczenia                                                      |
+| ----------------- | ------------ | ----------------------------------------------------------------- |
+| id                | SERIAL       | PRIMARY KEY                                                       |
+| user_id           | UUID         | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE |
+| title             | VARCHAR(255) | NOT NULL                                                          |
+| content           | TEXT         | NOT NULL, CHECK (char_length(content) <= 5000)                    |
+| additional_params | TEXT         | CHECK (char_length(additional_params) <= 5000)                    |
+| created_at        | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                            |
+| updated_at        | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                            |
 
 ---
 
 ### 1.5 logs
-| Kolumna               | Typ              | Ograniczenia                                                                                   |
-|-----------------------|------------------|-----------------------------------------------------------------------------------------------|
-| id                    | SERIAL           | PRIMARY KEY                                                                                   |
-| user_id               | UUID             | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE                             |
-| action_type           | action_type_enum | NOT NULL                                                                                      |
-| is_accepted           | BOOLEAN          |                                                                                               |
-| actual_ai_model       | TEXT             | NOT NULL                                                                                      |
-| generate_response_time| INTEGER          | NOT NULL  -- czas w milisekundach                                                            |
-| created_at            | TIMESTAMPTZ      | NOT NULL DEFAULT now()                                                                        |
+
+| Kolumna                | Typ              | Ograniczenia                                                      |
+| ---------------------- | ---------------- | ----------------------------------------------------------------- |
+| id                     | SERIAL           | PRIMARY KEY                                                       |
+| user_id                | UUID             | NOT NULL, FOREIGN KEY REFERENCES auth.users(id) ON DELETE CASCADE |
+| action_type            | action_type_enum | NOT NULL                                                          |
+| is_accepted            | BOOLEAN          |                                                                   |
+| actual_ai_model        | TEXT             | NOT NULL                                                          |
+| generate_response_time | INTEGER          | NOT NULL -- czas w milisekundach                                  |
+| created_at             | TIMESTAMPTZ      | NOT NULL DEFAULT now()                                            |
 
 ---
 
@@ -68,6 +73,7 @@ CREATE TYPE action_type_enum AS ENUM (
 - **users → logs**: 1:N przez `logs.user_id REFERENCES auth.users(id)`
 
 ## 3. Indeksy
+
 ```sql
 -- Preferences
 CREATE INDEX idx_preferences_user_id ON preferences(user_id);
@@ -99,5 +105,6 @@ CREATE POLICY user_is_owner ON logs
 ```
 
 ## 5. Uwagi projektowe
+
 - **Brak tabeli users**: korzystamy z katalogu `auth.users` dostarczonego przez Supabase Auth.
 - **CHECK constraints**: zapewniają zgodność z wymaganiami długości pól.

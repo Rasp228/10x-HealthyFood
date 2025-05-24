@@ -9,11 +9,10 @@ interface Props {
 
 const { title = "HealthyMeal" } = Astro.props;
 
-// Sprawdź status autentykacji - tutaj będzie logika middleware
-// Na razie symulujemy zalogowanego użytkownika
-const isAuthenticated = true;
+// Sprawdź status autentykacji z middleware
+const { user } = Astro.locals;
 
-if (!isAuthenticated) {
+if (!user) {
   return Astro.redirect("/auth/login");
 }
 ---

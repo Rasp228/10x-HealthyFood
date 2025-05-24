@@ -1,9 +1,11 @@
 # Plan wdrożenia endpointu API: POST /api/ai/generate-recipe
 
 ## 1. Przegląd punktu końcowego
+
 Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na podstawie preferencji użytkownika. Wykorzystuje parametry dostarczone przez użytkownika, weryfikuje kompletność profilu (minimum 3 preferencje) i komunikuje się z modelem AI poprzez OpenRouter.ai.
 
 ## 2. Szczegóły żądania
+
 - Metoda HTTP: POST
 - Struktura URL: `/api/ai/generate-recipe`
 - Nagłówki:
@@ -17,6 +19,7 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
   ```
 
 ## 3. Wykorzystywane typy
+
 - **DTOs**:
   - `GenerateRecipeCommand`: Typ dla danych wejściowych
   - `GeneratedRecipeDto`: Struktura odpowiedzi
@@ -25,6 +28,7 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
   - `PreferenceCategoryEnum`: Typy kategorii preferencji
 
 ## 4. Szczegóły odpowiedzi
+
 - Status 200 OK:
   ```json
   {
@@ -42,6 +46,7 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
 - Status 500 Internal Server Error: Błąd wewnętrzny serwera
 
 ## 5. Przepływ danych
+
 1. Walidacja danych wejściowych z użyciem Zod
 2. Pobranie preferencji użytkownika z bazy danych
 3. Sprawdzenie czy użytkownik ma minimum 3 preferencje
@@ -51,6 +56,7 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
 7. Zwrócenie wygenerowanego przepisu
 
 ## 6. Względy bezpieczeństwa
+
 - Uwierzytelnianie poprzez JWT token z Supabase Auth
 - RLS (Row Level Security) na poziomie bazy danych
 - Walidacja danych wejściowych za pomocą Zod
@@ -59,6 +65,7 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
 - Kontrola kosztów API dla modeli AI poprzez limity OpenRouter.ai
 
 ## 7. Obsługa błędów
+
 - 400 Bad Request:
   - Nieprawidłowe parametry w `additional_params`
   - Użytkownik nie ma minimum 3 preferencji
@@ -71,10 +78,12 @@ Endpoint służy do generowania nowego przepisu kulinarnego przy użyciu AI na p
   - Błąd zapisu logu
 
 ## 8. Rozważania dotyczące wydajności
+
 - Obsługa długo trwających operacji AI w sposób asynchroniczny
 - Monitorowanie czasu odpowiedzi modeli AI
 
 ## 9. Etapy wdrożenia
+
 1. Utworzenie pliku endpointu `/src/pages/api/ai/generate-recipe.ts`
 2. Implementacja schematu walidacji Zod dla `GenerateRecipeCommand`
 3. Utworzenie/rozszerzenie serwisu `AIService` w `/src/lib/services/ai.service.ts`

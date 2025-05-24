@@ -162,47 +162,51 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
   }, []);
 
   // Aktualizacja istniejącej preferencji (mockowane)
-  const updatePreference = useCallback(async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto | null> => {
-    setState((prev) => ({ ...prev, isUpdating: true, error: null }));
+  const updatePreference = useCallback(
+    async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto | null> => {
+      setState((prev) => ({ ...prev, isUpdating: true, error: null }));
 
-    try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      try {
+        // Symulacja opóźnienia sieci
+        await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Znajdź preferencję do aktualizacji
-      const preferenceIndex = mockPreferences.findIndex((p) => p.id === id);
-      if (preferenceIndex === -1) {
-        throw new Error(`Nie znaleziono preferencji o ID: ${id}`);
+        // Znajdź preferencję do aktualizacji
+        const preferenceIndex = mockPreferences.findIndex((p) => p.id === id);
+        if (preferenceIndex === -1) {
+          throw new Error(`Nie znaleziono preferencji o ID: ${id}`);
+        }
+
+        // Aktualizuj preferencję w mockowanej liście
+        const updatedPreference: PreferenceDto = {
+          ...mockPreferences[preferenceIndex],
+          category: preference.category as PreferenceCategoryEnum,
+          value: preference.value,
+        };
+
+        mockPreferences[preferenceIndex] = updatedPreference;
+
+        // Aktualizujemy stan zastępując zaktualizowaną preferencję
+        setState((prev) => ({
+          ...prev,
+          preferences: prev.preferences.map((p) => (p.id === id ? updatedPreference : p)),
+          isUpdating: false,
+        }));
+
+        return updatedPreference;
+      } catch (error) {
+        const thrownError =
+          error instanceof Error ? error : new Error("Nieznany błąd podczas aktualizacji preferencji");
+        setState((prev) => ({
+          ...prev,
+          isUpdating: false,
+          error: thrownError,
+        }));
+
+        throw thrownError;
       }
-
-      // Aktualizuj preferencję w mockowanej liście
-      const updatedPreference: PreferenceDto = {
-        ...mockPreferences[preferenceIndex],
-        category: preference.category as PreferenceCategoryEnum,
-        value: preference.value,
-      };
-
-      mockPreferences[preferenceIndex] = updatedPreference;
-
-      // Aktualizujemy stan zastępując zaktualizowaną preferencję
-      setState((prev) => ({
-        ...prev,
-        preferences: prev.preferences.map((p) => (p.id === id ? updatedPreference : p)),
-        isUpdating: false,
-      }));
-
-      return updatedPreference;
-    } catch (error) {
-      const thrownError = error instanceof Error ? error : new Error("Nieznany błąd podczas aktualizacji preferencji");
-      setState((prev) => ({
-        ...prev,
-        isUpdating: false,
-        error: thrownError,
-      }));
-
-      throw thrownError;
-    }
-  }, []);
+    },
+    []
+  );
 
   // Usuwanie preferencji (mockowane)
   const deletePreference = useCallback(async (id: number): Promise<boolean> => {

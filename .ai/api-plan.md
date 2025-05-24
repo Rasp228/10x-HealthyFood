@@ -1,6 +1,7 @@
 # REST API Plan
 
 ## 1. Resources
+
 - **Preferences** - corresponds to the `preferences` table in the database
 - **Recipes** - corresponds to the `recipes` table in the database
 - **Logs** - corresponds to the `logs` table in the database
@@ -11,6 +12,7 @@
 ### 2.1. Preferences
 
 #### GET /api/preferences
+
 - **Description**: Retrieve a list of user's food preferences
 - **Query parameters**:
   - `category` (optional): filter by category ('lubiane', 'nielubiane', 'wykluczone', 'diety')
@@ -37,6 +39,7 @@
 - **Error codes**: 401 Unauthorized, 500 Internal Server Error
 
 #### GET /api/preferences/:id
+
 - **Description**: Retrieve details of a specific preference
 - **Response**:
   ```json
@@ -52,6 +55,7 @@
 - **Error codes**: 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 
 #### POST /api/preferences
+
 - **Description**: Add a new food preference
 - **Request**:
   ```json
@@ -74,6 +78,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 422 Unprocessable Entity, 500 Internal Server Error
 
 #### PUT /api/preferences/:id
+
 - **Description**: Update an existing preference
 - **Request**:
   ```json
@@ -96,6 +101,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found, 422 Unprocessable Entity, 500 Internal Server Error
 
 #### DELETE /api/preferences/:id
+
 - **Description**: Delete a preference
 - **Response**: 204 No Content
 - **Success codes**: 204 No Content
@@ -104,6 +110,7 @@
 ### 2.2. Recipes
 
 #### GET /api/recipes
+
 - **Description**: Retrieve a list of user's recipes
 - **Query parameters**:
   - `limit` (optional): number of results per page (default 10)
@@ -133,6 +140,7 @@
 - **Error codes**: 401 Unauthorized, 500 Internal Server Error
 
 #### GET /api/recipes/:id
+
 - **Description**: Retrieve details of a specific recipe
 - **Response**:
   ```json
@@ -150,6 +158,7 @@
 - **Error codes**: 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 
 #### POST /api/recipes
+
 - **Description**: Add a new recipe
 - **Request**:
   ```json
@@ -175,6 +184,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 422 Unprocessable Entity, 500 Internal Server Error
 
 #### PUT /api/recipes/:id
+
 - **Description**: Update an existing recipe
 - **Request**:
   ```json
@@ -200,6 +210,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found, 422 Unprocessable Entity, 500 Internal Server Error
 
 #### DELETE /api/recipes/:id
+
 - **Description**: Delete a recipe
 - **Response**: 204 No Content
 - **Success codes**: 204 No Content
@@ -208,6 +219,7 @@
 ### 2.3. AI Integration
 
 #### POST /api/ai/generate-recipe
+
 - **Description**: Generate a new recipe using AI
 - **Request**:
   ```json
@@ -231,6 +243,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 500 Internal Server Error
 
 #### POST /api/ai/modify-recipe/:id
+
 - **Description**: Modify an existing recipe using AI
 - **Request**:
   ```json
@@ -259,6 +272,7 @@
 - **Error codes**: 400 Bad Request, 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 
 #### POST /api/ai/save-recipe
+
 - **Description**: Save a generated/modified recipe
 - **Request**:
   ```json
@@ -324,4 +338,4 @@ The application uses Supabase Auth for authentication and authorization:
 
 - Automatically created for actions of type 'generate_new' and 'generate_modification'
 - Store information about the AI model, generation time, and whether the user accepted the result
-- Available only to system administrators and the user they concern (through RLS) 
+- Available only to system administrators and the user they concern (through RLS)

@@ -1,178 +1,173 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import type { LoginSchema } from "../lib/validations/auth/login.ts";
+import type { RegisterSchema } from "../lib/validations/auth/register.ts";
+
+interface AuthError {
+  message: string;
+  details?: unknown[];
+}
 
 interface AuthUser {
   id: string;
   email: string;
 }
 
-interface AuthState {
-  user: AuthUser | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  error: Error | null;
+interface AuthResponse {
+  message?: string;
+  user?: AuthUser;
+  requiresVerification?: boolean;
 }
 
-interface AuthActions {
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
+export const useAuth = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<AuthError | null>(null);
 
-// Hook do zarządzania autoryzacją
-export function useAuth(): AuthState & AuthActions {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isLoading: true,
-    isAuthenticated: false,
-    error: null,
-  });
+  const clearError = () => setError(null);
 
-  // Sprawdzenie sesji przy starcie
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        // To będzie implementacja faktycznego sprawdzenia sesji z Supabase
-        // const { data, error } = await supabase.auth.getSession();
+  const login = async (credentials: LoginSchema): Promise<AuthResponse | null> => {
+    setIsLoading(true);
+    setError(null);
 
-        // Mockujemy dla potrzeb implementacji
-        const mockUser = localStorage.getItem("auth_user");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
 
-        if (mockUser) {
-          const user = JSON.parse(mockUser) as AuthUser;
-          setState({
-            user,
-            isLoading: false,
-            isAuthenticated: true,
-            error: null,
-          });
-        } else {
-          setState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-            error: null,
-          });
-        }
-      } catch (error) {
-        setState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
-          error: error instanceof Error ? error : new Error("Nieznany błąd autoryzacji"),
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas logowania",
+          details: data.details,
         });
+        return null;
       }
-    };
 
-    checkSession();
-  }, []);
-
-  // Logowanie
-  const login = async (email: string, password: string) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // To będzie implementacja faktycznego logowania z Supabase
-      // const { data, error } = await supabase.auth.signInWithPassword({
-      //   email,
-      //   password,
-      // });
-
-      // Mockujemy dla potrzeb implementacji
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const mockUser: AuthUser = {
-        id: "123",
-        email,
-      };
-
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
-
-      setState({
-        user: mockUser,
-        isLoading: false,
-        isAuthenticated: true,
-        error: null,
+      // Przekierowanie po pomyślnym logowaniu
+      window.location.href = "/";
+      return data;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
       });
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error : new Error("Błąd podczas logowania"),
-      }));
-      throw error;
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Rejestracja
-  const register = async (email: string, password: string) => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+  const register = async (credentials: RegisterSchema): Promise<AuthResponse | null> => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // To będzie implementacja faktycznej rejestracji z Supabase
-      // const { data, error } = await supabase.auth.signUp({
-      //   email,
-      //   password,
-      // });
-
-      // Mockujemy dla potrzeb implementacji
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const mockUser: AuthUser = {
-        id: "123",
-        email,
-      };
-
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
-
-      setState({
-        user: mockUser,
-        isLoading: false,
-        isAuthenticated: true,
-        error: null,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
       });
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error : new Error("Błąd podczas rejestracji"),
-      }));
-      throw error;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas rejestracji",
+          details: data.details,
+        });
+        return null;
+      }
+
+      return data;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Wylogowanie
-  const logout = async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+  const logout = async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // To będzie implementacja faktycznego wylogowania z Supabase
-      // const { error } = await supabase.auth.signOut();
-
-      // Mockujemy dla potrzeb implementacji
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      localStorage.removeItem("auth_user");
-
-      setState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-        error: null,
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error : new Error("Błąd podczas wylogowania"),
-      }));
-      throw error;
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError({
+          message: data.error || "Wystąpił błąd podczas wylogowania",
+        });
+        return false;
+      }
+
+      // Przekierowanie po pomyślnym wylogowaniu
+      window.location.href = "/auth/login";
+      return true;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas wysyłania linku resetującego",
+          details: data.details,
+        });
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    ...state,
+    isLoading,
+    error,
+    clearError,
     login,
     register,
     logout,
+    requestPasswordReset,
   };
-}
+};
