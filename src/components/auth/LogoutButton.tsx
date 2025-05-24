@@ -12,13 +12,25 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
     setIsLoading(true);
 
     try {
-      // Tutaj będzie logika integracji z Supabase Auth
-      console.log("Wylogowywanie użytkownika...");
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Przekierowanie po pomyślnym wylogowaniu
-      window.location.href = "/auth/login";
+      if (response.ok) {
+        // Przekierowanie po pomyślnym wylogowaniu
+        window.location.href = "/auth/login";
+      } else {
+        console.error("Błąd podczas wylogowania");
+        // Fallback - przekieruj mimo błędu
+        window.location.href = "/auth/login";
+      }
     } catch (error) {
-      console.error("Błąd podczas wylogowania:", error);
+      console.error("Błąd połączenia podczas wylogowania:", error);
+      // Fallback - przekieruj mimo błędu
+      window.location.href = "/auth/login";
     } finally {
       setIsLoading(false);
     }
