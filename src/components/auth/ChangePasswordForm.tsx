@@ -24,7 +24,7 @@ const changePasswordSchema = z
   });
 
 export default function ChangePasswordForm() {
-  const { isLoading, error, clearError } = useAuth();
+  const { isLoading, error, clearError, exchangeCodeForSession, changePassword } = useAuth();
   const [formValues, setFormValues] = useState<ChangePasswordFormValues>({
     password: "",
     confirmPassword: "",
@@ -36,49 +36,27 @@ export default function ChangePasswordForm() {
   // Sprawdź czy w URL jest code i wymień go na sesję
   useEffect(() => {
     const handleCodeExchange = async () => {
-      console.log("Current URL:", window.location.href);
-
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
 
-      console.log("Code from URL:", code);
-
       if (!code) {
-        console.log("No code found in URL - setting as invalid");
         setIsCodeValid(false);
         return;
       }
 
       try {
-        console.log("Attempting to exchange code for session...");
+        const success = await exchangeCodeForSession(code);
 
-        // Dynamiczny import Supabase aby uniknąć problemów z SSR
-        const { createClient } = await import("@supabase/supabase-js");
-        const supabase = createClient(
-          import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL,
-          import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_KEY
-        );
-
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-        if (error) {
-          console.error("Error exchanging code:", error);
-          setAuthError(`Błąd podczas aktywacji linku: ${error.message}`);
-          setIsCodeValid(false);
-          return;
-        }
-
-        if (data.session) {
-          console.log("Code exchange successful, user is now logged in");
+        if (success) {
           setIsCodeValid(true);
-
           // Usuń code z URL żeby nie było problemów przy odświeżeniu
           const newUrl = window.location.pathname;
           window.history.replaceState({}, "", newUrl);
         } else {
-          console.log("Code exchange failed - no session returned");
-          setAuthError("Nie udało się aktywować linku resetowania hasła");
           setIsCodeValid(false);
+          if (error) {
+            setAuthError(error.message);
+          }
         }
       } catch (err) {
         console.error("Exception during code exchange:", err);
@@ -88,7 +66,7 @@ export default function ChangePasswordForm() {
     };
 
     handleCodeExchange();
-  }, []);
+  }, [exchangeCodeForSession, error]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -134,28 +112,13 @@ export default function ChangePasswordForm() {
       return;
     }
 
-    try {
-      // Użyj bezpośrednio supabase client aby zaktualizować hasło
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabase = createClient(
-        import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL,
-        import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_KEY
-      );
+    const success = await changePassword(formValues.password, formValues.confirmPassword);
 
-      const { error } = await supabase.auth.updateUser({
-        password: formValues.password,
-      });
-
-      if (error) {
-        setAuthError(`Błąd podczas zmiany hasła: ${error.message}`);
-        return;
-      }
-
+    if (success) {
       // Przekierowanie po pomyślnej zmianie hasła
       window.location.href = "/auth/login?message=password-updated";
-    } catch (err) {
-      console.error("Exception during password update:", err);
-      setAuthError("Wystąpił błąd podczas zmiany hasła");
+    } else if (error) {
+      setAuthError(error.message);
     }
   };
 

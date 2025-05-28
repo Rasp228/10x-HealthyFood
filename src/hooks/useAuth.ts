@@ -195,6 +195,74 @@ export const useAuth = () => {
     }
   };
 
+  const exchangeCodeForSession = async (code: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/exchange-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas aktywacji linku",
+          details: data.details,
+        });
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async (password: string, confirmPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/update-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password, confirmPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError({
+          message: data.error || "Wystąpił błąd podczas zmiany hasła",
+          details: data.details,
+        });
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError({
+        message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -204,5 +272,7 @@ export const useAuth = () => {
     logout,
     requestPasswordReset,
     updatePassword,
+    exchangeCodeForSession,
+    changePassword,
   };
 };
