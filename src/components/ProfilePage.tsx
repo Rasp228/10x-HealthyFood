@@ -48,9 +48,9 @@ export default function ProfilePage() {
     loadPreferences();
   }, [fetchPreferences, showToast]);
 
-  // Pobieranie statystyk (mockowane)
+  // Pobieranie statystyk
   useEffect(() => {
-    // Tymczasowo mockowane dane statystyk (docelowo należy zaimplementować API)
+    // Tymczasowo mockowane dane statystyk
     setStats({
       totalRecipes: 12,
       aiGenerated: 4,
@@ -150,10 +150,7 @@ export default function ProfilePage() {
   // Renderowanie daty utworzenia konta
   const renderAccountCreationDate = () => {
     if (!user) return "N/A";
-
-    // Dodajemy mockowaną datę na potrzeby implementacji (zastąpi się prawdziwą datą z Supabase)
-    const mockCreationDate = "2023-01-15T12:00:00Z";
-    return formatDate(mockCreationDate);
+    return formatDate(user.created_at);
   };
 
   return (

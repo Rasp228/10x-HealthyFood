@@ -24,6 +24,7 @@ export type LogDto = Tables<"logs">;
 export interface PaginationParams {
   limit?: number;
   offset?: number;
+  category?: PreferenceCategoryEnum;
 }
 
 // Parametry sortowania dla list przepisów
@@ -37,7 +38,12 @@ export interface RecipeSortParams {
  */
 
 // Command do tworzenia/aktualizacji preferencji
-export type CreatePreferenceCommand = Pick<PreferenceDto, "category" | "value">;
+export interface CreatePreferenceCommand {
+  category: PreferenceCategoryEnum;
+  value: string;
+}
+
+// Command do aktualizacji preferencji
 export type UpdatePreferenceCommand = CreatePreferenceCommand;
 
 // Command do tworzenia/aktualizacji przepisu
@@ -108,4 +114,6 @@ export interface SaveRecipeCommand {
 
 // Typy dla logów akcji AI
 export type ActionTypeEnum = Database["public"]["Enums"]["action_type_enum"];
+
+// Typ dla kategorii preferencji
 export type PreferenceCategoryEnum = Database["public"]["Enums"]["preference_category_enum"];

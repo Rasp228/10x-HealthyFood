@@ -5,7 +5,6 @@ import type {
   UpdatePreferenceCommand,
   PaginatedPreferencesDto,
   PaginationParams,
-  PreferenceCategoryEnum,
 } from "../types";
 
 interface UsePreferencesState {
@@ -25,45 +24,6 @@ interface UsePreferencesActions {
   deletePreference: (id: number) => Promise<boolean>;
 }
 
-// Mockowane dane preferencji
-const mockPreferences: PreferenceDto[] = [
-  {
-    id: 1,
-    category: "diety" as PreferenceCategoryEnum,
-    value: "Wegetariańska",
-    user_id: "123",
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-  {
-    id: 2,
-    category: "wykluczone" as PreferenceCategoryEnum,
-    value: "Orzechy",
-    user_id: "123",
-    created_at: new Date(Date.now() - 25 * 86400000).toISOString(),
-  },
-  {
-    id: 3,
-    category: "nielubiane" as PreferenceCategoryEnum,
-    value: "Brokuły",
-    user_id: "123",
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-  },
-  {
-    id: 4,
-    category: "lubiane" as PreferenceCategoryEnum,
-    value: "Truskawki",
-    user_id: "123",
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  {
-    id: 5,
-    category: "wykluczone" as PreferenceCategoryEnum,
-    value: "Gluten",
-    user_id: "123",
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-];
-
 export function usePreferences(): UsePreferencesState & UsePreferencesActions {
   const [state, setState] = useState<UsePreferencesState>({
     preferences: [],
@@ -75,28 +35,23 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
     error: null,
   });
 
-  // Pobieranie preferencji (mockowane)
+  // Pobieranie preferencji
   const fetchPreferences = useCallback(async (params?: PaginationParams): Promise<PaginatedPreferencesDto | null> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const queryParams = new URLSearchParams();
+      if (params?.category) queryParams.append("category", params.category);
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.offset) queryParams.append("offset", params.offset.toString());
 
-      // Budujemy parametry filtrowania
-      const limit = params?.limit || 50;
-      const offset = params?.offset || 0;
+      const response = await fetch(`/api/preferences?${queryParams.toString()}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Błąd podczas pobierania preferencji");
+      }
 
-      // Symulacja paginacji
-      const paginatedPreferences = mockPreferences.slice(offset, offset + limit);
-
-      const data: PaginatedPreferencesDto = {
-        data: paginatedPreferences,
-        total: mockPreferences.length,
-        limit,
-        offset,
-      };
-
+      const data = await response.json();
       setState((prev) => ({
         ...prev,
         preferences: data.data,
@@ -117,38 +72,33 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
     }
   }, []);
 
-  // Dodawanie nowej preferencji (mockowane)
+  // Dodawanie nowej preferencji
   const createPreference = useCallback(async (preference: CreatePreferenceCommand): Promise<PreferenceDto | null> => {
     setState((prev) => ({ ...prev, isCreating: true, error: null }));
 
     try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const response = await fetch("/api/preferences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(preference),
+      });
 
-      // Tworzenie nowego ID (w prawdziwym API byłoby przydzielane przez serwer)
-      const newId = Math.max(0, ...mockPreferences.map((p) => p.id)) + 1;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Błąd podczas dodawania preferencji");
+      }
 
-      // Tworzenie nowej preferencji
-      const newPreference: PreferenceDto = {
-        id: newId,
-        category: preference.category as PreferenceCategoryEnum,
-        value: preference.value,
-        user_id: "123", // ID zalogowanego użytkownika (mockowane)
-        created_at: new Date().toISOString(),
-      };
-
-      // Dodajemy do mockowanej listy - normalnie zrobiłby to serwer
-      mockPreferences.push(newPreference);
-
-      // Aktualizujemy stan dodając nową preferencję
+      const data = await response.json();
       setState((prev) => ({
         ...prev,
-        preferences: [...prev.preferences, newPreference],
+        preferences: [...prev.preferences, data],
         total: prev.total + 1,
         isCreating: false,
       }));
 
-      return newPreference;
+      return data;
     } catch (error) {
       const thrownError = error instanceof Error ? error : new Error("Nieznany błąd podczas dodawania preferencji");
       setState((prev) => ({
@@ -161,38 +111,33 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
     }
   }, []);
 
-  // Aktualizacja istniejącej preferencji (mockowane)
+  // Aktualizacja istniejącej preferencji
   const updatePreference = useCallback(
     async (id: number, preference: UpdatePreferenceCommand): Promise<PreferenceDto | null> => {
       setState((prev) => ({ ...prev, isUpdating: true, error: null }));
 
       try {
-        // Symulacja opóźnienia sieci
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        const response = await fetch(`/api/preferences/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(preference),
+        });
 
-        // Znajdź preferencję do aktualizacji
-        const preferenceIndex = mockPreferences.findIndex((p) => p.id === id);
-        if (preferenceIndex === -1) {
-          throw new Error(`Nie znaleziono preferencji o ID: ${id}`);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Błąd podczas aktualizacji preferencji");
         }
 
-        // Aktualizuj preferencję w mockowanej liście
-        const updatedPreference: PreferenceDto = {
-          ...mockPreferences[preferenceIndex],
-          category: preference.category as PreferenceCategoryEnum,
-          value: preference.value,
-        };
-
-        mockPreferences[preferenceIndex] = updatedPreference;
-
-        // Aktualizujemy stan zastępując zaktualizowaną preferencję
+        const data = await response.json();
         setState((prev) => ({
           ...prev,
-          preferences: prev.preferences.map((p) => (p.id === id ? updatedPreference : p)),
+          preferences: prev.preferences.map((p) => (p.id === id ? data : p)),
           isUpdating: false,
         }));
 
-        return updatedPreference;
+        return data;
       } catch (error) {
         const thrownError =
           error instanceof Error ? error : new Error("Nieznany błąd podczas aktualizacji preferencji");
@@ -208,24 +153,20 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
     []
   );
 
-  // Usuwanie preferencji (mockowane)
+  // Usuwanie preferencji
   const deletePreference = useCallback(async (id: number): Promise<boolean> => {
     setState((prev) => ({ ...prev, isDeleting: true, error: null }));
 
     try {
-      // Symulacja opóźnienia sieci
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await fetch(`/api/preferences/${id}`, {
+        method: "DELETE",
+      });
 
-      // Znajdź preferencję do usunięcia
-      const preferenceIndex = mockPreferences.findIndex((p) => p.id === id);
-      if (preferenceIndex === -1) {
-        throw new Error(`Nie znaleziono preferencji o ID: ${id}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Błąd podczas usuwania preferencji");
       }
 
-      // Usuń preferencję z mockowanej listy
-      mockPreferences.splice(preferenceIndex, 1);
-
-      // Aktualizujemy stan usuwając preferencję
       setState((prev) => ({
         ...prev,
         preferences: prev.preferences.filter((p) => p.id !== id),

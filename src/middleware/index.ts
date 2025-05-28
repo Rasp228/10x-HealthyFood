@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   "/api/auth/verify",
   "/api/auth/exchange-code",
   "/api/auth/update-password",
+  "/api/auth/me",
 ];
 
 export const onRequest = defineMiddleware(async ({ locals, cookies, url, request, redirect }, next) => {
@@ -29,6 +30,9 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, url, request
     cookies,
     headers: request.headers,
   });
+
+  // Dodaj instancję Supabase do locals
+  locals.supabase = supabase;
 
   // IMPORTANT: Always get user session first before any other operations
   const {

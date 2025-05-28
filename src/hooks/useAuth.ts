@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { LoginSchema } from "../lib/validations/auth/login.ts";
 import type { RegisterSchema } from "../lib/validations/auth/register.ts";
 
@@ -10,6 +10,7 @@ interface AuthError {
 interface AuthUser {
   id: string;
   email: string;
+  created_at: string;
 }
 
 interface AuthResponse {
@@ -21,6 +22,23 @@ interface AuthResponse {
 export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Błąd podczas pobierania danych użytkownika:", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const clearError = () => setError(null);
 
@@ -266,6 +284,7 @@ export const useAuth = () => {
   return {
     isLoading,
     error,
+    user,
     clearError,
     login,
     register,
