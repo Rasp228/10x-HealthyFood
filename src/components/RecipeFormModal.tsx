@@ -17,12 +17,14 @@ const recipeSchema = z.object({
     .optional()
     .nullable()
     .transform((val) => (val === "" ? null : val)),
+  is_ai_generated: z.boolean().optional().default(false),
 });
 
 interface RecipeFormValues {
   title: string;
   content: string;
   additional_params?: string;
+  is_ai_generated?: boolean;
 }
 
 interface RecipeFormModalProps {

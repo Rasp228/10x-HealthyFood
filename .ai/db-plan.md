@@ -49,6 +49,7 @@ CREATE TYPE action_type_enum AS ENUM (
 | additional_params | TEXT         | CHECK (char_length(additional_params) <= 5000)                    |
 | created_at        | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                            |
 | updated_at        | TIMESTAMPTZ  | NOT NULL DEFAULT now()                                            |
+| is_ai_generated   | BOOL         | NOT NULL DEFAULT now()                                            |
 
 ---
 

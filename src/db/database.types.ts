@@ -64,6 +64,7 @@ export interface Database {
           title: string;
           updated_at: string;
           user_id: string;
+          is_ai_generated: boolean;
         };
         Insert: {
           additional_params?: string | null;
@@ -73,6 +74,7 @@ export interface Database {
           title: string;
           updated_at?: string;
           user_id: string;
+          is_ai_generated?: boolean;
         };
         Update: {
           additional_params?: string | null;
@@ -82,6 +84,7 @@ export interface Database {
           title?: string;
           updated_at?: string;
           user_id?: string;
+          is_ai_generated?: boolean;
         };
         Relationships: [];
       };

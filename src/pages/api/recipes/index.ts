@@ -9,6 +9,7 @@ const createRecipeSchema = z.object({
   title: z.string().min(1, "Tytuł jest wymagany"),
   content: z.string().min(1, "Treść przepisu jest wymagana"),
   additional_params: z.string().nullable().optional(),
+  is_ai_generated: z.boolean().optional().default(false),
 });
 
 // Schemat walidacji dla parametrów paginacji i sortowania
@@ -90,6 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       title: validationResult.data.title,
       content: validationResult.data.content,
       additional_params: validationResult.data.additional_params ?? null,
+      is_ai_generated: validationResult.data.is_ai_generated,
     };
 
     // Użyj serwisu do utworzenia przepisu
