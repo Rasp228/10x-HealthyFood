@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { RecipeDto } from "../types";
+import { RecipeService } from "../lib/services/recipe.service";
 
 interface UseRecipeResult {
   recipe: RecipeDto | null;
@@ -27,33 +28,28 @@ export function useRecipe(id: number | string | undefined): UseRecipeResult {
       setError(null);
 
       try {
-        // Tu będzie rzeczywiste wywołanie API
-        // const response = await fetch(`/api/recipes/${id}`);
-        // if (!response.ok) {
-        //   throw new Error(`Nie udało się pobrać przepisu (${response.status})`);
-        // }
-        // const data = await response.json();
+        const recipeService = new RecipeService();
+        const recipeId = typeof id === "string" ? parseInt(id) : id;
 
-        // Mockowanie danych dla celów implementacji
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (isNaN(recipeId) || recipeId <= 0) {
+          throw new Error("Nieprawidłowe ID przepisu");
+        }
 
-        // Tworzymy przykładowy przepis
-        const mockRecipe: RecipeDto = {
-          id: typeof id === "string" ? parseInt(id) : id,
-          title: `Przepis ${id}`,
-          content: `# Przepis ${id}\n\n## Składniki\n- 2 jabłka\n- 1 łyżka cynamonu\n- 3 łyżki cukru\n\n## Przygotowanie\n1. Pokrój jabłka w kostkę\n2. Wymieszaj z cynamonem i cukrem\n3. Zapiekaj 20 minut w piekarniku rozgrzanym do 180 stopni`,
-          additional_params: Number(id) % 2 === 0 ? "bezglutenowy, wegetariański" : null,
-          user_id: "123",
-          created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-          updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-          ai_generated: Number(id) % 3 === 0,
-          original_recipe_id: Number(id) % 5 === 0 ? 1 : null,
-        };
+        // Używamy rzeczywistego API zamiast mockowanych danych
+        const data = await recipeService.getRecipe(recipeId, "current-user");
 
-        setRecipe(mockRecipe);
+        if (!data) {
+          throw new Error("Przepis nie został znaleziony");
+        }
+
+        setRecipe(data);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error("Błąd podczas pobierania przepisu"));
+        const errorMessage = err instanceof Error ? err.message : "Błąd podczas pobierania przepisu";
+        setError(new Error(errorMessage));
         console.error("Błąd podczas pobierania przepisu:", err);
+
+        // W przypadku błędu ustawiamy null
+        setRecipe(null);
       } finally {
         setIsLoading(false);
       }

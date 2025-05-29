@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../types";
+import { RecipeService } from "../lib/services/recipe.service";
 
 type MutationStatus = "idle" | "loading" | "success" | "error";
 
@@ -29,158 +30,113 @@ export function useRecipeMutations(): RecipeMutations {
     data: null,
     status: "idle",
     error: null,
-    reset: () => setCreateState({ data: null, status: "idle", error: null, reset }),
+    reset: () => {
+      setCreateState((prev) => ({ ...prev, data: null, status: "idle", error: null }));
+    },
   });
 
   const [updateState, setUpdateState] = useState<MutationResult<RecipeDto>>({
     data: null,
     status: "idle",
     error: null,
-    reset: () => setUpdateState({ data: null, status: "idle", error: null, reset }),
+    reset: () => {
+      setUpdateState((prev) => ({ ...prev, data: null, status: "idle", error: null }));
+    },
   });
 
   const [deleteState, setDeleteState] = useState<MutationResult<boolean>>({
     data: null,
     status: "idle",
     error: null,
-    reset: () => setDeleteState({ data: null, status: "idle", error: null, reset }),
+    reset: () => {
+      setDeleteState((prev) => ({ ...prev, data: null, status: "idle", error: null }));
+    },
   });
 
   // Funkcja do tworzenia nowego przepisu
   const createRecipe = async (recipe: CreateRecipeCommand): Promise<RecipeDto> => {
-    setCreateState({ ...createState, status: "loading", error: null });
+    setCreateState((prev) => ({ ...prev, status: "loading", error: null }));
 
     try {
-      // Tu będzie rzeczywiste wywołanie API
-      // const response = await fetch("/api/recipes", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(recipe)
-      // });
-      //
-      // if (!response.ok) {
-      //   throw new Error(`Błąd podczas tworzenia przepisu (${response.status})`);
-      // }
-      //
-      // const data = await response.json();
+      const recipeService = new RecipeService();
 
-      // Mockowanie odpowiedzi
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Używamy rzeczywistego API zamiast mockowanych danych
+      const data = await recipeService.createRecipe("current-user", recipe);
 
-      const mockResponse: RecipeDto = {
-        id: Math.floor(Math.random() * 1000) + 100,
-        title: recipe.title,
-        content: recipe.content,
-        additional_params: recipe.additional_params || null,
-        user_id: "123",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        ai_generated: false,
-        original_recipe_id: null,
-      };
-
-      setCreateState({
-        ...createState,
-        data: mockResponse,
+      setCreateState((prev) => ({
+        ...prev,
+        data,
         status: "success",
-      });
+      }));
 
-      return mockResponse;
+      return data;
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Nieznany błąd podczas tworzenia przepisu");
-      setCreateState({
-        ...createState,
+      setCreateState((prev) => ({
+        ...prev,
         status: "error",
         error,
-      });
+      }));
       throw error;
     }
   };
 
   // Funkcja do aktualizacji przepisu
   const updateRecipe = async (id: number, recipe: UpdateRecipeCommand): Promise<RecipeDto> => {
-    setUpdateState({ ...updateState, status: "loading", error: null });
+    setUpdateState((prev) => ({ ...prev, status: "loading", error: null }));
 
     try {
-      // Tu będzie rzeczywiste wywołanie API
-      // const response = await fetch(`/api/recipes/${id}`, {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(recipe)
-      // });
-      //
-      // if (!response.ok) {
-      //   throw new Error(`Błąd podczas aktualizacji przepisu (${response.status})`);
-      // }
-      //
-      // const data = await response.json();
+      const recipeService = new RecipeService();
 
-      // Mockowanie odpowiedzi
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      // Używamy rzeczywistego API zamiast mockowanych danych
+      const data = await recipeService.updateRecipe(id, "current-user", recipe);
 
-      const mockResponse: RecipeDto = {
-        id,
-        title: recipe.title,
-        content: recipe.content,
-        additional_params: recipe.additional_params || null,
-        user_id: "123",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
-        ai_generated: false,
-        original_recipe_id: null,
-      };
+      if (!data) {
+        throw new Error("Przepis nie został znaleziony");
+      }
 
-      setUpdateState({
-        ...updateState,
-        data: mockResponse,
+      setUpdateState((prev) => ({
+        ...prev,
+        data,
         status: "success",
-      });
+      }));
 
-      return mockResponse;
+      return data;
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Nieznany błąd podczas aktualizacji przepisu");
-      setUpdateState({
-        ...updateState,
+      setUpdateState((prev) => ({
+        ...prev,
         status: "error",
         error,
-      });
+      }));
       throw error;
     }
   };
 
   // Funkcja do usuwania przepisu
   const deleteRecipe = async (id: number): Promise<boolean> => {
-    setDeleteState({ ...deleteState, status: "loading", error: null });
+    setDeleteState((prev) => ({ ...prev, status: "loading", error: null }));
 
     try {
-      // Tu będzie rzeczywiste wywołanie API
-      // const response = await fetch(`/api/recipes/${id}`, {
-      //   method: "DELETE"
-      // });
-      //
-      // if (!response.ok) {
-      //   throw new Error(`Błąd podczas usuwania przepisu (${response.status})`);
-      // }
-      //
-      // const data = await response.json();
+      const recipeService = new RecipeService();
 
-      // Mockowanie odpowiedzi
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Używamy rzeczywistego API zamiast mockowanych danych
+      const result = await recipeService.deleteRecipe(id, "current-user");
 
-      setDeleteState({
-        ...deleteState,
-        data: true,
+      setDeleteState((prev) => ({
+        ...prev,
+        data: result,
         status: "success",
-      });
+      }));
 
-      return true;
+      return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Nieznany błąd podczas usuwania przepisu");
-      setDeleteState({
-        ...deleteState,
+      setDeleteState((prev) => ({
+        ...prev,
         status: "error",
         error,
-      });
+      }));
       throw error;
     }
   };

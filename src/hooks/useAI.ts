@@ -62,6 +62,7 @@ export function useAI(): UseAIState & UseAIActions {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(params),
       });
 
@@ -99,12 +100,16 @@ export function useAI(): UseAIState & UseAIActions {
     }));
 
     try {
-      const response = await fetch(`/api/ai/modify-recipe/${id}`, {
+      const response = await fetch(`/api/ai/modify-recipe`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(params),
+        credentials: "include",
+        body: JSON.stringify({
+          ...params,
+          recipe_id: id,
+        }),
       });
 
       if (!response.ok) {
@@ -146,6 +151,7 @@ export function useAI(): UseAIState & UseAIActions {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(params),
       });
 

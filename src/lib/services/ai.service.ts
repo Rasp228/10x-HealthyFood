@@ -1,4 +1,11 @@
-import type { ActionTypeEnum, GenerateRecipeCommand, GeneratedRecipeDto, PreferenceDto } from "../../types";
+import type {
+  ActionTypeEnum,
+  GenerateRecipeCommand,
+  GeneratedRecipeDto,
+  ModifyRecipeCommand,
+  ModifiedRecipeDto,
+  PreferenceDto,
+} from "../../types";
 import { OpenRouterService } from "../openrouter.service";
 import type { JSONSchema, ChatResponse } from "../openrouter.types";
 
@@ -143,6 +150,127 @@ export class AIService {
       };
     } catch (error) {
       console.error("Błąd podczas generowania przepisu:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Modyfikuje istniejący przepis kulinarny na podstawie preferencji użytkownika
+   * @param userId - ID użytkownika
+   * @param recipeId - ID przepisu do modyfikacji
+   * @param command - Parametry dla modyfikacji przepisu
+   * @returns Zmodyfikowany przepis lub null w przypadku błędu
+   */
+  async modifyRecipe(
+    userId: string,
+    recipeId: number,
+    command: ModifyRecipeCommand,
+    selectedModel?: string
+  ): Promise<ModifiedRecipeDto | null> {
+    try {
+      const startTime = Date.now();
+
+      // Ustaw model i opcjonalnie parametry według potrzeb
+      if (selectedModel) {
+        this.openRouterService.setModel(selectedModel);
+      }
+
+      // Pobierz preferencje użytkownika
+      const userPreferencesArray = await this.getUserPreferences(userId);
+
+      // Konwertuj preferencje na format tekstowy do użycia w wiadomości
+      const userPreferencesText =
+        userPreferencesArray.length > 0
+          ? userPreferencesArray.map((pref) => `${pref.category}: ${pref.value}`).join("\n")
+          : "Brak specyficznych preferencji";
+
+      // Przygotuj treść przepisu bazowego
+      const baseRecipeText = command.base_recipe ? `Przepis do modyfikacji:\n${command.base_recipe}` : "";
+
+      // Przygotuj dodatkowe parametry modyfikacji
+      const additionalParamsText = command.additional_params
+        ? `Instrukcje modyfikacji: ${command.additional_params}`
+        : "";
+
+      // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
+      const userMessage = [additionalParamsText, baseRecipeText, `Preferencje użytkownika:\n${userPreferencesText}`]
+        .filter(Boolean)
+        .join("\n\n");
+
+      // Wiadomość systemowa dla modyfikacji przepisu
+      const systemMessage = `
+        Twoim celem jest modyfikacja istniejącego przepisu kulinarnego zgodnie z instrukcjami użytkownika i jego preferencjami żywieniowymi.
+        
+        1. **Wejście**  
+          - \`base_recipe\` (string): istniejący przepis do modyfikacji
+          - \`user_preferences\` (array[string]): lista preferencji żywieniowych (lubiane, nielubiane, wykluczone, diety)
+          - \`additional_params\` (string): instrukcje modyfikacji od użytkownika
+          
+        2. **Zasady modyfikacji**
+          - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
+          - Dostosuj składniki zgodnie z preferencjami użytkownika
+          - Uwzględnij wszystkie instrukcje modyfikacji z \`additional_params\`
+          - Nie dodawaj składników sprzecznych z preferencjami użytkownika
+          - Zachowaj proporcje i logikę kulinarną
+          - Maksymalna długość treści: 5000 znaków
+          
+        3. **Struktura odpowiedzi**  
+          Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
+          \`\`\`json
+          {
+            "title": "Zmodyfikowany tytuł przepisu",
+            "content": "Zmodyfikowana treść przepisu z listą składników i krokami przygotowania"
+          }
+          \`\`\`
+          
+        4. **Ograniczenia**  
+          - Maksymalna długość treści: 5000 znaków
+          - Zachowaj czytelność i konkretność
+          - Nie dodawaj zbędnych opisów
+      `;
+
+      // Wywołaj API OpenRouter
+      const response = await this.openRouterService.sendMessage(userMessage, systemMessage);
+
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+      const aiModel = response.model || "unknown";
+
+      // Parsowanie odpowiedzi
+      const parsedRecipe = this.parseAIResponse(response);
+
+      // Zapisz log akcji
+      await this.logAIAction(userId, "generate_modification", aiModel, responseTime);
+
+      // Parsuj oryginalny przepis z base_recipe
+      let originalRecipe;
+      try {
+        originalRecipe = JSON.parse(command.base_recipe || "{}");
+      } catch {
+        // Jeśli nie udało się sparsować, utwórz podstawowy obiekt
+        originalRecipe = {
+          id: recipeId,
+          title: "Oryginalny przepis",
+          content: command.base_recipe || "",
+        };
+      }
+
+      return {
+        original_recipe: {
+          id: originalRecipe.id || recipeId,
+          title: originalRecipe.title || "Oryginalny przepis",
+          content: originalRecipe.content || command.base_recipe || "",
+        },
+        modified_recipe: {
+          title: parsedRecipe.title,
+          content: parsedRecipe.content,
+          additional_params: command.additional_params,
+        },
+        ai_model: aiModel,
+        generate_response_time: responseTime,
+      };
+    } catch (error) {
+      console.error("Błąd podczas modyfikacji przepisu:", error);
       return null;
     }
   }

@@ -6,6 +6,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import RecipeFormModal from "./RecipeFormModal";
 import AIModal from "./AIModal";
 import { useToast } from "../hooks/useToast";
+import { RecipeService } from "../lib/services/recipe.service";
 import * as marked from "marked";
 
 interface RecipeDetailPageProps {
@@ -30,14 +31,25 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
 
   const handleConfirmDelete = async () => {
     try {
-      // W rzeczywistej implementacji tutaj byłoby wywołanie API
-      // await deleteRecipe(id)
+      const recipeService = new RecipeService();
+      const recipeId = typeof id === "string" ? parseInt(id) : id;
 
-      // Pokazujemy powiadomienie o sukcesie
-      showToast("Przepis został pomyślnie usunięty", "success");
+      if (isNaN(recipeId) || recipeId <= 0) {
+        throw new Error("Nieprawidłowe ID przepisu");
+      }
 
-      // Przekierowanie na stronę główną
-      window.location.href = "/";
+      // Używamy rzeczywistego API zamiast mockowanych danych
+      const success = await recipeService.deleteRecipe(recipeId, "current-user");
+
+      if (success) {
+        // Pokazujemy powiadomienie o sukcesie
+        showToast("Przepis został pomyślnie usunięty", "success");
+
+        // Przekierowanie na stronę główną
+        window.location.href = "/";
+      } else {
+        throw new Error("Nie można usunąć przepisu - możliwe, że już nie istnieje");
+      }
     } catch (err) {
       // Pokazujemy powiadomienie o błędzie
       let errorMessage = "Wystąpił błąd podczas usuwania przepisu";
