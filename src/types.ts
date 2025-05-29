@@ -108,8 +108,11 @@ export interface ModifiedRecipeDto {
 // Command do zapisania wygenerowanego/zmodyfikowanego przepisu
 export interface SaveRecipeCommand {
   recipe: RecipeBasicDto;
-  original_recipe_id?: number;
   is_new: boolean;
+  replace_existing?: {
+    recipe_id: number;
+    replace: boolean;
+  };
 }
 
 // Typy dla logów akcji AI

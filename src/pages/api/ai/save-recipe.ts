@@ -10,8 +10,13 @@ const saveRecipeSchema = z.object({
     content: z.string().min(1, "Treść przepisu jest wymagana"),
     additional_params: z.string().nullable().optional(),
   }),
-  original_recipe_id: z.number().optional(),
   is_new: z.boolean(),
+  replace_existing: z
+    .object({
+      recipe_id: z.number(),
+      replace: z.boolean(),
+    })
+    .optional(),
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -44,58 +49,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    const { recipe, original_recipe_id, is_new } = validationResult.data;
+    const { recipe, is_new, replace_existing } = validationResult.data;
 
-    if (is_new) {
-      // Tworzenie nowego przepisu
-      const recipeData = {
-        title: recipe.title,
-        content: recipe.content,
-        additional_params: recipe.additional_params ?? null,
-        is_ai_generated: true,
-        original_recipe_id: original_recipe_id ?? null,
-        user_id: user.id,
-      };
-
-      const { data: newRecipe, error } = await locals.supabase.from("recipes").insert(recipeData).select().single();
-
-      if (error) {
-        throw error;
-      }
-
-      return new Response(JSON.stringify(newRecipe), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      });
-    } else {
-      // Aktualizacja istniejącego przepisu
-      if (!original_recipe_id) {
-        return new Response(
-          JSON.stringify({
-            error: "ID oryginalnego przepisu jest wymagane dla aktualizacji",
-          }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
-
+    // Sprawdź czy chcemy zastąpić istniejący przepis
+    if (!is_new && replace_existing?.replace) {
       // Sprawdź czy przepis istnieje i należy do użytkownika
       const { data: existingRecipe, error: checkError } = await locals.supabase
         .from("recipes")
         .select("id")
-        .eq("id", original_recipe_id)
+        .eq("id", replace_existing.recipe_id)
         .eq("user_id", user.id)
         .single();
 
       if (checkError || !existingRecipe) {
         return new Response(
           JSON.stringify({
-            error: "Przepis nie został znaleziony",
+            error: "Przepis do zastąpienia nie został znaleziony",
           }),
           { status: 404, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      // Aktualizuj przepis
+      // Aktualizuj istniejący przepis
       const updateData = {
         title: recipe.title,
         content: recipe.content,
@@ -107,12 +82,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { data: updatedRecipe, error: updateError } = await locals.supabase
         .from("recipes")
         .update(updateData)
-        .eq("id", original_recipe_id)
+        .eq("id", replace_existing.recipe_id)
         .eq("user_id", user.id)
         .select()
         .single();
 
       if (updateError) {
+        console.error("Błąd podczas aktualizacji przepisu:", updateError);
         throw updateError;
       }
 
@@ -121,6 +97,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // Tworzenie nowego przepisu (domyślne zachowanie)
+    const recipeData = {
+      title: recipe.title,
+      content: recipe.content,
+      additional_params: recipe.additional_params ?? null,
+      is_ai_generated: true,
+      user_id: user.id,
+    };
+
+    const { data: newRecipe, error } = await locals.supabase.from("recipes").insert(recipeData).select().single();
+
+    if (error) {
+      console.error("Błąd podczas tworzenia przepisu:", error);
+      throw error;
+    }
+
+    return new Response(JSON.stringify(newRecipe), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     // Obsługa błędów
     const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";

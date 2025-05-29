@@ -49,7 +49,7 @@ export class OpenRouterService {
     }
 
     this.apiUrl = config.apiUrl || "https://openrouter.ai/api/v1";
-    this.defaultModel = config.defaultModel || "deepseek/deepseek-chat-v3-0324:free";
+    this.defaultModel = config.defaultModel || "tngtech/deepseek-r1t-chimera:free";
     this.defaultParameters = {
       temperature: 0.7,
       top_p: 1,

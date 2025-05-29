@@ -12,20 +12,20 @@ const generateRecipeSchema = z.object({
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
+
+    if (!user) {
       return new Response(
         JSON.stringify({
-          error: "Brak autoryzacji",
+          error: "Nieautoryzowany dostęp",
         }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const userId = session.data.session.user.id;
+    const userId = user.id;
 
     // Pobierz i zwaliduj dane wejściowe
     const rawData = await request.json();

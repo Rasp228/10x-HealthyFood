@@ -9,6 +9,7 @@ interface AIModalFormValues {
   base_recipe?: string;
   temp_title?: string;
   temp_content?: string;
+  replace_original?: boolean;
 }
 
 interface AIModalProps {
@@ -25,6 +26,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
     base_recipe: "",
     temp_title: "",
     temp_content: "",
+    replace_original: false,
   });
   const [step, setStep] = useState<"input" | "preview">("input");
   const [showBaseRecipe, setShowBaseRecipe] = useState(false);
@@ -57,6 +59,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
         base_recipe: "",
         temp_title: "",
         temp_content: "",
+        replace_original: false,
       });
     } else if (isOpen && originalRecipe) {
       // Jeśli otwieramy modal z przepisem do modyfikacji, ustawiamy pola tymczasowej edycji
@@ -65,15 +68,17 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
         base_recipe: "",
         temp_title: originalRecipe.title,
         temp_content: originalRecipe.content,
+        replace_original: false,
       });
     }
   }, [isOpen, originalRecipe, resetAIState]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormValues((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -118,14 +123,21 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
 
       const saveParams: SaveRecipeCommand = {
         recipe: recipeToSave,
-        is_new: mode === "generate",
-        original_recipe_id: mode === "modify" && originalRecipe ? originalRecipe.id : undefined,
+        is_new: !(mode === "modify" && originalRecipe && formValues.replace_original),
+        replace_existing:
+          mode === "modify" && originalRecipe && formValues.replace_original
+            ? {
+                recipe_id: originalRecipe.id,
+                replace: true,
+              }
+            : undefined,
       };
 
       const savedRecipe = await saveAIRecipe(saveParams);
 
       if (savedRecipe) {
-        showToast(`Przepis "${savedRecipe.title}" został zapisany.`, "success");
+        const actionText = saveParams.is_new ? "został zapisany" : "został zaktualizowany";
+        showToast(`Przepis "${savedRecipe.title}" ${actionText}.`, "success");
 
         if (onSuccess) {
           onSuccess();
@@ -355,6 +367,31 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                     />
                   </div>
                 </div>
+
+                {/* Opcja zastąpienia oryginalnego przepisu (tylko w trybie modyfikacji) */}
+                {mode === "modify" && originalRecipe && (
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        id="replace_original"
+                        name="replace_original"
+                        checked={formValues.replace_original || false}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 rounded border-gray-300"
+                      />
+                      <div className="flex-1">
+                        <label htmlFor="replace_original" className="text-sm font-medium">
+                          Zastąp oryginalny przepis &quot;{originalRecipe.title}&quot;
+                        </label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Jeśli zaznaczysz tę opcję, oryginalny przepis zostanie zaktualizowany nową wersją AI. W
+                          przeciwnym razie zostanie utworzony nowy przepis.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setStep("input")}>

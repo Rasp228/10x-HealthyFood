@@ -67,7 +67,8 @@ export function useAI(): UseAIState & UseAIActions {
       });
 
       if (!response.ok) {
-        throw new Error(`Błąd generowania przepisu: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: "Błąd komunikacji z serwerem" }));
+        throw new Error(errorData.error || `Błąd generowania przepisu: ${response.status}`);
       }
 
       const generatedRecipe = (await response.json()) as GeneratedRecipeDto;
@@ -113,7 +114,8 @@ export function useAI(): UseAIState & UseAIActions {
       });
 
       if (!response.ok) {
-        throw new Error(`Błąd modyfikacji przepisu: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: "Błąd komunikacji z serwerem" }));
+        throw new Error(errorData.error || `Błąd modyfikacji przepisu: ${response.status}`);
       }
 
       const modifiedRecipe = (await response.json()) as ModifiedRecipeDto;
@@ -156,7 +158,8 @@ export function useAI(): UseAIState & UseAIActions {
       });
 
       if (!response.ok) {
-        throw new Error(`Błąd zapisywania przepisu AI: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: "Błąd komunikacji z serwerem" }));
+        throw new Error(errorData.error || `Błąd zapisywania przepisu AI: ${response.status}`);
       }
 
       const savedRecipe = (await response.json()) as RecipeDto;
