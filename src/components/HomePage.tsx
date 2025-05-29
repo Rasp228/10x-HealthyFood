@@ -6,6 +6,7 @@ import RecipeFormModal from "./RecipeFormModal";
 import AIModal from "./AIModal";
 import { useToast } from "../hooks/useToast";
 import { useFetchRecipes } from "../hooks/useRecipes";
+import { RecipeService } from "../lib/services/recipe.service";
 
 export default function HomePage() {
   const [filterText, setFilterText] = useState("");
@@ -73,7 +74,6 @@ export default function HomePage() {
 
   // Obsługa akcji na przepisach
   const handleEditRecipe = (id: number) => {
-    console.log(`Edycja przepisu o id ${id}`);
     setSelectedRecipeId(id);
     setIsRecipeFormOpen(true);
   };
@@ -88,15 +88,18 @@ export default function HomePage() {
     if (recipeToDelete === null) return;
 
     try {
-      console.log(`Usuwanie przepisu o id ${recipeToDelete}`);
-      // W rzeczywistej implementacji wykonywalibyśmy faktyczne usunięcie
-      // await deleteRecipe(recipeToDelete)
+      const recipeService = new RecipeService();
+      const success = await recipeService.deleteRecipe(recipeToDelete, "current-user");
 
-      // Pokazujemy powiadomienie o sukcesie
-      showToast("Przepis został pomyślnie usunięty", "success");
+      if (success) {
+        // Pokazujemy powiadomienie o sukcesie
+        showToast("Przepis został pomyślnie usunięty", "success");
 
-      // Odświeżamy listę przepisów
-      refetch();
+        // Odświeżamy listę przepisów
+        refetch();
+      } else {
+        throw new Error("Nie można usunąć przepisu - możliwe, że już nie istnieje");
+      }
     } catch (err) {
       // Pokazujemy powiadomienie o błędzie
       let errorMessage = "Wystąpił błąd podczas usuwania przepisu";
@@ -117,7 +120,6 @@ export default function HomePage() {
   };
 
   const handleAIRecipe = (id: number) => {
-    console.log(`Modyfikacja przepisu przez AI dla id ${id}`);
     setSelectedRecipeId(id);
     setIsAIModalOpen(true);
   };

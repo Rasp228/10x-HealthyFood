@@ -72,8 +72,6 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
       //   password: formValues.password,
       // });
 
-      console.log(`Użytkownik ${mode === "login" ? "zalogowany" : "zarejestrowany"}`);
-
       if (onSuccess) {
         onSuccess();
       } else {

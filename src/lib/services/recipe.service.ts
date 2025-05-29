@@ -6,56 +6,109 @@ import type {
   RecipeSortParams,
   UpdateRecipeCommand,
 } from "../../types";
-// import { supabaseClient } from "../../db/supabase.client"; // TODO: Naprawić import - brakuje eksportu
 
 /**
  * Serwis obsługujący zarządzanie przepisami kulinarnymi
+ * Wszystkie operacje wykonywane przez bezpieczne API endpointy
  */
 export class RecipeService {
   /**
    * Pobiera listę przepisów użytkownika z paginacją i sortowaniem
-   * @param userId - ID użytkownika
+   * @param userId - ID użytkownika (używane dla walidacji, ale auth jest przez cookies)
    * @param pagination - Parametry paginacji (limit, offset)
    * @param sort - Parametry sortowania (sort, order)
+   * @param search - Opcjonalne wyszukiwanie
    * @returns Paginowana lista przepisów
    */
   async getUserRecipes(
     userId: string,
     pagination: PaginationParams = {},
-    sort: RecipeSortParams = {} // eslint-disable-line @typescript-eslint/no-unused-vars
+    sort: RecipeSortParams = {},
+    search?: string
   ): Promise<PaginatedRecipesDto> {
-    // TODO: Naprawić import supabaseClient
-    console.warn(`getUserRecipes called for user ${userId} - returning empty data due to missing supabaseClient`);
-    return {
-      data: [],
-      total: 0,
-      limit: pagination.limit || 10,
-      offset: pagination.offset || 0,
-    };
+    try {
+      // Budowanie query string
+      const queryParams = new URLSearchParams();
+
+      if (pagination.limit) queryParams.append("limit", pagination.limit.toString());
+      if (pagination.offset) queryParams.append("offset", pagination.offset.toString());
+      if (sort.sort) queryParams.append("sort", sort.sort);
+      if (sort.order) queryParams.append("order", sort.order);
+      if (search) queryParams.append("search", search.trim());
+
+      const response = await fetch(`/api/recipes?${queryParams.toString()}`, {
+        method: "GET",
+        credentials: "include", // Ważne dla przesyłania cookies z sesją
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching user recipes:", error);
+      throw error instanceof Error ? error : new Error("Nieznany błąd podczas pobierania przepisów");
+    }
   }
 
   /**
    * Pobiera pojedynczy przepis
    * @param recipeId - ID przepisu
-   * @param userId - ID użytkownika (opcjonalne, dla walidacji właściciela)
+   * @param userId - ID użytkownika (dla walidacji)
    * @returns Przepis lub null jeśli nie znaleziono
    */
   async getRecipe(recipeId: number, userId?: string): Promise<RecipeDto | null> {
-    console.warn(
-      `getRecipe called for recipe ${recipeId}, user ${userId} - returning null due to missing supabaseClient`
-    );
-    return null;
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+      throw error instanceof Error ? error : new Error("Nieznany błąd podczas pobierania przepisu");
+    }
   }
 
   /**
    * Tworzy nowy przepis
-   * @param userId - ID użytkownika
+   * @param userId - ID użytkownika (dla walidacji)
    * @param command - Dane do utworzenia przepisu
    * @returns Utworzony przepis
    */
   async createRecipe(userId: string, command: CreateRecipeCommand): Promise<RecipeDto> {
-    console.warn(`createRecipe called for user ${userId} - throwing error due to missing supabaseClient`);
-    throw new Error("Funkcjonalność przepisów jest tymczasowo niedostępna");
+    try {
+      const response = await fetch("/api/recipes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(command),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error creating recipe:", error);
+      throw error instanceof Error ? error : new Error("Nieznany błąd podczas tworzenia przepisu");
+    }
   }
 
   /**
@@ -66,10 +119,30 @@ export class RecipeService {
    * @returns Zaktualizowany przepis lub null jeśli nie znaleziono
    */
   async updateRecipe(recipeId: number, userId: string, command: UpdateRecipeCommand): Promise<RecipeDto | null> {
-    console.warn(
-      `updateRecipe called for recipe ${recipeId}, user ${userId} - returning null due to missing supabaseClient`
-    );
-    return null;
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(command),
+      });
+
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+      throw error instanceof Error ? error : new Error("Nieznany błąd podczas aktualizacji przepisu");
+    }
   }
 
   /**
@@ -79,9 +152,25 @@ export class RecipeService {
    * @returns true jeśli usunięto, false jeśli nie znaleziono
    */
   async deleteRecipe(recipeId: number, userId: string): Promise<boolean> {
-    console.warn(
-      `deleteRecipe called for recipe ${recipeId}, user ${userId} - returning false due to missing supabaseClient`
-    );
-    return false;
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.status === 404) {
+        return false;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+      throw error instanceof Error ? error : new Error("Nieznany błąd podczas usuwania przepisu");
+    }
   }
 }

@@ -4,6 +4,7 @@ import PreferenceChip from "./PreferenceChip";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
 import { usePreferences } from "../hooks/usePreferences";
+import { useUserStats } from "../hooks/useUserStats";
 import { z } from "zod";
 import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferenceCategoryEnum } from "../types";
 
@@ -28,12 +29,14 @@ export default function ProfilePage() {
     deletePreference,
   } = usePreferences();
 
+  // Używamy hooka do pobierania statystyk zamiast state
+  const { stats, isLoading: isStatsLoading, error: statsError, refetch: refetchStats } = useUserStats();
+
   const [newPreference, setNewPreference] = useState<CreatePreferenceCommand>({
     category: "diety" as PreferenceCategoryEnum,
     value: "",
   });
   const [formError, setFormError] = useState("");
-  const [stats, setStats] = useState({ totalRecipes: 0, aiGenerated: 0 });
 
   // Pobieranie preferencji przy montowaniu komponentu
   useEffect(() => {
@@ -48,14 +51,12 @@ export default function ProfilePage() {
     loadPreferences();
   }, [fetchPreferences, showToast]);
 
-  // Pobieranie statystyk
+  // Obsługa błędów statystyk
   useEffect(() => {
-    // Tymczasowo mockowane dane statystyk
-    setStats({
-      totalRecipes: 12,
-      aiGenerated: 4,
-    });
-  }, []);
+    if (statsError) {
+      showToast("Błąd podczas ładowania statystyk", "error");
+    }
+  }, [statsError, showToast]);
 
   // Grupowanie preferencji według kategorii
   const preferencesByCategory = preferences.reduce<Record<string, PreferenceDto[]>>((acc, pref) => {
@@ -172,21 +173,44 @@ export default function ProfilePage() {
             </div>
             <div className="pt-2">
               <span className="text-muted-foreground">Statystyki:</span>
-              <ul className="mt-1 ml-4 list-disc text-sm" aria-label="Statystyki użytkownika">
-                <li>
-                  <span className="text-muted-foreground">Liczba przepisów:</span>{" "}
-                  <span className="font-medium">{stats.totalRecipes}</span>
-                </li>
-                <li>
-                  <span className="text-muted-foreground">Wygenerowane przez AI:</span>{" "}
-                  <span className="font-medium">{stats.aiGenerated}</span>
-                </li>
-                <li>
-                  <span className="text-muted-foreground">Preferencje:</span>{" "}
-                  <span className="font-medium">{total}</span>
-                  <span className="text-muted-foreground text-xs ml-1">(max. 50)</span>
-                </li>
-              </ul>
+              {isStatsLoading ? (
+                <div className="mt-1 ml-4">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-32 mb-1"></div>
+                    <div className="h-4 bg-muted rounded w-28 mb-1"></div>
+                    <div className="h-4 bg-muted rounded w-24"></div>
+                  </div>
+                </div>
+              ) : statsError ? (
+                <div className="mt-1 ml-4 text-red-500 text-sm">
+                  Błąd ładowania statystyk{" "}
+                  <button onClick={refetchStats} className="underline hover:no-underline">
+                    Spróbuj ponownie
+                  </button>
+                </div>
+              ) : (
+                <ul className="mt-1 ml-4 list-disc text-sm" aria-label="Statystyki użytkownika">
+                  <li>
+                    <span className="text-muted-foreground">Liczba przepisów:</span>{" "}
+                    <span className="font-medium">{stats?.totalRecipes || 0}</span>
+                  </li>
+                  <li>
+                    <span className="text-muted-foreground">Wygenerowane przez AI:</span>{" "}
+                    <span className="font-medium">{stats?.aiGeneratedRecipes || 0}</span>
+                  </li>
+                  <li>
+                    <span className="text-muted-foreground">Preferencje:</span>{" "}
+                    <span className="font-medium">{total}</span>
+                    <span className="text-muted-foreground text-xs ml-1">(max. 50)</span>
+                  </li>
+                  {stats?.lastRecipeDate && (
+                    <li>
+                      <span className="text-muted-foreground">Ostatni przepis:</span>{" "}
+                      <span className="font-medium">{formatDate(stats.lastRecipeDate)}</span>
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
           </div>
         </div>

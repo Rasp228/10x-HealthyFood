@@ -1,8 +1,7 @@
 import type { ActionTypeEnum, GenerateRecipeCommand, GeneratedRecipeDto, PreferenceDto } from "../../types";
-// import { supabaseClient } from "../../db/supabase.client"; // TODO: Naprawić import - brakuje eksportu
 import { OpenRouterService } from "../openrouter.service";
 import type { JSONSchema, ChatResponse } from "../openrouter.types";
-//TODO autoryzacja do ogarnięcia!
+
 /**
  * Serwis obsługujący interakcje z AI poprzez OpenRouter.ai
  */

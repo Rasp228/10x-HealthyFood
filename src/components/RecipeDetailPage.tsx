@@ -32,7 +32,6 @@ export default function RecipeDetailPage({ id }: RecipeDetailPageProps) {
     try {
       // W rzeczywistej implementacji tutaj byłoby wywołanie API
       // await deleteRecipe(id)
-      console.log(`Usuwanie przepisu o id ${id}`);
 
       // Pokazujemy powiadomienie o sukcesie
       showToast("Przepis został pomyślnie usunięty", "success");

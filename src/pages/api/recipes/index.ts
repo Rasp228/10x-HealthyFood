@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
-import { RecipeService } from "../../../lib/services/recipe.service";
 
 export const prerender = false;
 
@@ -18,6 +17,7 @@ const paginationSchema = z.object({
   offset: z.coerce.number().optional(),
   sort: z.enum(["created_at", "updated_at", "title"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
+  search: z.string().optional(),
 });
 
 // Handler GET - pobieranie listy przepisów
@@ -27,6 +27,15 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const {
       data: { user },
     } = await locals.supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({
+          error: "Nieautoryzowany dostęp",
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // Pobierz i zwaliduj parametry paginacji i sortowania
     const params = Object.fromEntries(url.searchParams.entries());
@@ -42,13 +51,36 @@ export const GET: APIRoute = async ({ locals, url }) => {
       );
     }
 
-    const { limit, offset, sort, order } = validationResult.data;
+    const { limit = 10, offset = 0, sort = "created_at", order = "desc", search } = validationResult.data;
 
-    // Użyj serwisu do pobrania przepisów
-    const recipeService = new RecipeService();
-    const result = await recipeService.getUserRecipes(user.id, { limit, offset }, { sort, order });
+    // Budowanie zapytania z wyszukiwaniem
+    let query = locals.supabase.from("recipes").select("*", { count: "exact" }).eq("user_id", user.id);
 
-    // Zwróć listę przepisów
+    // Dodanie wyszukiwania jeśli podano
+    if (search && search.trim() !== "") {
+      const searchTerm = search.trim();
+      query = query.or(
+        `title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,additional_params.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Sortowanie i paginacja
+    query = query.order(sort, { ascending: order === "asc" }).range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Zwróć listę przepisów w formacie zgodnym z PaginatedRecipesDto
+    const result = {
+      data: data || [],
+      total: count || 0,
+      limit,
+      offset,
+    };
+
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
     // Obsługa błędów
@@ -72,6 +104,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       data: { user },
     } = await locals.supabase.auth.getUser();
 
+    if (!user) {
+      return new Response(
+        JSON.stringify({
+          error: "Nieautoryzowany dostęp",
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Pobierz i zwaliduj dane wejściowe
     const rawData = await request.json();
     const validationResult = createRecipeSchema.safeParse(rawData);
@@ -86,20 +127,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Przygotuj dane do utworzenia przepisu z poprawnym typem dla additional_params
-    const command = {
+    // Przygotuj dane do utworzenia przepisu
+    const recipeData = {
       title: validationResult.data.title,
       content: validationResult.data.content,
       additional_params: validationResult.data.additional_params ?? null,
       is_ai_generated: validationResult.data.is_ai_generated,
+      user_id: user.id,
     };
 
-    // Użyj serwisu do utworzenia przepisu
-    const recipeService = new RecipeService();
-    const result = await recipeService.createRecipe(user.id, command);
+    // Utwórz przepis w bazie danych
+    const { data, error } = await locals.supabase.from("recipes").insert(recipeData).select().single();
+
+    if (error) {
+      throw error;
+    }
 
     // Zwróć utworzony przepis
-    return new Response(JSON.stringify(result), { status: 201, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(data), { status: 201, headers: { "Content-Type": "application/json" } });
   } catch (error) {
     // Obsługa błędów
     const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";

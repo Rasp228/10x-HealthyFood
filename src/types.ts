@@ -117,3 +117,32 @@ export type ActionTypeEnum = Database["public"]["Enums"]["action_type_enum"];
 
 // Typ dla kategorii preferencji
 export type PreferenceCategoryEnum = Database["public"]["Enums"]["preference_category_enum"];
+
+/**
+ * Typy dla API błędów i statystyk
+ */
+
+// Typ dla błędów API
+export interface APIError {
+  error: string;
+  details?: string;
+  statusCode?: number;
+}
+
+// Typ dla statystyk użytkownika
+export interface UserStatsDto {
+  totalRecipes: number;
+  aiGeneratedRecipes: number;
+  lastRecipeDate?: string;
+}
+
+// Rozszerzenie istniejących typów dla odpowiedzi API
+export interface RecipeApiResponse {
+  data?: RecipeDto;
+  error?: APIError;
+}
+
+export interface RecipesListApiResponse {
+  data?: PaginatedRecipesDto;
+  error?: APIError;
+}

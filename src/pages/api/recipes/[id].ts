@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
-import { RecipeService } from "../../../lib/services/recipe.service";
 
 export const prerender = false;
 
@@ -15,15 +14,16 @@ const updateRecipeSchema = z.object({
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
-      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Nieautoryzowany dostęp" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    const userId = session.data.session.user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const recipeId = parseInt(params.id || "0", 10);
@@ -34,15 +34,23 @@ export const GET: APIRoute = async ({ params, locals }) => {
       });
     }
 
-    // Użyj serwisu do pobrania przepisu
-    const recipeService = new RecipeService();
-    const recipe = await recipeService.getRecipe(recipeId, userId);
+    // Pobierz przepis z bazy danych
+    const { data: recipe, error } = await locals.supabase
+      .from("recipes")
+      .select("*")
+      .eq("id", recipeId)
+      .eq("user_id", user.id)
+      .single();
 
-    if (!recipe) {
-      return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Brak wyników
+        return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw error;
     }
 
     // Zwróć przepis
@@ -65,15 +73,16 @@ export const GET: APIRoute = async ({ params, locals }) => {
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
-      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Nieautoryzowany dostęp" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    const userId = session.data.session.user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const recipeId = parseInt(params.id || "0", 10);
@@ -99,21 +108,31 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     }
 
     // Przygotuj dane do aktualizacji przepisu
-    const command = {
+    const updateData = {
       title: validationResult.data.title,
       content: validationResult.data.content,
       additional_params: validationResult.data.additional_params ?? null,
+      updated_at: new Date().toISOString(),
     };
 
-    // Użyj serwisu do aktualizacji przepisu
-    const recipeService = new RecipeService();
-    const updatedRecipe = await recipeService.updateRecipe(recipeId, userId, command);
+    // Aktualizuj przepis w bazie danych
+    const { data: updatedRecipe, error } = await locals.supabase
+      .from("recipes")
+      .update(updateData)
+      .eq("id", recipeId)
+      .eq("user_id", user.id)
+      .select()
+      .single();
 
-    if (!updatedRecipe) {
-      return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Brak wyników
+        return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw error;
     }
 
     // Zwróć zaktualizowany przepis
@@ -139,15 +158,16 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     // Sprawdź autoryzację
-    const session = await locals.supabase.auth.getSession();
-    if (!session.data.session?.user) {
-      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
+    const {
+      data: { user },
+    } = await locals.supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Nieautoryzowany dostęp" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    const userId = session.data.session.user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const recipeId = parseInt(params.id || "0", 10);
@@ -158,15 +178,11 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       });
     }
 
-    // Użyj serwisu do usunięcia przepisu
-    const recipeService = new RecipeService();
-    const deleted = await recipeService.deleteRecipe(recipeId, userId);
+    // Usuń przepis z bazy danych
+    const { error } = await locals.supabase.from("recipes").delete().eq("id", recipeId).eq("user_id", user.id);
 
-    if (!deleted) {
-      return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (error) {
+      throw error;
     }
 
     // Zwróć potwierdzenie usunięcia
