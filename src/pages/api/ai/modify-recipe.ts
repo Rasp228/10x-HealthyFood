@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Użyj serwisu AI do modyfikacji przepisu
-    const aiService = new AIService();
+    const aiService = new AIService(locals.supabase);
     const result = await aiService.modifyRecipe(user.id, parsedRecipeId, command);
 
     if (!result) {

@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Użyj serwisu AI do wygenerowania przepisu
-    const aiService = new AIService();
+    const aiService = new AIService(locals.supabase);
     const result = await aiService.generateRecipe(userId, command);
 
     if (!result) {
