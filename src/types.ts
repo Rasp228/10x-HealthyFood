@@ -149,3 +149,67 @@ export interface RecipesListApiResponse {
   data?: PaginatedRecipesDto;
   error?: APIError;
 }
+
+/**
+ * Typy dla modala szczegółów przepisu
+ */
+
+// Props dla komponentu modala szczegółów przepisu
+export interface RecipeViewModalProps {
+  isOpen: boolean;
+  recipeId: number | null;
+  onClose: () => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  onAI?: (id: number) => void;
+  onSuccess?: () => void;
+}
+
+// Props dla refaktoryzowanego komponentu zawartości szczegółów
+export interface RecipeDetailContentProps {
+  recipe: RecipeDto | null;
+  isLoading?: boolean;
+  error?: Error | null;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onAI?: () => void;
+  onSuccess?: () => void;
+  showBackButton?: boolean; // dla rozróżnienia strony vs modala
+  className?: string; // dla customizacji stylów
+}
+
+// Rozszerzenie props dla RecipeCard o nowy callback
+export interface RecipeCardViewProps {
+  recipe: RecipeDto;
+  onView?: (id: number) => void; // Nowy callback
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  onAI?: (id: number) => void;
+}
+
+// Hook dla modala
+export interface UseRecipeModalResult {
+  isOpen: boolean;
+  recipeId: number | null;
+  recipe: RecipeDto | null;
+  isLoading: boolean;
+  error: Error | null;
+  openModal: (id: number) => void;
+  closeModal: () => void;
+  refetch: () => void;
+}
+
+// Cache management dla optymalizacji
+export type RecipeCache = Record<
+  number,
+  {
+    recipe: RecipeDto;
+    timestamp: number;
+  }
+>;
+
+export interface ModalState {
+  isOpen: boolean;
+  recipeId: number | null;
+  cache: RecipeCache;
+}

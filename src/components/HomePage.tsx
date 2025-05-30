@@ -4,6 +4,8 @@ import RecipeCard from "./RecipeCard";
 import ConfirmDialog from "./ConfirmDialog";
 import RecipeFormModal from "./RecipeFormModal";
 import AIModal from "./AIModal";
+import RecipeViewModalContainer from "./RecipeViewModal";
+import { useRecipeModal } from "../hooks/useRecipeModal";
 import { useToast } from "../hooks/useToast";
 import { useFetchRecipes } from "../hooks/useRecipes";
 import { RecipeService } from "../lib/services/recipe.service";
@@ -21,6 +23,9 @@ export default function HomePage() {
   const [recipeToDelete, setRecipeToDelete] = useState<number | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const { showToast } = useToast();
+
+  // Hook do obsługi modala szczegółów
+  const { openModal } = useRecipeModal();
 
   // Użycie hooka do pobrania wszystkich przepisów z uwzględnieniem wyszukiwania i sortowania
   const {
@@ -122,6 +127,11 @@ export default function HomePage() {
   const handleAIRecipe = (id: number) => {
     setSelectedRecipeId(id);
     setIsAIModalOpen(true);
+  };
+
+  // Obsługa otwierania modala szczegółów przepisu
+  const handleViewRecipe = (id: number) => {
+    openModal(id);
   };
 
   // Obsługa sukcesu po dodaniu/edycji/AI modyfikacji
@@ -390,6 +400,7 @@ export default function HomePage() {
                 onEdit={() => handleEditRecipe(recipe.id)}
                 onDelete={() => handleDeleteRecipe(recipe.id)}
                 onAI={() => handleAIRecipe(recipe.id)}
+                onView={() => handleViewRecipe(recipe.id)}
               />
             ))}
           </div>
@@ -423,6 +434,14 @@ export default function HomePage() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         severity="danger"
+      />
+
+      {/* Modal szczegółów przepisu */}
+      <RecipeViewModalContainer
+        onEdit={handleEditRecipe}
+        onDelete={handleDeleteRecipe}
+        onAI={handleAIRecipe}
+        onSuccess={handleRecipeSuccess}
       />
     </div>
   );

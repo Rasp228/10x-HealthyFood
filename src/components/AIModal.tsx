@@ -161,7 +161,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-3xl rounded-lg bg-card p-6 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold">
