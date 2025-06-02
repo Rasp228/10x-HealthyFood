@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "../../hooks/useAuth.ts";
-import { loginSchema } from "../../lib/validations/auth/login.ts";
+import { useAuth } from "../../hooks/useAuth";
+import { loginSchema } from "../../lib/validations/auth/login";
 
 interface LoginFormValues {
   email: string;
@@ -80,6 +80,7 @@ export default function LoginForm() {
             onChange={handleChange}
             className={`w-full rounded-md border p-2 ${validationErrors.email ? "border-red-300" : "border-input"}`}
             placeholder="twoj@email.com"
+            autoComplete="email"
             required
           />
           {validationErrors.email && <p className="text-xs text-red-500">{validationErrors.email}</p>}
@@ -96,6 +97,7 @@ export default function LoginForm() {
             value={formValues.password}
             onChange={handleChange}
             className={`w-full rounded-md border p-2 ${validationErrors.password ? "border-red-300" : "border-input"}`}
+            autoComplete="current-password"
             required
           />
           {validationErrors.password && <p className="text-xs text-red-500">{validationErrors.password}</p>}

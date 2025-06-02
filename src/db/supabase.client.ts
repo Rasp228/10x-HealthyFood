@@ -24,7 +24,11 @@ export const createSupabaseServerInstance = (context: { headers: Headers; cookie
         return parseCookieHeader(context.headers.get("Cookie") ?? "");
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => context.cookies.set(name, value, options));
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => context.cookies.set(name, value, options));
+        } catch (e) {
+          console.error("Error setting cookies:", e);
+        }
       },
     },
   });

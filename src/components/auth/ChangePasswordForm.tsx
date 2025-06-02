@@ -108,7 +108,7 @@ export default function ChangePasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !formValues.password || !formValues.confirmPassword) {
+    if (!validateForm()) {
       return;
     }
 

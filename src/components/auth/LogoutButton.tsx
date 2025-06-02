@@ -19,14 +19,12 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
         },
       });
 
-      if (response.ok) {
-        // Przekierowanie po pomyślnym wylogowaniu
-        window.location.href = "/auth/login";
-      } else {
+      if (!response.ok) {
         console.error("Błąd podczas wylogowania");
-        // Fallback - przekieruj mimo błędu
-        window.location.href = "/auth/login";
       }
+
+      // Przekierowanie po wylogowaniu
+      window.location.href = "/auth/login";
     } catch (error) {
       console.error("Błąd połączenia podczas wylogowania:", error);
       // Fallback - przekieruj mimo błędu

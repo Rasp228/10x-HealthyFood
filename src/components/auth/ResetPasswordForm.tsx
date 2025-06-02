@@ -57,7 +57,7 @@ export default function ResetPasswordForm() {
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateRequestReset() || !formValues.email) return;
+    if (!validateRequestReset()) return;
 
     const success = await requestPasswordReset(formValues.email);
     if (success) {

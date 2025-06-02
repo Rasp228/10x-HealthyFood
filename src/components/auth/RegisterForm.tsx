@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "../../hooks/useAuth.ts";
-import { registerSchema } from "../../lib/validations/auth/register.ts";
+import { useAuth } from "../../hooks/useAuth";
+import { registerSchema } from "../../lib/validations/auth/register";
 
 interface RegisterFormValues {
   email: string;
