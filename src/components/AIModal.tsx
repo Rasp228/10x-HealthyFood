@@ -12,6 +12,13 @@ interface AIModalFormValues {
   replace_original?: boolean;
 }
 
+interface ValidationErrors {
+  additional_params?: string;
+  base_recipe?: string;
+  temp_title?: string;
+  temp_content?: string;
+}
+
 interface AIModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,21 +38,80 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
   const [step, setStep] = useState<"input" | "preview">("input");
   const [showBaseRecipe, setShowBaseRecipe] = useState(false);
   const [editingOriginal, setEditingOriginal] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const {
     generateRecipe,
     modifyRecipe,
     saveAIRecipe,
     resetAIState,
+    retryLastOperation,
+    cancelOperation,
     isGenerating,
     isModifying,
     isSaving,
     generatedRecipe,
     modifiedRecipe,
     error,
+    retryable,
+    canCancel,
   } = useAI();
 
   const { showToast } = useToast();
+
+  // Walidacja pól na żywo
+  const validateField = (name: string, value: string): string | undefined => {
+    switch (name) {
+      case "additional_params":
+        if (value.length > 5000) {
+          return "Dodatkowe parametry nie mogą przekraczać 5000 znaków";
+        }
+        break;
+      case "base_recipe":
+        if (value.length > 5000) {
+          return "Przepis bazowy nie może przekraczać 5000 znaków";
+        }
+        break;
+      case "temp_title":
+        if (value.length > 100) {
+          return "Tytuł nie może przekraczać 100 znaków";
+        }
+        break;
+      case "temp_content":
+        if (value.length > 5000) {
+          return "Treść przepisu nie może przekraczać 5000 znaków";
+        }
+        break;
+    }
+    return undefined;
+  };
+
+  // Walidacja wszystkich pól
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    errors.additional_params = validateField("additional_params", formValues.additional_params);
+    if (showBaseRecipe && formValues.base_recipe) {
+      errors.base_recipe = validateField("base_recipe", formValues.base_recipe);
+    }
+    if (editingOriginal && formValues.temp_title) {
+      errors.temp_title = validateField("temp_title", formValues.temp_title);
+    }
+    if (editingOriginal && formValues.temp_content) {
+      errors.temp_content = validateField("temp_content", formValues.temp_content);
+    }
+
+    // Usuń błędy undefined
+    const filteredErrors: ValidationErrors = {};
+    (Object.keys(errors) as (keyof ValidationErrors)[]).forEach((key) => {
+      if (errors[key]) {
+        filteredErrors[key] = errors[key];
+      }
+    });
+
+    setValidationErrors(filteredErrors);
+    return Object.keys(filteredErrors).length === 0;
+  };
 
   // Reset stanu przy zamykaniu/otwieraniu modala
   useEffect(() => {
@@ -54,6 +120,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
       resetAIState();
       setShowBaseRecipe(false);
       setEditingOriginal(false);
+      setValidationErrors({});
       setFormValues({
         additional_params: "",
         base_recipe: "",
@@ -76,18 +143,35 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
+
+    const newValue = type === "checkbox" ? checked : value;
+
     setFormValues((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: newValue,
     }));
+
+    // Live validation
+    if (type !== "checkbox") {
+      const error = validateField(name, value);
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: error,
+      }));
+    }
   };
 
   // Obsługa operacji AI
   const handleAIOperation = async () => {
+    if (!validateForm()) {
+      showToast("Popraw błędy w formularzu przed kontynuowaniem", "error");
+      return;
+    }
+
     try {
       if (mode === "generate") {
         const params: GenerateRecipeCommand = {
-          additional_params: formValues.additional_params,
+          additional_params: formValues.additional_params || null,
           base_recipe: showBaseRecipe && formValues.base_recipe ? formValues.base_recipe : undefined,
         };
         await generateRecipe(params);
@@ -102,7 +186,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
           : originalRecipe;
 
         const params: ModifyRecipeCommand = {
-          additional_params: formValues.additional_params,
+          additional_params: formValues.additional_params || null,
           base_recipe: JSON.stringify(modifiedOriginalRecipe),
         };
         await modifyRecipe(originalRecipe.id, params);
@@ -113,6 +197,24 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
         showToast(err.message, "error");
       }
     }
+  };
+
+  // Obsługa retry
+  const handleRetry = async () => {
+    try {
+      await retryLastOperation();
+      setStep("preview");
+    } catch (err) {
+      if (err instanceof Error) {
+        showToast(err.message, "error");
+      }
+    }
+  };
+
+  // Obsługa anulowania
+  const handleCancel = () => {
+    cancelOperation();
+    showToast("Operacja została anulowana", "info");
   };
 
   // Obsługa zapisywania przepisu
@@ -156,6 +258,9 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
   const isLoading = isGenerating || isModifying;
   const isSaveLoading = isSaving;
   const recipeToDisplay = generatedRecipe?.recipe || modifiedRecipe?.modified_recipe;
+  const hasValidationErrors = Object.keys(validationErrors).some(
+    (key) => validationErrors[key as keyof ValidationErrors]
+  );
 
   // Jeśli modal jest zamknięty, nie renderujemy
   if (!isOpen) return null;
@@ -285,21 +390,35 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
               <label htmlFor="additional_params" className="block text-sm font-medium">
                 Dodatkowe parametry (opcjonalnie)
               </label>
-              <textarea
-                id="additional_params"
-                name="additional_params"
-                value={formValues.additional_params}
-                onChange={handleChange}
-                className="h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder={
-                  mode === "generate"
-                    ? "Dodaj szczegóły, preferencje, ograniczenia itp. np. 'wegetariańskie, bez glutenu, danie na szybki obiad'"
-                    : "Opisz, jak chcesz zmodyfikować przepis, np. 'dodaj więcej warzyw, zmniejsz kaloryczność, dostosuj do diety keto'"
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                Im więcej szczegółów podasz, tym lepiej AI dostosuje przepis do Twoich potrzeb.
-              </p>
+              <div className="relative">
+                <textarea
+                  id="additional_params"
+                  name="additional_params"
+                  value={formValues.additional_params}
+                  onChange={handleChange}
+                  className={`h-40 w-full rounded-md border px-3 py-2 text-sm ${
+                    validationErrors.additional_params
+                      ? "border-destructive bg-destructive/10"
+                      : "border-input bg-background"
+                  }`}
+                  placeholder={
+                    mode === "generate"
+                      ? "Dodaj szczegóły, preferencje, ograniczenia itp. np. 'wegetariańskie, bez glutenu, danie na szybki obiad'"
+                      : "Opisz, jak chcesz zmodyfikować przepis, np. 'dodaj więcej warzyw, zmniejsz kaloryczność, dostosuj do diety keto'"
+                  }
+                />
+                <div className="mt-1 flex justify-between text-xs">
+                  <span className={validationErrors.additional_params ? "text-destructive" : "text-muted-foreground"}>
+                    {validationErrors.additional_params ||
+                      "Im więcej szczegółów podasz, tym lepiej AI dostosuje przepis do Twoich potrzeb."}
+                  </span>
+                  <span
+                    className={`${formValues.additional_params.length > 5000 ? "text-destructive" : formValues.additional_params.length > 4500 ? "text-orange-500" : "text-muted-foreground"}`}
+                  >
+                    {formValues.additional_params.length}/5000
+                  </span>
+                </div>
+              </div>
               {mode === "generate" && (
                 <div className="mt-2 rounded-lg bg-purple-50 p-3 dark:bg-purple-950">
                   <p className="text-xs text-purple-700 dark:text-purple-300">
@@ -314,7 +433,12 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
               <Button variant="outline" onClick={onClose}>
                 Anuluj
               </Button>
-              <Button onClick={handleAIOperation} disabled={isLoading} className="gap-2">
+              {canCancel && isLoading && (
+                <Button variant="destructive" onClick={handleCancel}>
+                  Przerwij operację
+                </Button>
+              )}
+              <Button onClick={handleAIOperation} disabled={isLoading || hasValidationErrors} className="gap-2">
                 {isLoading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -414,8 +538,18 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
         )}
 
         {error && (
-          <div className="mt-4 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-            {error.message}
+          <div className="mt-4 rounded-md border border-destructive bg-destructive/10 p-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm text-destructive font-medium">Wystąpił błąd</p>
+                <p className="text-sm text-destructive">{error.message}</p>
+              </div>
+              {retryable && (
+                <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
+                  Spróbuj ponownie
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>

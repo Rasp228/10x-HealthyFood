@@ -116,6 +116,20 @@ export interface APIError {
   statusCode?: number;
 }
 
+// Typ dla błędów AI zgodny z planem wdrożenia
+export interface AIErrorResponse {
+  error: string;
+  code:
+    | "AI_TIMEOUT"
+    | "INVALID_INPUT"
+    | "SERVER_ERROR"
+    | "NETWORK_ERROR"
+    | "AI_PARSE_ERROR"
+    | "UNAUTHORIZED"
+    | "RECIPE_NOT_FOUND";
+  details?: string;
+}
+
 // Typ dla statystyk użytkownika
 export interface UserStatsDto {
   totalRecipes: number;

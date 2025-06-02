@@ -104,31 +104,37 @@ export class AIService {
         2. **Zasady generowania / edycji** 
           a) Jeżeli \`base_recipe\` ≠ \`null\`:  
             - Modyfikuj przepis, dostosowując składniki, kroki przygotowania i wartości odżywcze do \`user_preferences\` i \`additional_params\`.  
-            - Nie dodawaj nowych kroków ani składników sprzecznych z preferencjami.  
+            - Nie dodawaj całkowicie nowych kroków ani składników sprzecznych z preferencjami.  
             - Zachowaj strukturę i styl oryginału, nie przekraczaj 5000 znaków.  
 
           b) Jeżeli \`base_recipe\` = \`null\`:  
             i) Jeżeli \`user_preferences\` niepuste:  
-              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie podane preferencje.  
+              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie podane preferencje i nie przekraczający 5000 znaków.  
             ii) Jeżeli \`user_preferences\` puste:  
               - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis.  
-            - Przepis nie może przekroczyć 5000 znaków.  
+            - Przepis nie może przekroczyć 5000 znaków.
+            - user_preferences nie mogą przekroczyć 4000 znaków. 
 
         3. **Struktura odpowiedzi**  
           Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
           \`\`\`json
           {
             title: {
-              description: "Tytuł przepisu kulinarnego adekwatny do treści przepisu",
+              description: "Tytuł przepisu kulinarnego adekwatny do treści przepisu", (MAX 100 znaków)
             },
             content: {
-              description: "Pełna treść przepisu zawierająca listę składników, kroki przygotowania, wartości odżywcze",
+              description: "Pełna treść przepisu zawierająca listę składników, kroki przygotowania, wartości odżywcze", (MAX 5000 znaków)
             },
+            additional_params: {
+              additional_params: "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, należy jed oddzielać przecinkiem" (MAX 4000 znaków)
+            }
           }
           \`\`\`
 
         5. **Ograniczenia i priorytety**  
-          - Maksymalna długość \`recipe_content\`: 5000 znaków.   
+          - Maksymalna długość \`title\`: 100 znaków.   
+          - Maksymalna długość \`content\`: 5000 znaków.   
+          - Maksymalna długość \`additional_params\`: 4000 znaków.   
           - Stawiaj na jasność i zwięzłość: brak zbędnych opisów, pełna konkretność.
       `;
 
@@ -149,7 +155,7 @@ export class AIService {
         recipe: {
           title: parsedRecipe.title,
           content: parsedRecipe.content,
-          additional_params: command.additional_params,
+          additional_params: parsedRecipe.additional_params || command.additional_params,
         },
         ai_model: aiModel,
         generate_response_time: responseTime,
@@ -224,13 +230,24 @@ export class AIService {
           Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
           \`\`\`json
           {
-            "title": "Zmodyfikowany tytuł przepisu",
-            "content": "Zmodyfikowana treść przepisu z listą składników i krokami przygotowania"
+            title: {
+              description: "Zmodyfikowany tytuł przepisu (może zostać obecny)", (MAX 100 znaków)
+            },
+            content: {
+              description: "Zmodyfikowana treść przepisu z listą składników, krokami przygotowania, wartościami odżywczymi", (MAX 5000 znaków)
+            },
+            additional_params: {
+              additional_params: "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, 
+                należy jed oddzielać przecinkiem. Mogą zostać obecne jeśli są konkretne i sensowne, 
+                jeśli nie można je uprościć i skonkretyzować" (MAX 4000 znaków)
+            }
           }
           \`\`\`
           
         4. **Ograniczenia**  
-          - Maksymalna długość treści: 5000 znaków
+          - Maksymalna długość \`title\`: 100 znaków.   
+          - Maksymalna długość \`content\`: 5000 znaków.   
+          - Maksymalna długość \`additional_params\`: 4000 znaków.   
           - Zachowaj czytelność i konkretność
           - Nie dodawaj zbędnych opisów
       `;
@@ -270,7 +287,7 @@ export class AIService {
         modified_recipe: {
           title: parsedRecipe.title,
           content: parsedRecipe.content,
-          additional_params: command.additional_params,
+          additional_params: parsedRecipe.additional_params || command.additional_params,
         },
         ai_model: aiModel,
         generate_response_time: responseTime,
@@ -282,45 +299,146 @@ export class AIService {
   }
 
   /**
-   * Parsuje odpowiedź z API OpenRouter
+   * Parsuje odpowiedź z API OpenRouter i ukrywa proces reasoningowy
    */
-  private parseAIResponse(response: ChatResponse): { title: string; content: string } {
+  private parseAIResponse(response: ChatResponse): {
+    title: string;
+    content: string;
+    additional_params?: string | null;
+  } {
     try {
-      if (response?.choices?.[0]?.message?.content) {
-        // Próba parsowania JSON z odpowiedzi
-        try {
-          const jsonResponse = JSON.parse(response.choices[0].message.content);
-          return {
-            title: jsonResponse.title || "Wygenerowany przepis",
-            content: jsonResponse.content || "Brak treści przepisu",
-          };
-        } catch {
-          // Jeśli nie udało się sparsować JSON, użyj tekstu jako treści
-          const content = response.choices[0].message.content;
-          // Próba wyodrębnienia tytułu z pierwszej linii
-          const lines = content.split("\n");
-          const title = lines[0].replace(/^#\s*/, "").trim();
-          const remainingContent = lines.slice(1).join("\n").trim();
-
-          return {
-            title: title || "Wygenerowany przepis",
-            content: remainingContent || content,
-          };
-        }
+      if (!response?.choices?.[0]?.message?.content) {
+        return {
+          title: "Błąd generowania",
+          content: "Nie udało się otrzymać odpowiedzi z AI.",
+          additional_params: null,
+        };
       }
 
-      // Domyślna odpowiedź, jeśli nie udało się sparsować
-      return {
-        title: "Wygenerowany przepis",
-        content: "Nie udało się wygenerować treści przepisu.",
-      };
+      const rawContent = response.choices[0].message.content;
+
+      // Próba parsowania JSON z odpowiedzi
+      try {
+        const jsonResponse = JSON.parse(rawContent);
+
+        // Obsługa różnych formatów JSON odpowiedzi
+        if (jsonResponse.title && jsonResponse.content) {
+          return {
+            title: this.sanitizeField(jsonResponse.title, 100) || "Wygenerowany przepis",
+            content: this.sanitizeField(jsonResponse.content, 5000) || "Brak treści przepisu",
+            additional_params: jsonResponse.additional_params
+              ? this.sanitizeField(jsonResponse.additional_params, 5000)
+              : null,
+          };
+        }
+
+        // Format z description polami - główny format używany przez AI
+        if (jsonResponse.title?.description && jsonResponse.content?.description) {
+          let additionalParams = null;
+
+          // Obsługa additional_params.additional_params (format z przykładu)
+          if (jsonResponse.additional_params?.additional_params) {
+            additionalParams = this.sanitizeField(jsonResponse.additional_params.additional_params, 5000);
+          } else if (jsonResponse.additional_params?.description) {
+            additionalParams = this.sanitizeField(jsonResponse.additional_params.description, 5000);
+          } else if (typeof jsonResponse.additional_params === "string") {
+            additionalParams = this.sanitizeField(jsonResponse.additional_params, 5000);
+          }
+
+          return {
+            title: this.sanitizeField(jsonResponse.title.description, 100) || "Wygenerowany przepis",
+            content: this.sanitizeField(jsonResponse.content.description, 5000) || "Brak treści przepisu",
+            additional_params: additionalParams,
+          };
+        }
+
+        // Jeśli jest to obiekt ale nie ma oczekiwanych pól, spróbuj jako tekst
+        return this.fallbackTextParsing(rawContent);
+      } catch {
+        // Jeśli nie udało się sparsować JSON, użyj parsowania tekstowego
+        return this.fallbackTextParsing(rawContent);
+      }
     } catch (error) {
-      console.error("Błąd podczas parsowania odpowiedzi:", error);
+      console.error("Błąd podczas parsowania odpowiedzi AI:", error);
       return {
         title: "Błąd generowania",
         content: "Wystąpił problem podczas przetwarzania odpowiedzi z AI.",
+        additional_params: null,
       };
     }
+  }
+
+  /**
+   * Fallback dla parsowania tekstowej odpowiedzi
+   */
+  private fallbackTextParsing(content: string): { title: string; content: string; additional_params?: string | null } {
+    // Ukrywanie procesu reasoningowego - szukamy końcowego wyniku
+    const lines = content.split("\n");
+
+    // Próba znalezienia struktury z tytułem
+    let title = "";
+    let remainingContent = content;
+
+    // Szukamy pierwszej linii która nie zawiera znaków myślenia AI
+    const reasoningKeywords = [
+      "myślę",
+      "rozważam",
+      "zastanawiam",
+      "analizuję",
+      "thinking",
+      "considering",
+      "let me think",
+      "I think",
+      "I need to",
+      "first",
+      "po pierwsze",
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Pomijamy puste linie i linie z procesem myślenia
+      if (!line || reasoningKeywords.some((keyword) => line.toLowerCase().includes(keyword.toLowerCase()))) {
+        continue;
+      }
+
+      // Jeśli znajdziemy pierwszy sensowny wiersz, traktujemy go jako tytuł
+      if (!title && line.length > 0 && line.length <= 100) {
+        title = line
+          .replace(/^#\s*/, "")
+          .replace(/^\*\s*/, "")
+          .trim();
+        remainingContent = lines
+          .slice(i + 1)
+          .join("\n")
+          .trim();
+        break;
+      }
+    }
+
+    // Jeśli nie znaleźliśmy tytułu, użyj pierwszej linii
+    if (!title) {
+      title = lines[0]?.replace(/^#\s*/, "").trim() || "Wygenerowany przepis";
+      remainingContent = lines.slice(1).join("\n").trim();
+    }
+
+    return {
+      title: this.sanitizeField(title, 100) || "Wygenerowany przepis",
+      content: this.sanitizeField(remainingContent || content, 5000) || "Brak treści przepisu",
+      additional_params: null, // W fallback nie parsujemy additional_params
+    };
+  }
+
+  /**
+   * Sanityzuje i obcina pole do maksymalnej długości
+   */
+  private sanitizeField(value: string, maxLength: number): string {
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    const cleaned = value.trim();
+    return cleaned.length <= maxLength ? cleaned : cleaned.substring(0, maxLength - 3) + "...";
   }
 
   /**
