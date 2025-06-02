@@ -1,17 +1,17 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import type { CreatePreferenceCommand, PaginatedPreferencesDto, PreferenceCategoryEnum } from "../../../types";
+import type { CreatePreferenceCommand, PreferencesDto, PreferenceCategoryEnum } from "../../../types";
 
 // Schemat walidacji dla nowej preferencji
 const preferenceSchema = z.object({
   category: z.enum(["lubiane", "nielubiane", "wykluczone", "diety"] as const),
-  value: z.string().min(1).max(50),
+  value: z.string().min(0).max(50),
 });
 
 // Schemat walidacji dla parametrów zapytania
 const querySchema = z.object({
   category: z.enum(["lubiane", "nielubiane", "wykluczone", "diety"] as const).optional(),
-  limit: z.coerce.number().min(1).max(50).optional(),
+  limit: z.coerce.number().min(0).max(50).optional(),
   offset: z.coerce.number().min(0).optional(),
 });
 
@@ -60,11 +60,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       throw error;
     }
 
-    const response: PaginatedPreferencesDto = {
+    const response: PreferencesDto = {
       data: data || [],
       total: count || 0,
-      limit,
-      offset,
     };
 
     return new Response(JSON.stringify(response), {

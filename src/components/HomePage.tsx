@@ -37,7 +37,7 @@ export default function HomePage() {
   } = useFetchRecipes({
     ...sortParams,
     search: debouncedFilterText,
-    // Pobieramy wszystkie przepisy bez limitu i offsetu
+    // Pobieramy wszystkie przepisy
   });
 
   // Implementacja debounce dla wyszukiwania

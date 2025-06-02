@@ -1,11 +1,4 @@
-import type {
-  CreateRecipeCommand,
-  PaginatedRecipesDto,
-  PaginationParams,
-  RecipeDto,
-  RecipeSortParams,
-  UpdateRecipeCommand,
-} from "../../types";
+import type { CreateRecipeCommand, RecipesDto, RecipeDto, RecipeSortParams, UpdateRecipeCommand } from "../../types";
 
 /**
  * Serwis obsługujący zarządzanie przepisami kulinarnymi
@@ -13,25 +6,17 @@ import type {
  */
 export class RecipeService {
   /**
-   * Pobiera listę przepisów użytkownika z paginacją i sortowaniem
+   * Pobiera listę przepisów użytkownika z sortowaniem
    * @param userId - ID użytkownika (używane dla walidacji, ale auth jest przez cookies)
-   * @param pagination - Parametry paginacji (limit, offset)
    * @param sort - Parametry sortowania (sort, order)
    * @param search - Opcjonalne wyszukiwanie
-   * @returns Paginowana lista przepisów
+   * @returns Lista przepisów
    */
-  async getUserRecipes(
-    userId: string,
-    pagination: PaginationParams = {},
-    sort: RecipeSortParams = {},
-    search?: string
-  ): Promise<PaginatedRecipesDto> {
+  async getUserRecipes(userId: string, sort: RecipeSortParams = {}, search?: string): Promise<RecipesDto> {
     try {
       // Budowanie query string
       const queryParams = new URLSearchParams();
 
-      if (pagination.limit) queryParams.append("limit", pagination.limit.toString());
-      if (pagination.offset) queryParams.append("offset", pagination.offset.toString());
       if (sort.sort) queryParams.append("sort", sort.sort);
       if (sort.order) queryParams.append("order", sort.order);
       if (search) queryParams.append("search", search.trim());

@@ -116,7 +116,7 @@ export interface RecipeApiResponse {
 }
 
 export interface RecipesListApiResponse {
-  data?: PaginatedRecipesDto;
+  data?: recipesDto;
   error?: APIError;
 }
 ```
@@ -144,7 +144,7 @@ export interface RecipesListApiResponse {
 ```typescript
 // GET /api/recipes
 Request: URLSearchParams { sort, order, search? }
-Response: PaginatedRecipesDto | { error: string }
+Response: recipesDto | { error: string }
 
 // POST /api/recipes
 Request: CreateRecipeCommand

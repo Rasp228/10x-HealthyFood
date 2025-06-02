@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import type { RecipeDto, RecipeSortParams, PaginationParams } from "../types";
+import type { RecipeDto, RecipeSortParams } from "../types";
 import { RecipeService } from "../lib/services/recipe.service";
 
-interface UseFetchRecipesParams extends PaginationParams, RecipeSortParams {
+interface UseFetchRecipesParams extends RecipeSortParams {
   search?: string;
 }
 
@@ -14,7 +14,7 @@ interface UseFetchRecipesResult {
   refetch: () => void;
 }
 
-// Hook do pobierania listy przepisów z paginacją, sortowaniem i wyszukiwaniem
+// Hook do pobierania listy przepisów z sortowaniem i wyszukiwaniem
 export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRecipesResult {
   const [data, setData] = useState<RecipeDto[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -22,7 +22,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<number>(0);
 
-  const { limit = 10, offset = 0, sort = "created_at", order = "desc", search = "" } = params;
+  const { sort = "created_at", order = "desc", search = "" } = params;
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -35,7 +35,6 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
         // Używamy prawdziwego serwisu z API endpoints
         const result = await recipeService.getUserRecipes(
           "current-user", // userId - auth jest zarządzane przez cookies w API
-          { limit, offset },
           { sort, order },
           search || undefined
         );
@@ -56,7 +55,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
     };
 
     fetchRecipes();
-  }, [limit, offset, sort, order, search, refresh]);
+  }, [sort, order, search, refresh]);
 
   const refetch = () => setRefresh((prev) => prev + 1);
 

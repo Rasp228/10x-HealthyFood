@@ -57,7 +57,7 @@ AppLayout
 ### HomePage
 
 - Pokazuje FilterInput (search), przyciski Add & AI
-- Hook: `useFetchRecipes({ limit, offset, sort, order })`
+- Hook: `useFetchRecipes({ sort, order })`
 - Obsługa stanu: `filterText`, `isAIModalOpen`
 - Reaguje na onChange filter → odświeża listę
 - Zdarzenia: click Add → otwórz RecipeFormModal; click AI → otwórz AIModal
@@ -88,7 +88,6 @@ AppLayout
 - Wywołuje POST `/api/ai/generate-recipe` lub `/api/ai/modify-recipe/:id`
 - Pokazuje loader, potem podgląd wyników: `GeneratedRecipeDto` lub `ModifiedRecipeDto`
 - Daje opcje: Accept (save), Reject (zamknij)
-- Save wywołuje POST `/api/ai/save-recipe` z `is_new` lub `original_recipe_id`
 - Props: `mode: 'generate'|'modify', original?: RecipeReferenceDto`
 
 ### ProfilePage
@@ -110,7 +109,7 @@ AppLayout
 
 ## 5. Typy
 
-- Importować z `src/types.ts`: `RecipeDto`, `RecipeBasicDto`, `RecipeReferenceDto`, `GeneratedRecipeDto`, `ModifiedRecipeDto`, `PreferenceDto`, `PaginatedRecipesDto`, `PaginatedPreferencesDto`
+- Importować z `src/types.ts`: `RecipeDto`, `RecipeBasicDto`, `RecipeReferenceDto`, `GeneratedRecipeDto`, `ModifiedRecipeDto`, `PreferenceDto`, `recipesDto`, `preferencesDto`
 - Nowe ViewModel:
   - `RecipeListItemVM extends RecipeDto`
   - `AuthFormValues { email: string; password: string }`
@@ -133,7 +132,7 @@ AppLayout
 
 | Akcja              | Endpoint                         | Req Type                  | Resp Type                 |
 | ------------------ | -------------------------------- | ------------------------- | ------------------------- |
-| Lista przepisów    | GET `/api/recipes`               | —                         | `PaginatedRecipesDto`     |
+| Lista przepisów    | GET `/api/recipes`               | —                         | `RecipesDto`     |
 | Przepis detail     | GET `/api/recipes/:id`           | —                         | `RecipeDto`               |
 | Dodaj przepis      | POST `/api/recipes`              | `CreateRecipeCommand`     | `RecipeDto`               |
 | Edytuj przepis     | PUT `/api/recipes/:id`           | `UpdateRecipeCommand`     | `RecipeDto`               |
@@ -141,7 +140,7 @@ AppLayout
 | Generuj AI         | POST `/api/ai/generate-recipe`   | `GenerateRecipeCommand`   | `GeneratedRecipeDto`      |
 | Modyfikuj AI       | POST `/api/ai/modify-recipe/:id` | `ModifyRecipeCommand`     | `ModifiedRecipeDto`       |
 | Zapisz AI result   | POST `/api/ai/save-recipe`       | `SaveRecipeCommand`       | `RecipeDto`               |
-| Lista preferencji  | GET `/api/preferences`           | —                         | `PaginatedPreferencesDto` |
+| Lista preferencji  | GET `/api/preferences`           | —                         | `PreferencesDto` |
 | Dodaj preferencję  | POST `/api/preferences`          | `CreatePreferenceCommand` | `PreferenceDto`           |
 | Edytuj preferencję | PUT `/api/preferences/:id`       | `UpdatePreferenceCommand` | `PreferenceDto`           |
 | Usuń preferencję   | DELETE `/api/preferences/:id`    | —                         | 204 No Content            |

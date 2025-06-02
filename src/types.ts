@@ -8,24 +8,14 @@ import type { Database, Tables } from "./db/database.types";
 export type PreferenceDto = Tables<"preferences">;
 
 // Typ przepisu z bazy danych
-export interface RecipeDto extends Tables<"recipes"> {
-  ai_generated?: boolean;
-  original_recipe_id?: number | null;
-}
+export type RecipeDto = Tables<"recipes">;
 
 // Typ logu z bazy danych
 export type LogDto = Tables<"logs">;
 
 /**
- * Parametry paginacji i sortowania
+ * Parametry sortowania
  */
-
-// Parametry paginacji dla list
-export interface PaginationParams {
-  limit?: number;
-  offset?: number;
-  category?: PreferenceCategoryEnum;
-}
 
 // Parametry sortowania dla list przepisów
 export interface RecipeSortParams {
@@ -51,22 +41,20 @@ export type CreateRecipeCommand = Pick<RecipeDto, "title" | "content" | "additio
 export type UpdateRecipeCommand = CreateRecipeCommand;
 
 /**
- * DTO z paginacją
+ * DTO
  */
 
-// Interfejs generyczny dla odpowiedzi z paginacją
-export interface PaginatedResponseDto<T> {
+// Interfejs generyczny dla odpowiedzi
+export interface ResponseDto<T> {
   data: T[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
-// Odpowiedź z listą preferencji i paginacją
-export type PaginatedPreferencesDto = PaginatedResponseDto<PreferenceDto>;
+// Odpowiedź z listą preferencji
+export type PreferencesDto = ResponseDto<PreferenceDto>;
 
-// Odpowiedź z listą przepisów i paginacją
-export type PaginatedRecipesDto = PaginatedResponseDto<RecipeDto>;
+// Odpowiedź z listą przepisów
+export type RecipesDto = ResponseDto<RecipeDto>;
 
 /**
  * AI Integration DTO i Command Models
@@ -146,7 +134,7 @@ export interface RecipeApiResponse {
 }
 
 export interface RecipesListApiResponse {
-  data?: PaginatedRecipesDto;
+  data?: RecipesDto;
   error?: APIError;
 }
 

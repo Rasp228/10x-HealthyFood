@@ -1,11 +1,5 @@
 import { useState, useCallback } from "react";
-import type {
-  PreferenceDto,
-  CreatePreferenceCommand,
-  UpdatePreferenceCommand,
-  PaginatedPreferencesDto,
-  PaginationParams,
-} from "../types";
+import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferencesDto } from "../types";
 
 interface UsePreferencesState {
   preferences: PreferenceDto[];
@@ -18,7 +12,7 @@ interface UsePreferencesState {
 }
 
 interface UsePreferencesActions {
-  fetchPreferences: (params?: PaginationParams) => Promise<PaginatedPreferencesDto | null>;
+  fetchPreferences: () => Promise<PreferencesDto | null>;
   createPreference: (preference: CreatePreferenceCommand) => Promise<PreferenceDto | null>;
   updatePreference: (id: number, preference: UpdatePreferenceCommand) => Promise<PreferenceDto | null>;
   deletePreference: (id: number) => Promise<boolean>;
@@ -36,14 +30,11 @@ export function usePreferences(): UsePreferencesState & UsePreferencesActions {
   });
 
   // Pobieranie preferencji
-  const fetchPreferences = useCallback(async (params?: PaginationParams): Promise<PaginatedPreferencesDto | null> => {
+  const fetchPreferences = useCallback(async (): Promise<PreferencesDto | null> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const queryParams = new URLSearchParams();
-      if (params?.category) queryParams.append("category", params.category);
-      if (params?.limit) queryParams.append("limit", params.limit.toString());
-      if (params?.offset) queryParams.append("offset", params.offset.toString());
 
       const response = await fetch(`/api/preferences?${queryParams.toString()}`);
       if (!response.ok) {

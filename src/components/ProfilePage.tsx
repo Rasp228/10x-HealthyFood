@@ -42,7 +42,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        await fetchPreferences({ limit: 50 });
+        await fetchPreferences();
       } catch {
         showToast("Błąd podczas ładowania preferencji", "error");
       }

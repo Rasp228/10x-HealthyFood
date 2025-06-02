@@ -16,8 +16,6 @@
 - **Description**: Retrieve a list of user's food preferences
 - **Query parameters**:
   - `category` (optional): filter by category ('lubiane', 'nielubiane', 'wykluczone', 'diety')
-  - `limit` (optional): number of results per page (default 20)
-  - `offset` (optional): pagination offset (default 0)
 - **Response**:
   ```json
   {
@@ -30,9 +28,7 @@
         "created_at": "2023-09-10T12:00:00Z"
       }
     ],
-    "total": 42,
-    "limit": 20,
-    "offset": 0
+    "total": 42
   }
   ```
 - **Success codes**: 200 OK
@@ -113,8 +109,6 @@
 
 - **Description**: Retrieve a list of user's recipes
 - **Query parameters**:
-  - `limit` (optional): number of results per page (default 10)
-  - `offset` (optional): pagination offset (default 0)
   - `sort` (optional): sort field ('created_at', 'updated_at', 'title')
   - `order` (optional): sort direction ('asc', 'desc')
 - **Response**:
@@ -131,9 +125,7 @@
         "updated_at": "2023-09-10T12:00:00Z"
       }
     ],
-    "total": 5,
-    "limit": 10,
-    "offset": 0
+    "total": 5
   }
   ```
 - **Success codes**: 200 OK
@@ -282,7 +274,6 @@
       "content": "Recipe content...",
       "additional_params": "Additional parameters..."
     },
-    "original_recipe_id": 1,
     "is_new": false
   }
   ```

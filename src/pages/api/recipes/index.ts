@@ -11,10 +11,8 @@ const createRecipeSchema = z.object({
   is_ai_generated: z.boolean().optional().default(false),
 });
 
-// Schemat walidacji dla parametrów paginacji i sortowania
-const paginationSchema = z.object({
-  limit: z.coerce.number().optional(),
-  offset: z.coerce.number().optional(),
+// Schemat walidacji dla parametrów sortowania
+const listSchema = z.object({
   sort: z.enum(["created_at", "updated_at", "title"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
   search: z.string().optional(),
@@ -37,9 +35,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
       );
     }
 
-    // Pobierz i zwaliduj parametry paginacji i sortowania
+    // Pobierz i zwaliduj parametry sortowania
     const params = Object.fromEntries(url.searchParams.entries());
-    const validationResult = paginationSchema.safeParse(params);
+    const validationResult = listSchema.safeParse(params);
 
     if (!validationResult.success) {
       return new Response(
@@ -51,7 +49,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
       );
     }
 
-    const { limit = 10, offset = 0, sort = "created_at", order = "desc", search } = validationResult.data;
+    const { sort = "created_at", order = "desc", search } = validationResult.data;
 
     // Budowanie zapytania z wyszukiwaniem
     let query = locals.supabase.from("recipes").select("*", { count: "exact" }).eq("user_id", user.id);
@@ -64,8 +62,8 @@ export const GET: APIRoute = async ({ locals, url }) => {
       );
     }
 
-    // Sortowanie i paginacja
-    query = query.order(sort, { ascending: order === "asc" }).range(offset, offset + limit - 1);
+    // Sortowanie
+    query = query.order(sort, { ascending: order === "asc" });
 
     const { data, error, count } = await query;
 
@@ -73,12 +71,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
       throw error;
     }
 
-    // Zwróć listę przepisów w formacie zgodnym z PaginatedRecipesDto
+    // Zwróć listę przepisów w formacie zgodnym z RecipesDto
     const result = {
       data: data || [],
       total: count || 0,
-      limit,
-      offset,
     };
 
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
