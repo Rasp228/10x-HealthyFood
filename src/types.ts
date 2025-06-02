@@ -24,23 +24,6 @@ export interface RecipeSortParams {
 }
 
 /**
- * Command Models do tworzenia i aktualizacji danych
- */
-
-// Command do tworzenia/aktualizacji preferencji
-export interface CreatePreferenceCommand {
-  category: PreferenceCategoryEnum;
-  value: string;
-}
-
-// Command do aktualizacji preferencji
-export type UpdatePreferenceCommand = CreatePreferenceCommand;
-
-// Command do tworzenia/aktualizacji przepisu
-export type CreateRecipeCommand = Pick<RecipeDto, "title" | "content" | "additional_params">;
-export type UpdateRecipeCommand = CreateRecipeCommand;
-
-/**
  * DTO
  */
 
@@ -66,23 +49,19 @@ export type RecipeBasicDto = Pick<RecipeDto, "title" | "content" | "additional_p
 // Prosty przepis z ID i tytułem do referencji
 export type RecipeReferenceDto = Pick<RecipeDto, "id" | "title" | "content">;
 
-// Command do generacji przepisu
-export interface GenerateRecipeCommand {
+export interface BaseRecipeCommand {
   additional_params: string | null;
   base_recipe?: string;
 }
+
+export type GenerateRecipeCommand = BaseRecipeCommand;
+export type ModifyRecipeCommand = BaseRecipeCommand;
 
 // Wygenerowany przepis
 export interface GeneratedRecipeDto {
   recipe: RecipeBasicDto;
   ai_model: string;
   generate_response_time: number;
-}
-
-// Command do modyfikacji przepisu
-export interface ModifyRecipeCommand {
-  additional_params: string | null;
-  base_recipe?: string;
 }
 
 // Zmodyfikowany przepis
@@ -108,6 +87,23 @@ export type ActionTypeEnum = Database["public"]["Enums"]["action_type_enum"];
 
 // Typ dla kategorii preferencji
 export type PreferenceCategoryEnum = Database["public"]["Enums"]["preference_category_enum"];
+
+/**
+ * Command Models do tworzenia i aktualizacji danych
+ */
+
+// Command do tworzenia/aktualizacji preferencji
+export interface CreatePreferenceCommand {
+  category: PreferenceCategoryEnum;
+  value: string;
+}
+
+// Command do aktualizacji preferencji
+export type UpdatePreferenceCommand = CreatePreferenceCommand;
+
+// Command do tworzenia/aktualizacji przepisu
+export type CreateRecipeCommand = RecipeBasicDto;
+export type UpdateRecipeCommand = RecipeBasicDto;
 
 /**
  * Typy dla API błędów i statystyk
