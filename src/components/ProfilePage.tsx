@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PreferenceChip from "./PreferenceChip";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
@@ -184,9 +185,14 @@ export default function ProfilePage() {
               ) : statsError ? (
                 <div className="mt-1 ml-4 text-red-500 text-sm">
                   Błąd ładowania statystyk{" "}
-                  <button onClick={refetchStats} className="underline hover:no-underline">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={refetchStats}
+                    className="h-auto p-0 text-red-500 underline hover:no-underline"
+                  >
                     Spróbuj ponownie
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <ul className="mt-1 ml-4 list-disc text-sm" aria-label="Statystyki użytkownika">
@@ -296,10 +302,7 @@ export default function ProfilePage() {
         )}
 
         {isLoading && !preferences.length ? (
-          <div className="text-center py-8" aria-live="polite" aria-busy="true">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-muted-foreground">Ładowanie preferencji...</p>
-          </div>
+          <LoadingSpinner className="py-8" message="Ładowanie preferencji..." />
         ) : !preferences.length ? (
           <div className="text-center py-8 bg-muted/50 rounded-lg" aria-live="polite">
             <p className="text-muted-foreground">Nie dodano jeszcze żadnych preferencji</p>

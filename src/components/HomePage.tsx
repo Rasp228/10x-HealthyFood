@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { AddButton, AIButton } from "@/components/ui/ActionButtons";
 import RecipeCard from "./RecipeCard";
 import ConfirmDialog from "./ConfirmDialog";
 import RecipeFormModal from "./RecipeFormModal";
@@ -9,6 +10,7 @@ import { useRecipeModal } from "../hooks/useRecipeModal";
 import { useToast } from "../hooks/useToast";
 import { useFetchRecipes } from "../hooks/useRecipes";
 import { RecipeService } from "../lib/services/recipe.service";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function HomePage() {
   const [filterText, setFilterText] = useState("");
@@ -145,12 +147,7 @@ export default function HomePage() {
 
   // Renderowanie stanu ładowania przy pierwszym ładowaniu
   if (isLoading && recipes.length === 0 && !debouncedFilterText) {
-    return (
-      <div className="text-center py-8" aria-live="polite" aria-busy="true">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="mt-2 text-muted-foreground">Ładowanie przepisów...</p>
-      </div>
-    );
+    return <LoadingSpinner className="py-8" message="Ładowanie przepisów..." />;
   }
 
   // Renderowanie błędu
@@ -203,22 +200,7 @@ export default function HomePage() {
           />
           {isSearching && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <svg className="h-4 w-4 animate-spin text-muted-foreground" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
+              <LoadingSpinner size="sm" />
             </div>
           )}
           {filterText && !isSearching && (
@@ -303,57 +285,23 @@ export default function HomePage() {
             </button>
           </div>
 
-          <Button
-            variant="outline"
+          <AIButton
             onClick={() => {
               setSelectedRecipeId(null);
               setIsAIModalOpen(true);
             }}
-            className="gap-2 text-purple-500"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="m4.9 4.9 14.2 14.2"></path>
-              <path d="M9 9h.01"></path>
-              <path d="M15 15h.01"></path>
-            </svg>
             Wygeneruj z AI
-          </Button>
+          </AIButton>
 
-          <Button
-            variant="default"
+          <AddButton
             onClick={() => {
               setSelectedRecipeId(null);
               setIsRecipeFormOpen(true);
             }}
-            className="gap-2"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 5v14"></path>
-              <path d="M5 12h14"></path>
-            </svg>
             Dodaj przepis
-          </Button>
+          </AddButton>
         </div>
       </div>
 

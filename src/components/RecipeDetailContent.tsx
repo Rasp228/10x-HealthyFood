@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/ActionButtons";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import RecipeContent from "@/components/ui/RecipeContent";
 import ActionPanel from "./ActionPanel";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "../hooks/useToast";
 import { RecipeService } from "../lib/services/recipe.service";
-import { marked } from "marked";
 import type { RecipeDetailContentProps } from "../types";
 
 export default function RecipeDetailContent({
@@ -87,10 +88,7 @@ export default function RecipeDetailContent({
   if (isLoading) {
     return (
       <div className={`flex h-64 items-center justify-center ${className}`}>
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Ładowanie przepisu...</p>
-        </div>
+        <LoadingSpinner size="lg" message="Ładowanie przepisu..." />
       </div>
     );
   }
@@ -121,24 +119,7 @@ export default function RecipeDetailContent({
     <div className={className}>
       {/* Górny pasek z przyciskiem powrotu (opcjonalnym) i panelem akcji */}
       <div className="mb-8 flex items-center justify-between">
-        {showBackButton && (
-          <Button variant="outline" onClick={() => window.history.back()} className="gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6"></path>
-            </svg>
-            Powrót
-          </Button>
-        )}
+        {showBackButton && <BackButton onClick={() => window.history.back()}>Powrót</BackButton>}
         {!showBackButton && <div></div>} {/* Spacer gdy nie ma przycisku powrotu */}
         <ActionPanel onEdit={handleEdit} onDelete={handleDelete} onAI={handleAIModify} />
       </div>
@@ -149,7 +130,7 @@ export default function RecipeDetailContent({
           <h1 className="text-3xl font-bold">{recipe.title}</h1>
 
           {/* Etykieta AI jeśli przepis jest wygenerowany przez AI */}
-          {recipe.ai_generated && (
+          {recipe.is_ai_generated && (
             <div className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
               AI
             </div>
@@ -173,10 +154,8 @@ export default function RecipeDetailContent({
         )}
       </div>
 
-      {/* Treść przepisu */}
-      <div className="prose prose-slate mx-auto dark:prose-invert lg:prose-lg">
-        <div dangerouslySetInnerHTML={{ __html: marked.parse(recipe.content) }}></div>
-      </div>
+      {/* Treść przepisu - teraz używa RecipeContent zamiast dangerouslySetInnerHTML */}
+      <RecipeContent content={recipe.content} className="mx-auto" />
 
       {/* Dialog potwierdzenia usunięcia - pozostaje tutaj */}
       <ConfirmDialog

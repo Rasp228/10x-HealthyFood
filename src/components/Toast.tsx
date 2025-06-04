@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { CloseButton } from "@/components/ui/ActionButtons";
 
 interface ToastProps {
   message: string;
@@ -122,29 +123,12 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
       <div className={`flex items-center space-x-3 rounded-md border p-4 shadow-md ${styles.containerClass}`}>
         <div className={styles.iconClass}>{styles.icon}</div>
         <div className="flex-1">{message}</div>
-        <button
+        <CloseButton
           onClick={() => {
             setIsVisible(false);
             setTimeout(onClose, 300);
           }}
-          className="rounded-full p-1 hover:bg-black/5"
-          aria-label="Zamknij"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
@@ -31,10 +32,12 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button
+    <Button
       id="theme-toggle"
+      variant="ghost"
+      size="icon"
       onClick={toggleTheme}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-muted"
+      className="rounded-full"
       aria-label={isDark ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
     >
       <svg
@@ -73,6 +76,6 @@ export default function ThemeToggle() {
         <path d="m6.34 17.66-1.41 1.41"></path>
         <path d="m19.07 4.93-1.41 1.41"></path>
       </svg>
-    </button>
+    </Button>
   );
 }
