@@ -65,17 +65,11 @@ export class AIService {
         this.openRouterService.setModel(selectedModel);
       }
 
-      // Pobierz preferencje użytkownika
-      const userPreferencesArray = await this.getUserPreferences(userId);
-
-      // Konwertuj preferencje na format tekstowy do użycia w wiadomości
-      const userPreferencesText =
-        userPreferencesArray.length > 0
-          ? userPreferencesArray.map((pref) => `${pref.category}: ${pref.value}`).join("\n")
-          : "Brak specyficznych preferencji";
+      // Pobierz i przetworz preferencje użytkownika
+      const userPreferences = await this.getFormattedUserPreferences(userId);
 
       // Przygotuj treść przepisu bazowego, jeśli istnieje
-      const baseRecipeText = command.base_recipe ? `Przepis bazowy do modyfikacji:\n${command.base_recipe}` : "";
+      const baseRecipeText = command.base_recipe ? `Przepis bazowy do inspiracji:\n${command.base_recipe}` : "";
 
       // Przygotuj dodatkowe parametry, jeśli istnieją
       const additionalParamsText = command.additional_params
@@ -86,7 +80,7 @@ export class AIService {
       const userMessage = [
         additionalParamsText,
         baseRecipeText,
-        `Preferencje użytkownika:\n${userPreferencesText}`,
+        userPreferences ? `Moje preferencje żywieniowe:\n${userPreferences}` : "",
         !command.base_recipe && !command.additional_params ? "Wygeneruj losowy przepis" : "",
       ]
         .filter(Boolean)
@@ -96,46 +90,45 @@ export class AIService {
       const systemMessage = `
         Twoim nieugiętym celem jest dostarczanie precyzyjnych, konkretnych przepisów kulinarnych, 
         zoptymalizowanych pod indywidualne preferencje żywieniowe użytkownika. Działasz zgodnie z poniższymi wytycznymi:
+        
         1. **Wejście**  
-          - \`base_recipe\` (string | null): istniejący przepis do modyfikacji, albo \`null\`, gdy nie ma przepisu bazowego.  
-          - \`user_preferences\` (array[string]): lista preferencji żywieniowych (lubiane, nielubiane, wykluczone, diety). Może być pusta.  
+          - \`base_recipe\` (string | null): przepis bazowy do inspiracji/modyfikacji, albo \`null\`, gdy brak przepisu bazowego.  
+          - \`user_preferences\` (string): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety). Może być puste.  
           - \`additional_params\` (string | null): opcjonalne dodatkowe instrukcje od użytkownika (np. "mniej soli", "wegańskie zamienniki"), albo \`null\`.  
 
-        2. **Zasady generowania / edycji** 
-          a) Jeżeli \`base_recipe\` ≠ \`null\`:  
-            - Modyfikuj przepis, dostosowując składniki, kroki przygotowania i wartości odżywcze do \`user_preferences\` i \`additional_params\`.  
-            - Nie dodawaj całkowicie nowych kroków ani składników sprzecznych z preferencjami.  
-            - Zachowaj strukturę i styl oryginału, nie przekraczaj 5000 znaków.  
+        2. **Zasady działania** 
+          a) **Jeżeli podano \`base_recipe\`** (użytkownik wkleił przepis do inspiracji):  
+            - ZAWSZE traktuj to jako modyfikację/ulepszenie podanego przepisu bazowego
+            - Dostosuj składniki, kroki przygotowania zgodnie z \`user_preferences\` i \`additional_params\`
+            - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
+            - Uwzględnij wszystkie preferencje użytkownika i dodatkowe instrukcje
+            - NIE generuj zupełnie nowego losowego przepisu
+            - Maksymalna długość: 5000 znaków
 
-          b) Jeżeli \`base_recipe\` = \`null\`:  
+          b) **Jeżeli NIE podano \`base_recipe\`** (brak przepisu bazowego):  
             i) Jeżeli \`user_preferences\` niepuste:  
-              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie podane preferencje i nie przekraczający 5000 znaków.  
+              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie podane preferencje  
             ii) Jeżeli \`user_preferences\` puste:  
-              - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis.  
-            - Przepis nie może przekroczyć 5000 znaków.
-            - user_preferences nie mogą przekroczyć 4000 znaków. 
+              - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis  
+            - Przepis nie może przekroczyć 5000 znaków
 
         3. **Struktura odpowiedzi**  
           Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
           \`\`\`json
           {
-            title: {
-              description: "Tytuł przepisu kulinarnego adekwatny do treści przepisu", (MAX 100 znaków)
-            },
-            content: {
-              description: "Pełna treść przepisu zawierająca listę składników, kroki przygotowania, wartości odżywcze", (MAX 5000 znaków)
-            },
-            additional_params: {
-              additional_params: "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, należy jed oddzielać przecinkiem" (MAX 4000 znaków)
-            }
+            "title": "Tytuł przepisu kulinarnego adekwatny do treści przepisu",
+            "content": "Pełna treść przepisu zawierająca listę składników, kroki przygotowania, wartości odżywcze",
+            "additional_params": "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, należy je oddzielać przecinkiem"
           }
           \`\`\`
 
-        5. **Ograniczenia i priorytety**  
-          - Maksymalna długość \`title\`: 100 znaków.   
-          - Maksymalna długość \`content\`: 5000 znaków.   
-          - Maksymalna długość \`additional_params\`: 4000 znaków.   
-          - Stawiaj na jasność i zwięzłość: brak zbędnych opisów, pełna konkretność.
+        4. **Ograniczenia i priorytety**  
+          - Maksymalna długość \`title\`: 100 znaków   
+          - Maksymalna długość \`content\`: 5000 znaków   
+          - Maksymalna długość \`additional_params\`: 4000 znaków   
+          - Stawiaj na jasność i zwięzłość: brak zbędnych opisów, pełna konkretność
+          - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON
+          - Jeśli modyfikujesz przepis bazowy, zachowaj jego główne cechy ale dostosuj do preferencji
       `;
 
       // Wywołaj API OpenRouter
@@ -187,14 +180,14 @@ export class AIService {
         this.openRouterService.setModel(selectedModel);
       }
 
-      // Pobierz preferencje użytkownika
-      const userPreferencesArray = await this.getUserPreferences(userId);
+      // Pobierz i przetworz preferencje użytkownika
+      const userPreferences = await this.getFormattedUserPreferences(userId);
 
-      // Konwertuj preferencje na format tekstowy do użycia w wiadomości
-      const userPreferencesText =
-        userPreferencesArray.length > 0
-          ? userPreferencesArray.map((pref) => `${pref.category}: ${pref.value}`).join("\n")
-          : "Brak specyficznych preferencji";
+      // Pobierz i przetworz preferencje z oryginalnego przepisu (additional_params)
+      const recipePreferences = await this.getRecipePreferences(recipeId, userId);
+
+      // Połącz preferencje użytkownika z preferencjami z przepisu
+      const combinedPreferences = this.combinePreferences(userPreferences, recipePreferences);
 
       // Przygotuj treść przepisu bazowego
       const baseRecipeText = command.base_recipe ? `Przepis do modyfikacji:\n${command.base_recipe}` : "";
@@ -205,7 +198,11 @@ export class AIService {
         : "";
 
       // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
-      const userMessage = [additionalParamsText, baseRecipeText, `Preferencje użytkownika:\n${userPreferencesText}`]
+      const userMessage = [
+        additionalParamsText,
+        baseRecipeText,
+        combinedPreferences ? `Moje preferencje żywieniowe:\n${combinedPreferences}` : "",
+      ]
         .filter(Boolean)
         .join("\n\n");
 
@@ -215,7 +212,7 @@ export class AIService {
         
         1. **Wejście**  
           - \`base_recipe\` (string): istniejący przepis do modyfikacji
-          - \`user_preferences\` (array[string]): lista preferencji żywieniowych (lubiane, nielubiane, wykluczone, diety)
+          - \`user_preferences\` (string): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety)
           - \`additional_params\` (string): instrukcje modyfikacji od użytkownika
           
         2. **Zasady modyfikacji**
@@ -230,26 +227,19 @@ export class AIService {
           Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
           \`\`\`json
           {
-            title: {
-              description: "Zmodyfikowany tytuł przepisu (może zostać obecny)", (MAX 100 znaków)
-            },
-            content: {
-              description: "Zmodyfikowana treść przepisu z listą składników, krokami przygotowania, wartościami odżywczymi", (MAX 5000 znaków)
-            },
-            additional_params: {
-              additional_params: "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, 
-                należy jed oddzielać przecinkiem. Mogą zostać obecne jeśli są konkretne i sensowne, 
-                jeśli nie można je uprościć i skonkretyzować" (MAX 4000 znaków)
-            }
+            "title": "Zmodyfikowany tytuł przepisu (może zostać obecny)",
+            "content": "Zmodyfikowana treść przepisu z listą składników, krokami przygotowania, wartościami odżywczymi",
+            "additional_params": "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, należy je oddzielać przecinkiem. Mogą zostać obecne jeśli są konkretne i sensowne, jeśli nie można je uprościć i skonkretyzować"
           }
           \`\`\`
           
         4. **Ograniczenia**  
           - Maksymalna długość \`title\`: 100 znaków.   
-          - Maksymalna długość \`content\`: 5000 znaków.   
+          - Maksymalna długość \`content\`: 5000 znaków   
           - Maksymalna długość \`additional_params\`: 4000 znaków.   
           - Zachowaj czytelność i konkretność
           - Nie dodawaj zbędnych opisów
+          - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON.
       `;
 
       // Wywołaj API OpenRouter
@@ -317,47 +307,49 @@ export class AIService {
 
       const rawContent = response.choices[0].message.content;
 
-      // Próba parsowania JSON z odpowiedzi
-      try {
-        const jsonResponse = JSON.parse(rawContent);
+      // Najpierw spróbuj znaleźć JSON w odpowiedzi
+      const jsonMatch = this.extractJsonFromResponse(rawContent);
+      if (jsonMatch) {
+        try {
+          const jsonResponse = JSON.parse(jsonMatch);
 
-        // Obsługa różnych formatów JSON odpowiedzi
-        if (jsonResponse.title && jsonResponse.content) {
-          return {
-            title: this.sanitizeField(jsonResponse.title, 100) || "Wygenerowany przepis",
-            content: this.sanitizeField(jsonResponse.content, 5000) || "Brak treści przepisu",
-            additional_params: jsonResponse.additional_params
-              ? this.sanitizeField(jsonResponse.additional_params, 5000)
-              : null,
-          };
-        }
+          // Format z description polami - główny format używany przez AI
+          if (jsonResponse.title?.description && jsonResponse.content?.description) {
+            let additionalParams = null;
 
-        // Format z description polami - główny format używany przez AI
-        if (jsonResponse.title?.description && jsonResponse.content?.description) {
-          let additionalParams = null;
+            // Obsługa różnych formatów additional_params
+            if (jsonResponse.additional_params?.additional_params) {
+              additionalParams = this.sanitizeField(jsonResponse.additional_params.additional_params, 5000);
+            } else if (jsonResponse.additional_params?.description) {
+              additionalParams = this.sanitizeField(jsonResponse.additional_params.description, 5000);
+            } else if (typeof jsonResponse.additional_params === "string") {
+              additionalParams = this.sanitizeField(jsonResponse.additional_params, 5000);
+            }
 
-          // Obsługa additional_params.additional_params (format z przykładu)
-          if (jsonResponse.additional_params?.additional_params) {
-            additionalParams = this.sanitizeField(jsonResponse.additional_params.additional_params, 5000);
-          } else if (jsonResponse.additional_params?.description) {
-            additionalParams = this.sanitizeField(jsonResponse.additional_params.description, 5000);
-          } else if (typeof jsonResponse.additional_params === "string") {
-            additionalParams = this.sanitizeField(jsonResponse.additional_params, 5000);
+            return {
+              title: this.sanitizeField(jsonResponse.title.description, 100) || "Wygenerowany przepis",
+              content: this.sanitizeField(jsonResponse.content.description, 5000) || "Brak treści przepisu",
+              additional_params: additionalParams,
+            };
           }
 
-          return {
-            title: this.sanitizeField(jsonResponse.title.description, 100) || "Wygenerowany przepis",
-            content: this.sanitizeField(jsonResponse.content.description, 5000) || "Brak treści przepisu",
-            additional_params: additionalParams,
-          };
+          // Prosty format JSON
+          if (jsonResponse.title && jsonResponse.content) {
+            return {
+              title: this.sanitizeField(jsonResponse.title, 100) || "Wygenerowany przepis",
+              content: this.sanitizeField(jsonResponse.content, 5000) || "Brak treści przepisu",
+              additional_params: jsonResponse.additional_params
+                ? this.sanitizeField(jsonResponse.additional_params, 5000)
+                : null,
+            };
+          }
+        } catch (parseError) {
+          console.warn("Nie udało się sparsować znalezionego JSON:", parseError);
         }
-
-        // Jeśli jest to obiekt ale nie ma oczekiwanych pól, spróbuj jako tekst
-        return this.fallbackTextParsing(rawContent);
-      } catch {
-        // Jeśli nie udało się sparsować JSON, użyj parsowania tekstowego
-        return this.fallbackTextParsing(rawContent);
       }
+
+      // Fallback: parsowanie tekstowe z ukryciem reasoning
+      return this.fallbackTextParsing(rawContent);
     } catch (error) {
       console.error("Błąd podczas parsowania odpowiedzi AI:", error);
       return {
@@ -369,17 +361,33 @@ export class AIService {
   }
 
   /**
-   * Fallback dla parsowania tekstowej odpowiedzi
+   * Ekstraktuje JSON z odpowiedzi AI, ukrywając process reasoning
+   */
+  private extractJsonFromResponse(content: string): string | null {
+    // Usuń bloki kodu markdown z JSON
+    const jsonBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+    if (jsonBlockMatch) {
+      return jsonBlockMatch[1];
+    }
+
+    // Szukaj JSON w tekście - szukamy ostatniego wystąpienia (końcowy wynik)
+    const jsonMatches = content.match(/\{[\s\S]*?\}/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      // Bierz ostatni JSON w odpowiedzi (najprawdopodobniej końcowy wynik)
+      return jsonMatches[jsonMatches.length - 1];
+    }
+
+    return null;
+  }
+
+  /**
+   * Fallback dla parsowania tekstowej odpowiedzi z ukryciem reasoning
    */
   private fallbackTextParsing(content: string): { title: string; content: string; additional_params?: string | null } {
     // Ukrywanie procesu reasoningowego - szukamy końcowego wyniku
     const lines = content.split("\n");
 
-    // Próba znalezienia struktury z tytułem
-    let title = "";
-    let remainingContent = content;
-
-    // Szukamy pierwszej linii która nie zawiera znaków myślenia AI
+    // Rozszerzona lista słów kluczowych reasoning
     const reasoningKeywords = [
       "myślę",
       "rozważam",
@@ -392,39 +400,76 @@ export class AIService {
       "I need to",
       "first",
       "po pierwsze",
+      "więc",
+      "zatem",
+      "dlatego",
+      "ponieważ",
+      "bowiem",
+      "gdyż",
+      "żeby",
+      "aby",
+      "w związku z tym",
+      "biorąc pod uwagę",
+      "mając na uwadze",
+      "uwzględniając",
     ];
+
+    // Znajdź pierwszy wiersz który wygląda na tytuł przepisu (nie reasoning)
+    let title = "";
+    let contentStartIndex = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
-      // Pomijamy puste linie i linie z procesem myślenia
-      if (!line || reasoningKeywords.some((keyword) => line.toLowerCase().includes(keyword.toLowerCase()))) {
+      // Pomijamy puste linie
+      if (!line) continue;
+
+      // Pomijamy linie z reasoning
+      if (reasoningKeywords.some((keyword) => line.toLowerCase().includes(keyword.toLowerCase()))) {
+        continue;
+      }
+
+      // Pomijamy linie zaczynające się od słów typu "Oto", "Poniżej", "Tutaj"
+      if (/^(oto|poniżej|tutaj|przedstawiam|prezentuję)/i.test(line)) {
         continue;
       }
 
       // Jeśli znajdziemy pierwszy sensowny wiersz, traktujemy go jako tytuł
       if (!title && line.length > 0 && line.length <= 100) {
         title = line
-          .replace(/^#\s*/, "")
-          .replace(/^\*\s*/, "")
+          .replace(/^#+\s*/, "") // Usuń markdown headers
+          .replace(/^\*+\s*/, "") // Usuń gwiazdki
+          .replace(/^-+\s*/, "") // Usuń myślniki
+          .replace(/^\d+\.\s*/, "") // Usuń numerację
           .trim();
-        remainingContent = lines
-          .slice(i + 1)
-          .join("\n")
-          .trim();
+        contentStartIndex = i + 1;
         break;
       }
     }
 
-    // Jeśli nie znaleźliśmy tytułu, użyj pierwszej linii
+    // Jeśli nie znaleźliśmy tytułu, użyj pierwszej niepustej linii
     if (!title) {
-      title = lines[0]?.replace(/^#\s*/, "").trim() || "Wygenerowany przepis";
-      remainingContent = lines.slice(1).join("\n").trim();
+      const firstNonEmptyLine = lines.find((line) => line.trim().length > 0);
+      title = firstNonEmptyLine?.replace(/^#+\s*/, "").trim() || "Wygenerowany przepis";
+      contentStartIndex = lines.findIndex((line) => line.trim() === firstNonEmptyLine?.trim()) + 1;
     }
+
+    // Ekstraktuj treść przepisu, pomijając dalsze reasoning
+    const contentLines = lines.slice(contentStartIndex);
+    const cleanedContent = contentLines
+      .filter((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return true; // Zachowaj puste linie dla formatowania
+
+        // Filtruj linie z reasoning
+        return !reasoningKeywords.some((keyword) => trimmed.toLowerCase().includes(keyword.toLowerCase()));
+      })
+      .join("\n")
+      .trim();
 
     return {
       title: this.sanitizeField(title, 100) || "Wygenerowany przepis",
-      content: this.sanitizeField(remainingContent || content, 5000) || "Brak treści przepisu",
+      content: this.sanitizeField(cleanedContent || content, 5000) || "Brak treści przepisu",
       additional_params: null, // W fallback nie parsujemy additional_params
     };
   }
@@ -454,6 +499,105 @@ export class AIService {
     }
 
     return data || [];
+  }
+
+  /**
+   * Pobiera i formatuje preferencje użytkownika dla AI
+   * @param userId - ID użytkownika
+   * @returns Sformatowane preferencje jako string
+   */
+  private async getFormattedUserPreferences(userId: string): Promise<string | null> {
+    try {
+      const userPreferencesArray = await this.getUserPreferences(userId);
+
+      if (userPreferencesArray.length === 0) {
+        return null;
+      }
+
+      // Grupuj preferencje według kategorii
+      const grouped = userPreferencesArray.reduce<Record<string, string[]>>((acc, pref) => {
+        if (!acc[pref.category]) {
+          acc[pref.category] = [];
+        }
+        acc[pref.category].push(pref.value);
+        return acc;
+      }, {});
+
+      // Formatuj preferencje w czytelny sposób
+      const formatted = Object.entries(grouped)
+        .map(([category, values]) => {
+          const categoryLabel = this.getCategoryLabel(category);
+          return `${categoryLabel}: ${values.join(", ")}`;
+        })
+        .join("\n");
+
+      return formatted;
+    } catch (error) {
+      console.error("Błąd podczas formatowania preferencji:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Pobiera preferencje z przepisu (additional_params)
+   * @param recipeId - ID przepisu
+   * @param userId - ID użytkownika (dla bezpieczeństwa)
+   * @returns Preferencje z przepisu lub null
+   */
+  private async getRecipePreferences(recipeId: number, userId: string): Promise<string | null> {
+    try {
+      const { data: recipe, error } = await this.supabase
+        .from("recipes")
+        .select("additional_params")
+        .eq("id", recipeId)
+        .eq("user_id", userId)
+        .single();
+
+      if (error || !recipe || !recipe.additional_params) {
+        return null;
+      }
+
+      return recipe.additional_params;
+    } catch (error) {
+      console.error("Błąd podczas pobierania preferencji z przepisu:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Łączy preferencje użytkownika z preferencjami z przepisu
+   * @param userPreferences - Preferencje z profilu użytkownika
+   * @param recipePreferences - Preferencje z przepisu
+   * @returns Połączone preferencje
+   */
+  private combinePreferences(userPreferences: string | null, recipePreferences: string | null): string | null {
+    const parts = [userPreferences, recipePreferences].filter(Boolean);
+
+    if (parts.length === 0) {
+      return null;
+    }
+
+    if (parts.length === 1) {
+      return parts[0];
+    }
+
+    return `${userPreferences}\n\nDodatkowe uwagi do przepisu:\n${recipePreferences}`;
+  }
+
+  /**
+   * Mapuje kategorię preferencji na czytelną etykietę
+   * @param category - Kategoria preferencji
+   * @returns Czytelna etykieta
+   */
+  private getCategoryLabel(category: string): string {
+    const labels: Record<string, string> = {
+      diety: "Diety",
+      lubiane: "Produkty lubiane",
+      nielubiane: "Produkty nielubiane",
+      wykluczone: "Produkty wykluczone",
+    };
+
+    return labels[category] || category;
   }
 
   /**

@@ -7,6 +7,7 @@ export const prerender = false;
 // Schemat walidacji dla danych wejściowych
 const generateRecipeSchema = z.object({
   additional_params: z.string().nullable().optional(),
+  base_recipe: z.string().nullable().optional(),
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -46,6 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const command = {
       additional_params: validationResult.data.additional_params || null,
+      base_recipe: validationResult.data.base_recipe || null,
     };
 
     // Użyj serwisu AI do wygenerowania przepisu

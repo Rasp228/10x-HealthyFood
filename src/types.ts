@@ -51,7 +51,7 @@ export type RecipeReferenceDto = Pick<RecipeDto, "id" | "title" | "content">;
 
 export interface BaseRecipeCommand {
   additional_params: string | null;
-  base_recipe?: string;
+  base_recipe?: string | null;
 }
 
 export type GenerateRecipeCommand = BaseRecipeCommand;

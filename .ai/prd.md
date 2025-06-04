@@ -54,7 +54,7 @@ HealthyMeal rozwiązuje te problemy poprzez wykorzystanie AI do personalizacji p
 - Modyfikowanie istniejących przepisów zgodnie z preferencjami
 - Maksymalna długość pola z treścią przepisu (content): 5000 znaków
 - Maksymalna długość pola z dodatkowymi parametrami (additional_params): 5000 znaków
-- Ręczne wywołanie modyfikacji przez przycisk "Generuj"
+- Ręczne wywołanie modyfikacji przez przycisk "Wygeneruj z AI", "AI"
 - Możliwość zapisania zmodyfikowanego przepisu jako nowego lub nadpisania istniejącego
 - Decyzja o akceptacji lub odrzuceniu przepisu należy wyłącznie do użytkownika
 

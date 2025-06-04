@@ -172,7 +172,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
       if (mode === "generate") {
         const params: GenerateRecipeCommand = {
           additional_params: formValues.additional_params || null,
-          base_recipe: showBaseRecipe && formValues.base_recipe ? formValues.base_recipe : undefined,
+          base_recipe: showBaseRecipe && formValues.base_recipe ? formValues.base_recipe : null,
         };
         await generateRecipe(params);
       } else if (mode === "modify" && originalRecipe) {
@@ -422,8 +422,10 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
               {mode === "generate" && (
                 <div className="mt-2 rounded-lg bg-purple-50 p-3 dark:bg-purple-950">
                   <p className="text-xs text-purple-700 dark:text-purple-300">
-                    <span className="font-medium">Wskazówka:</span> Jeśli wszystkie pola pozostawisz puste, zostanie
-                    wygenerowany losowy przepis uwzględniający Twoje preferencje z profilu użytkownika.
+                    <span className="font-medium">Wskazówka:</span>
+                    {showBaseRecipe
+                      ? " Gdy podajesz przepis bazowy, AI zmodyfikuje go zgodnie z Twoimi preferencjami i dodatkowymi instrukcjami."
+                      : " Jeśli wszystkie pola pozostawisz puste, zostanie wygenerowany losowy przepis uwzględniający Twoje preferencje z profilu użytkownika."}
                   </p>
                 </div>
               )}
@@ -442,7 +444,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                 {isLoading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Przetwarzanie...
+                    {mode === "generate" ? "Generowanie..." : "Modyfikowanie..."}
                   </>
                 ) : (
                   <>
@@ -467,6 +469,28 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                 )}
               </Button>
             </div>
+
+            {/* Progress indicator podczas operacji AI */}
+            {isLoading && (
+              <div className="mt-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
+                <div className="flex items-center space-x-3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      {mode === "generate" ? "AI generuje przepis..." : "AI modyfikuje przepis..."}
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      To może potrwać do 30 sekund. AI uwzględnia Twoje preferencje i tworzy spersonalizowany przepis.
+                    </p>
+                  </div>
+                  {canCancel && (
+                    <Button variant="outline" size="sm" onClick={handleCancel} className="text-xs">
+                      Anuluj
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -476,15 +500,35 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                   <h3 className="mb-2 text-lg font-bold">{recipeToDisplay.title}</h3>
                   <div className="prose max-h-96 overflow-y-auto dark:prose-invert">
                     <div
+                      className="whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{
                         __html: recipeToDisplay.content
                           .split("\n")
                           .map((line: string) => {
-                            if (line.startsWith("# ")) return `<h1>${line.substring(2)}</h1>`;
-                            if (line.startsWith("## ")) return `<h2>${line.substring(3)}</h2>`;
-                            if (line.startsWith("- ")) return `<li>${line.substring(2)}</li>`;
-                            if (line.match(/^\d+\. /)) return `<li>${line.substring(line.indexOf(" ") + 1)}</li>`;
-                            return line ? `<p>${line}</p>` : "<br/>";
+                            const trimmedLine = line.trim();
+
+                            // Obsługa nagłówków markdown
+                            if (trimmedLine.startsWith("### ")) return `<h3>${trimmedLine.substring(4)}</h3>`;
+                            if (trimmedLine.startsWith("## ")) return `<h2>${trimmedLine.substring(3)}</h2>`;
+                            if (trimmedLine.startsWith("# ")) return `<h1>${trimmedLine.substring(2)}</h1>`;
+
+                            // Obsługa list
+                            if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ")) {
+                              return `<li>${trimmedLine.substring(2)}</li>`;
+                            }
+                            if (trimmedLine.match(/^\d+\.\s/)) {
+                              return `<li>${trimmedLine.substring(trimmedLine.indexOf(" ") + 1)}</li>`;
+                            }
+
+                            // Obsługa pogrubienia
+                            let processedLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+                            processedLine = processedLine.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+                            // Puste linie jako break
+                            if (!trimmedLine) return "<br/>";
+
+                            // Zwykłe linie jako paragrafy
+                            return `<p>${processedLine}</p>`;
                           })
                           .join(""),
                       }}
