@@ -38,7 +38,6 @@ HealthyMeal rozwiązuje te problemy poprzez wykorzystanie AI do personalizacji p
 - Definiowanie preferencji żywieniowych (produkty lubiane, nielubiane, wykluczone i diety)
 - Możliwość dodawania, edytowania i usuwania preferencji żywieniowych (do 50 różnych preferencji)
 - Każda preferencja może zawierać maksymalnie 50 znaków
-- Profil uznawany za ukończony po zapisaniu minimum 3 preferencji (ale są one opcjonalne i można mieć mniej)
 
 ### 3.3 Zarządzanie przepisami
 

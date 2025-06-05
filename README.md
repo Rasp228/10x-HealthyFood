@@ -44,6 +44,13 @@ HealthyMeal solves several challenges users face when looking for suitable recip
 
 - Openrouter.ai - Access to various AI models (OpenAI, Anthropic, Google, etc.)
 
+### Testing
+
+- Jest - JavaScript testing framework for unit and integration tests
+- React Testing Library - Simple and complete testing utilities for React components
+- Playwright - End-to-end testing framework for web applications
+- Supertest - HTTP testing library for API endpoints
+
 ### CI/CD & Hosting
 
 - GitHub Actions - For CI/CD pipelines

@@ -23,6 +23,21 @@ const baseConfig = tseslint.config({
   },
 });
 
+// Konfiguracja dla plików CommonJS (jak lighthouserc.js, jest.config.js)
+const commonjsConfig = tseslint.config({
+  files: ["*.config.js", "lighthouserc.js"],
+  languageOptions: {
+    sourceType: "commonjs",
+    globals: {
+      module: "readonly",
+      require: "readonly",
+      exports: "readonly",
+      process: "readonly",
+      console: "readonly",
+    },
+  },
+});
+
 const jsxA11yConfig = tseslint.config({
   files: ["**/*.{js,jsx,ts,tsx}"],
   extends: [jsxA11y.flatConfigs.recommended],
@@ -59,6 +74,7 @@ const reactConfig = tseslint.config({
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
+  commonjsConfig,
   jsxA11yConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
