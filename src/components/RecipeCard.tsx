@@ -62,10 +62,14 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
         }
       }}
       aria-label={onView ? `Otwórz szczegóły przepisu: ${recipe.title}` : undefined}
+      data-testid={`recipe-card-${recipe.id}`}
     >
       {/* Etykieta AI jeśli przepis jest wygenerowany przez AI */}
       {recipe.is_ai_generated && (
-        <div className="absolute right-2 top-2 rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200 transition-transform group-hover:scale-105">
+        <div
+          className="absolute right-2 top-2 rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200 transition-transform group-hover:scale-105"
+          data-testid="recipe-ai-badge"
+        >
           AI
         </div>
       )}
@@ -91,17 +95,24 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
         </div>
       )}
 
-      <h3 className="mb-2 text-lg sm:text-xl font-semibold leading-tight group-hover:text-primary transition-colors">
+      <h3
+        className="mb-2 text-lg sm:text-xl font-semibold leading-tight group-hover:text-primary transition-colors"
+        data-testid="recipe-title"
+      >
         {recipe.title}
       </h3>
 
-      <p className="mb-4 text-xs sm:text-sm text-muted-foreground">{formatDate(recipe.created_at)}</p>
+      <p className="mb-4 text-xs sm:text-sm text-muted-foreground" data-testid="recipe-date">
+        {formatDate(recipe.created_at)}
+      </p>
 
-      <p className="mb-6 text-sm leading-relaxed text-foreground/80">{getContentPreview(recipe.content)}</p>
+      <p className="mb-6 text-sm leading-relaxed text-foreground/80" data-testid="recipe-preview">
+        {getContentPreview(recipe.content)}
+      </p>
 
       {/* Opcjonalne tagi/parametry */}
       {recipe.additional_params && (
-        <div className="mb-4 flex flex-wrap gap-1">
+        <div className="mb-4 flex flex-wrap gap-1" data-testid="recipe-tags">
           {recipe.additional_params
             .split(",")
             .slice(0, 3)
@@ -119,12 +130,16 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
       )}
 
       {/* Toolbar akcji - widoczny po najechaniu myszą lub zawsze na touch devices */}
-      <div className="mt-auto flex justify-end gap-1 sm:gap-2 opacity-100 sm:opacity-0 transition-opacity group-hover:opacity-100">
+      <div
+        className="mt-auto flex justify-end gap-1 sm:gap-2 opacity-100 sm:opacity-0 transition-opacity group-hover:opacity-100"
+        data-testid="recipe-actions"
+      >
         {onEdit && (
           <EditButton
             onClick={(e) => handleActionClick(e, () => onEdit(recipe.id))}
             size="sm"
             className="h-8 px-2 sm:px-3 text-xs"
+            data-testid={`edit-recipe-${recipe.id}`}
           >
             <span className="hidden sm:inline">Edytuj</span>
           </EditButton>
@@ -135,6 +150,7 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
             onClick={(e) => handleActionClick(e, () => onDelete(recipe.id))}
             size="sm"
             className="h-8 px-2 sm:px-3 text-xs"
+            data-testid={`delete-recipe-${recipe.id}`}
           >
             <span className="hidden sm:inline">Usuń</span>
           </DeleteButton>
@@ -145,6 +161,7 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
             onClick={(e) => handleActionClick(e, () => onAI(recipe.id))}
             size="sm"
             className="h-8 px-2 sm:px-3 text-xs"
+            data-testid={`ai-recipe-${recipe.id}`}
           >
             <span className="hidden sm:inline">AI</span>
           </AIButton>

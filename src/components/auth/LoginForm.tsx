@@ -61,14 +61,21 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-      <h1 className="mb-6 text-2xl font-bold text-center">Logowanie</h1>
+    <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm" data-testid="login-form">
+      <h1 className="mb-6 text-2xl font-bold text-center" data-testid="login-form-title">
+        Logowanie
+      </h1>
 
       {error && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error.message}</div>
+        <div
+          className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600"
+          data-testid="login-error-message"
+        >
+          {error.message}
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="login-form-container">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
@@ -83,8 +90,13 @@ export default function LoginForm() {
             placeholder="twoj@email.com"
             autoComplete="email"
             required
+            data-testid="login-email-input"
           />
-          {validationErrors.email && <p className="text-xs text-red-500">{validationErrors.email}</p>}
+          {validationErrors.email && (
+            <p className="text-xs text-red-500" data-testid="login-email-error">
+              {validationErrors.email}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -100,11 +112,16 @@ export default function LoginForm() {
             className={`w-full rounded-md border p-2 ${validationErrors.password ? "border-red-300" : "border-input"}`}
             autoComplete="current-password"
             required
+            data-testid="login-password-input"
           />
-          {validationErrors.password && <p className="text-xs text-red-500">{validationErrors.password}</p>}
+          {validationErrors.password && (
+            <p className="text-xs text-red-500" data-testid="login-password-error">
+              {validationErrors.password}
+            </p>
+          )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading} data-testid="login-submit-button">
           {isLoading ? (
             <span className="flex items-center gap-2">
               <LoadingSpinner size="sm" />
@@ -116,12 +133,16 @@ export default function LoginForm() {
         </Button>
 
         <div className="space-y-3 text-center text-sm">
-          <a href="/auth/reset-password" className="block text-primary hover:underline">
+          <a
+            href="/auth/reset-password"
+            className="block text-primary hover:underline"
+            data-testid="login-forgot-password-link"
+          >
             Zapomniałem hasła
           </a>
           <p>
             Nie masz konta?{" "}
-            <a href="/auth/register" className="text-primary hover:underline">
+            <a href="/auth/register" className="text-primary hover:underline" data-testid="login-register-link">
               Zarejestruj się
             </a>
           </p>

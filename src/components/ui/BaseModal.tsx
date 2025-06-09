@@ -11,6 +11,7 @@ interface BaseModalProps {
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl";
   showCloseButton?: boolean;
   zIndex?: number;
+  "data-testid"?: string;
 }
 
 export default function BaseModal({
@@ -22,6 +23,7 @@ export default function BaseModal({
   maxWidth = "4xl",
   showCloseButton = true,
   zIndex = 50,
+  "data-testid": dataTestId,
 }: BaseModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -124,6 +126,7 @@ export default function BaseModal({
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/50 animate-in fade-in-0 duration-200"
       style={{ zIndex }}
+      data-testid={dataTestId}
     >
       <div className="fixed inset-0" onClick={handleBackdropClick} aria-hidden="true" />
       <div
@@ -138,13 +141,13 @@ export default function BaseModal({
         {(title || showCloseButton) && (
           <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 backdrop-blur-sm p-4">
             {title ? (
-              <h2 id="modal-title" className="text-lg font-semibold">
+              <h2 id="modal-title" className="text-lg font-semibold" data-testid="modal-title">
                 {title}
               </h2>
             ) : (
               <div></div>
             )}
-            {showCloseButton && <CloseButton onClick={onClose} size="sm" />}
+            {showCloseButton && <CloseButton onClick={onClose} size="sm" data-testid="modal-close-button" />}
           </div>
         )}
 

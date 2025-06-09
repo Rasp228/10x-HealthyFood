@@ -11,6 +11,9 @@ tests/
 ├── unit/           # Testy jednostkowe (Jest + React Testing Library)
 ├── integration/    # Testy integracyjne (Jest + Supertest)
 ├── e2e/           # Testy end-to-end (Playwright)
+│   ├── config/    # Konfiguracja E2E
+│   ├── page-objects/  # Page Object Models
+│   └── recipe-management.spec.ts  # Główny test E2E
 ├── setup/         # Konfiguracja środowiska testowego
 ├── fixtures/      # Dane testowe
 ├── mocks/         # Mocki dla external services
@@ -40,18 +43,15 @@ npm run test:coverage
 ```
 
 ### Testy E2E
+
+⚠️ **WYMAGANA KONFIGURACJA:** Przed uruchomieniem testów E2E należy skonfigurować plik `.env.test`
+
 ```bash
+# Uruchom aplikację w trybie developerskim dla E2E
+npm run dev:e2e
+
 # Uruchom testy E2E
 npm run test:e2e
-
-# Uruchom testy E2E z interfejsem
-npm run test:e2e:ui
-
-# Uruchom testy E2E w trybie headed
-npm run test:e2e:headed
-
-# Debug testów E2E
-npm run test:e2e:debug
 ```
 
 ### Wszystkie Testy
@@ -60,12 +60,45 @@ npm run test:e2e:debug
 npm run test && npm run test:e2e
 ```
 
-## 📊 Kryteria Pokrycia
+## ⚙️ Konfiguracja E2E
 
-Zgodnie z planem testów:
-- **Minimum 80%** pokrycia dla krytycznych modułów
-- **100%** testów krytycznych musi przechodzić
-- **95%** testów wysokiego priorytetu musi przechodzić
+### Plik .env.test
+
+Przed uruchomieniem testów E2E należy utworzyć plik `.env.test` w katalogu głównym projektu:
+
+```bash
+# Konfiguracja Supabase
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_KEY=your_supabase_anon_key_here
+
+# Dane testowego użytkownika
+E2E_USERNAME_ID=test_user_id
+E2E_USERNAME=test@example.com
+E2E_PASSWORD=test_password_123
+```
+
+**Uwagi:**
+- Używaj dedykowanej instancji Supabase dla testów
+- Testowy użytkownik musi istnieć w bazie danych
+- Dane logowania muszą być poprawne dla środowiska testowego
+
+### Uruchomienie
+
+1. **Przygotuj środowisko:**
+   ```bash
+   cp .env.example .env.test
+   # Edytuj .env.test i wprowadź poprawne dane
+   ```
+
+2. **Uruchom aplikację:**
+   ```bash
+   npm run dev:e2e
+   ```
+
+3. **Uruchom testy (w nowym terminalu):**
+   ```bash
+   npm run test:e2e
+   ```
 
 ## 🎯 Typy Testów
 
@@ -92,10 +125,15 @@ npm run test -- --testPathPattern=integration
 ```
 
 ### 3. Testy E2E (`tests/e2e/`)
-- Kompletne przepływy użytkownika
+- **Główny scenariusz:** Kompletny przepływ dodawania przepisu
 - Integracja UI z backendem
-- Cross-browser testing
-- User journey validation
+- Walidacja krytycznej funkcjonalności
+
+**Obecny zakres testów E2E:**
+- ✅ Logowanie użytkownika
+- ✅ Dodawanie nowego przepisu
+- ✅ Walidacja formularza
+- ✅ Sprawdzenie zapisania przepisu
 
 **Przykład uruchomienia:**
 ```bash
@@ -104,28 +142,17 @@ npm run test:e2e -- --headed
 
 ## 📝 Scenariusze Testowe
 
-### Autentykacja
-- TC-AUTH-001: Rejestracja nowego użytkownika
-- TC-AUTH-002: Logowanie z poprawnymi danymi  
-- TC-AUTH-003: Wylogowanie
+### Aktywne Testy E2E
 
-### Zarządzanie Preferencjami
-- TC-PREF-001: Dodawanie preferencji żywieniowej
-- TC-PREF-002: Edycja preferencji
-- TC-PREF-003: Limit 50 preferencji
+#### TC-E2E-001: Kompletny przepływ dodawania przepisu
+**Kroki:**
+1. Logowanie z danymi z `.env.test`
+2. Kliknięcie "Dodaj przepis"
+3. Wypełnienie formularza przepisu
+4. Zapisanie przepisu
+5. Sprawdzenie czy przepis pojawił się na liście
 
-### Zarządzanie Przepisami
-- TC-RECIPE-001: Dodawanie nowego przepisu
-- TC-RECIPE-002: Wyświetlanie listy przepisów
-- TC-RECIPE-003: Wyszukiwanie przepisów
-- TC-RECIPE-004: Edycja przepisu
-- TC-RECIPE-005: Usuwanie przepisu
-
-### Integracja z AI
-- TC-AI-001: Generowanie nowego przepisu
-- TC-AI-002: Modyfikacja istniejącego przepisu przez AI
-- TC-AI-003: Zapisywanie wygenerowanego przepisu
-- TC-AI-004: Odrzucenie wygenerowanego przepisu
+**Status:** ✅ Zaimplementowany w `recipe-management.spec.ts`
 
 ## 🔧 Konfiguracja
 
@@ -187,11 +214,28 @@ npm run test -- tests/unit/specific.test.ts
 # Debug mode z DevTools
 npm run test:e2e:debug
 
-# Headed mode (widoczna przeglądarką)
+# Headed mode (widoczna przeglądarka)
 npm run test:e2e:headed
 
 # Record new test
 npx playwright codegen localhost:4321
+```
+
+### Troubleshooting E2E
+
+**Problem:** Test nie może się połączyć z aplikacją
+```bash
+# Sprawdź czy aplikacja działa na localhost:4321
+npm run dev:e2e
+
+# Sprawdź port w playwright.config.ts
+```
+
+**Problem:** Błędy autoryzacji
+```bash
+# Sprawdź dane w .env.test
+# Zweryfikuj czy testowy użytkownik istnieje w bazie
+# Sprawdź poprawność URL i kluczy Supabase
 ```
 
 ## 📊 Raportowanie
@@ -223,12 +267,17 @@ Testy są skonfigurowane do automatycznego uruchamiania w:
    - Resetuj mocki między testami
    - Isolate test data per test
 
-3. **Assertions:**
+3. **E2E Tests:**
+   - Skupiaj się na krytycznych przepływach użytkownika
+   - Używaj Page Object Model dla lepszej maintainability
+   - Testuj jeden główny scenariusz na test
+
+4. **Assertions:**
    - Test behavior, not implementation
    - Use semantic selectors (roles, labels)
    - Test accessibility
 
-4. **Performance:**
+5. **Performance:**
    - Parallel execution where possible
    - Skip tests in development: `test.skip()`
    - Focus on changed code: `test.only()`
@@ -246,12 +295,20 @@ Testy są skonfigurowane do automatycznego uruchamiania w:
 ```bash
 # Zwiększ timeout w playwright.config.ts
 # Sprawdź czy aplikacja działa na porcie 4321
+# Sprawdź poprawność danych w .env.test
 ```
 
 **React Testing Library errors:**
 ```bash
 # Sprawdź czy jest setup w tests/setup/jest.setup.ts
 # Zweryfikuj import '@testing-library/jest-dom'
+```
+
+**E2E testy nie mogą się zalogować:**
+```bash
+# Sprawdź dane logowania w .env.test
+# Zweryfikuj czy użytkownik istnieje w testowej bazie Supabase
+# Sprawdź poprawność SUPABASE_URL i SUPABASE_KEY
 ```
 
 ### Przydatne Linki

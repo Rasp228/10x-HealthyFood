@@ -171,7 +171,7 @@ export default function HomePage() {
   const selectedRecipe = selectedRecipeId ? recipes.find((recipe) => recipe.id === selectedRecipeId) : null;
 
   return (
-    <div>
+    <div data-testid="homepage">
       {/* Górny pasek z wyszukiwaniem i przyciskami akcji */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative">
@@ -197,6 +197,7 @@ export default function HomePage() {
             value={filterText}
             onChange={handleFilterChange}
             aria-label="Wyszukaj przepisy"
+            data-testid="search-recipes-input"
           />
           {isSearching && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -208,6 +209,7 @@ export default function HomePage() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               onClick={handleClearSearch}
               aria-label="Wyczyść wyszukiwanie"
+              data-testid="clear-search-button"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -235,6 +237,7 @@ export default function HomePage() {
               value={sortParams.sort}
               onChange={(e) => handleSortChange(e.target.value as "created_at" | "updated_at" | "title")}
               aria-label="Sortuj według"
+              data-testid="sort-select"
             >
               <option value="created_at">Data utworzenia</option>
               <option value="updated_at">Data aktualizacji</option>
@@ -244,6 +247,7 @@ export default function HomePage() {
               onClick={handleOrderChange}
               className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md border border-input hover:bg-muted"
               aria-label={sortParams.order === "desc" ? "Sortuj malejąco" : "Sortuj rosnąco"}
+              data-testid="sort-order-button"
             >
               {sortParams.order === "desc" ? (
                 <svg
@@ -290,6 +294,7 @@ export default function HomePage() {
               setSelectedRecipeId(null);
               setIsAIModalOpen(true);
             }}
+            data-testid="ai-generate-button"
           >
             Wygeneruj z AI
           </AIButton>
@@ -299,6 +304,7 @@ export default function HomePage() {
               setSelectedRecipeId(null);
               setIsRecipeFormOpen(true);
             }}
+            data-testid="add-recipe-button-main"
           >
             Dodaj przepis
           </AddButton>
@@ -307,7 +313,7 @@ export default function HomePage() {
 
       {/* Informacja o wynikach wyszukiwania */}
       {debouncedFilterText && (
-        <div className="mb-4">
+        <div className="mb-4" data-testid="search-results-info">
           <p className="text-sm text-muted-foreground">
             Znaleziono {total} wyników dla &quot;{debouncedFilterText}&quot;
           </p>
@@ -316,7 +322,10 @@ export default function HomePage() {
 
       {/* Lista przepisów */}
       {recipes.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-muted p-12 text-center">
+        <div
+          className="rounded-lg border-2 border-dashed border-muted p-12 text-center"
+          data-testid="empty-recipes-state"
+        >
           <h3 className="mb-2 text-xl font-medium">
             {debouncedFilterText ? "Nie znaleziono przepisów" : "Brak przepisów"}
           </h3>
@@ -334,12 +343,13 @@ export default function HomePage() {
                 setIsRecipeFormOpen(true);
               }
             }}
+            data-testid="empty-state-action-button"
           >
             {debouncedFilterText ? "Wyczyść wyszukiwanie" : "Dodaj pierwszy przepis"}
           </Button>
         </div>
       ) : (
-        <div>
+        <div data-testid="recipes-grid">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {recipes.map((recipe) => (
               <RecipeCard

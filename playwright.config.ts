@@ -1,4 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config } from "dotenv";
+
+// Ładuj zmienne środowiskowe z .env.test jeśli uruchamiamy testy E2E
+if (process.env.NODE_ENV === "test" || process.env.TEST_MODE) {
+  config({ path: ".env.test" });
+}
 
 /**
  * Konfiguracja Playwright dla testów E2E
@@ -23,22 +29,18 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
 
   // Retry w przypadku niepowodzenia
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
 
-  // Liczba worker'ów
-  workers: process.env.CI ? 1 : undefined,
+  // Liczba worker'ów - ograniczona dla Dockera
+  workers: 1,
 
   // Reporter dla wyników testów
-  reporter: [
-    ["html"],
-    ["json", { outputFile: "test-results/e2e-results.json" }],
-    ...(process.env.CI ? [["github"] as const] : []),
-  ],
+  reporter: [["html"], ["list"], ...(process.env.CI ? [["github"] as const] : [])],
 
   // Globalna konfiguracja dla wszystkich projektów
   use: {
-    // URL podstawowy dla testów (localhost podczas developmentu)
-    baseURL: process.env.BASE_URL || "http://localhost:4321",
+    // URL podstawowy dla testów
+    baseURL: "http://localhost:3000",
 
     // Śledzenie dla debugowania testów
     trace: "on-first-retry",
@@ -54,41 +56,53 @@ export default defineConfig({
 
     // Timeout dla nawigacji
     navigationTimeout: 30_000,
+
+    // Ustawienia dla środowiska Docker
+    launchOptions: {
+      // Headless mode w Docker
+      headless: true,
+      // Argumenty dla Chromium w Docker
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-ipc-flooding-protection",
+        "--disable-extensions",
+        "--disable-default-apps",
+        "--disable-translate",
+        "--disable-sync",
+        "--disable-background-networking",
+        "--disable-software-rasterizer",
+        "--disable-gpu",
+        "--disable-gpu-sandbox",
+        "--allow-running-insecure-content",
+        "--disable-site-isolation-trials",
+        "--disable-features=TranslateUI,BlinkGenPropertyTrees",
+      ],
+    },
   },
 
-  // Projekty testowe dla różnych przeglądarek
+  // Projekty testowe - tylko Chromium dla Docker
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
-    },
-
-    // Testy mobilne
-    {
-      name: "Mobile Chrome",
-      use: { ...devices["Pixel 5"] },
-    },
-    {
-      name: "Mobile Safari",
-      use: { ...devices["iPhone 12"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 720 },
+      },
     },
   ],
 
   // Web Server do uruchomienia przed testami
   webServer: {
-    command: "npm run preview",
-    port: 4321,
-    reuseExistingServer: !process.env.CI,
+    command: "npm run dev:e2e",
+    url: "http://localhost:3000",
+    reuseExistingServer: true, // Używaj istniejącego serwera
     timeout: 120_000,
   },
 });

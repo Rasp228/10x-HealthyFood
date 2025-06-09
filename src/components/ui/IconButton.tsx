@@ -127,6 +127,7 @@ interface IconButtonProps extends React.ComponentProps<"button">, VariantProps<t
   children?: React.ReactNode;
   asChild?: boolean;
   loading?: boolean;
+  "data-testid"?: string;
 }
 
 export default function IconButton({
@@ -136,6 +137,7 @@ export default function IconButton({
   size = "default",
   className,
   loading = false,
+  "data-testid": dataTestId,
   ...props
 }: IconButtonProps) {
   return (
@@ -144,6 +146,7 @@ export default function IconButton({
       size={size}
       className={`gap-2 ${className || ""}`}
       disabled={loading || props.disabled}
+      data-testid={dataTestId}
       {...props}
     >
       {loading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" /> : icons[icon]}

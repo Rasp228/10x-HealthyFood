@@ -54,6 +54,7 @@ interface BaseActionButtonProps {
   disabled?: boolean;
   loading?: boolean;
   className?: string;
+  "data-testid"?: string;
 }
 
 export function EditButton({
@@ -63,6 +64,7 @@ export function EditButton({
   disabled,
   loading,
   className,
+  "data-testid": dataTestId,
 }: BaseActionButtonProps) {
   return (
     <IconButton
@@ -74,6 +76,7 @@ export function EditButton({
       loading={loading}
       className={`hover:bg-primary/10 hover:text-primary transition-colors ${className || ""}`}
       aria-label="Edytuj"
+      data-testid={dataTestId}
     >
       {children}
     </IconButton>
@@ -87,6 +90,7 @@ export function DeleteButton({
   disabled,
   loading,
   className,
+  "data-testid": dataTestId,
 }: BaseActionButtonProps) {
   return (
     <IconButton
@@ -98,13 +102,22 @@ export function DeleteButton({
       loading={loading}
       className={`text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors ${className || ""}`}
       aria-label="Usuń"
+      data-testid={dataTestId}
     >
       {children}
     </IconButton>
   );
 }
 
-export function AIButton({ onClick, children, size = "default", disabled, loading, className }: BaseActionButtonProps) {
+export function AIButton({
+  onClick,
+  children,
+  size = "default",
+  disabled,
+  loading,
+  className,
+  "data-testid": dataTestId,
+}: BaseActionButtonProps) {
   return (
     <IconButton
       icon="ai"
@@ -115,6 +128,7 @@ export function AIButton({ onClick, children, size = "default", disabled, loadin
       loading={loading}
       className={`text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors ${className || ""}`}
       aria-label="Modyfikuj z AI"
+      data-testid={dataTestId}
     >
       {children}
     </IconButton>
@@ -128,6 +142,7 @@ export function AddButton({
   disabled,
   loading,
   className,
+  "data-testid": dataTestId,
 }: BaseActionButtonProps) {
   return (
     <IconButton
@@ -139,6 +154,7 @@ export function AddButton({
       loading={loading}
       className={className}
       aria-label="Dodaj"
+      data-testid={dataTestId || "add-recipe-button"}
     >
       {children}
     </IconButton>
@@ -152,6 +168,7 @@ export function BackButton({
   disabled,
   loading,
   className,
+  "data-testid": dataTestId,
 }: BaseActionButtonProps) {
   return (
     <IconButton
@@ -163,13 +180,22 @@ export function BackButton({
       loading={loading}
       className={className}
       aria-label="Wróć"
+      data-testid={dataTestId}
     >
       {children}
     </IconButton>
   );
 }
 
-export function CloseButton({ onClick, children, size = "sm", disabled, loading, className }: BaseActionButtonProps) {
+export function CloseButton({
+  onClick,
+  children,
+  size = "sm",
+  disabled,
+  loading,
+  className,
+  "data-testid": dataTestId,
+}: BaseActionButtonProps) {
   return (
     <IconButton
       icon="close"
@@ -180,6 +206,7 @@ export function CloseButton({ onClick, children, size = "sm", disabled, loading,
       loading={loading}
       className={`h-auto p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 ${className || ""}`}
       aria-label="Zamknij"
+      data-testid={dataTestId || "close-button"}
     >
       {children}
     </IconButton>

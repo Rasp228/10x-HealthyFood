@@ -176,11 +176,12 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
       title={isEditMode ? "Edytuj przepis" : "Dodaj nowy przepis"}
       maxWidth="2xl"
       zIndex={60}
+      data-testid="recipe-form-modal"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" data-testid="recipe-form">
         {/* Wyświetlenie błędów formularza */}
         {errors.form && (
-          <div className="rounded-md border border-destructive bg-destructive/10 p-3">
+          <div className="rounded-md border border-destructive bg-destructive/10 p-3" data-testid="recipe-form-error">
             <p className="text-sm text-destructive">{errors.form}</p>
           </div>
         )}
@@ -203,8 +204,13 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
             required
             disabled={isLoading}
             maxLength={100}
+            data-testid="recipe-title-input"
           />
-          {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+          {errors.title && (
+            <p className="text-xs text-destructive" data-testid="recipe-title-error">
+              {errors.title}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">{formValues.title.length}/100</p>
         </div>
 
@@ -225,8 +231,13 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
             required
             disabled={isLoading}
             maxLength={5000}
+            data-testid="recipe-content-input"
           />
-          {errors.content && <p className="text-xs text-destructive">{errors.content}</p>}
+          {errors.content && (
+            <p className="text-xs text-destructive" data-testid="recipe-content-error">
+              {errors.content}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">{formValues.content.length}/5000</p>
         </div>
 
@@ -247,18 +258,29 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
             placeholder="Np. wegetariański, bezglutenowy, danie główne"
             disabled={isLoading}
             maxLength={5000}
+            data-testid="recipe-additional-params-input"
           />
-          {errors.additional_params && <p className="text-xs text-destructive">{errors.additional_params}</p>}
+          {errors.additional_params && (
+            <p className="text-xs text-destructive" data-testid="recipe-additional-params-error">
+              {errors.additional_params}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             Tagi lub parametry ułatwiające wyszukiwanie i kategoryzację przepisu
           </p>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            data-testid="recipe-form-cancel-button"
+          >
             Anuluj
           </Button>
-          <Button type="submit" disabled={isLoading} className="gap-2">
+          <Button type="submit" disabled={isLoading} className="gap-2" data-testid="recipe-form-submit-button">
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" />
