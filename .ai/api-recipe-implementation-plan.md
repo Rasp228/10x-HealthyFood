@@ -33,21 +33,23 @@ src/
 ## 3. Szczegóły zmian w plikach
 
 ### useRecipes.ts
+
 - **Opis**: Hook odpowiedzialny za pobieranie listy przepisów z sortowaniem i wyszukiwaniem bez paginacji
-- **Główne elementy**: 
+- **Główne elementy**:
   - Usunięcie mockowych przepisów
   - Dodanie rzeczywistych wywołań fetch do `/api/recipes`
   - Zachowanie istniejącej logiki sortowania i filtrowania
-- **Obsługiwane zdarzenia**: 
+- **Obsługiwane zdarzenia**:
   - Pobieranie listy przepisów z API
   - Refetch po zmianach
   - Obsługa stanów ładowania i błędów
-- **Warunki walidacji**: 
+- **Warunki walidacji**:
   - Sprawdzenie autoryzacji użytkownika
   - Walidacja parametrów sortowania (sort, order)
   - Walidacja parametrów wyszukiwania
 
 ### RecipeService.ts
+
 - **Opis**: Serwis backendowy obsługujący wszystkie operacje na przepisach
 - **Główne elementy**:
   - Zweryfikowanie poprawności implementacji integracji z supabase
@@ -65,6 +67,7 @@ src/
   - Sprawdzenie czy przepis istnieje przed operacjami UPDATE/DELETE
 
 ### HomePage.tsx
+
 - **Opis**: Główny komponent strony startowej wyświetlający listę przepisów
 - **Główne elementy**:
   - Aktualizacja obsługi błędów sieciowych
@@ -79,6 +82,7 @@ src/
   - Walidacja odpowiedzi API przed renderowaniem
 
 ### ProfilePage.tsx
+
 - **Opis**: Strona profilu użytkownika z statystykami przepisów
 - **Główne elementy**:
   - Zastąpienie mockowych statystyk realnymi danymi
@@ -94,6 +98,7 @@ src/
 ## 4. Typy
 
 ### Nowe typy dla API
+
 ```typescript
 // Typ dla błędów API
 export interface APIError {
@@ -133,6 +138,7 @@ export interface RecipesListApiResponse {
 ## 6. Integracja API
 
 ### Endpointy do wykorzystania:
+
 - `GET /api/recipes` - lista przepisów (już istnieje)
 - `GET /api/recipes/:id` - pojedynczy przepis (już istnieje)
 - `POST /api/recipes` - tworzenie przepisu (już istnieje)
@@ -141,6 +147,7 @@ export interface RecipesListApiResponse {
 - `GET /api/users/stats` - statystyki użytkownika (do utworzenia)
 
 ### Typy żądań i odpowiedzi:
+
 ```typescript
 // GET /api/recipes
 Request: URLSearchParams { sort, order, search? }
@@ -158,6 +165,7 @@ Response: UserStatsDto | { error: string }
 ## 7. Interakcje użytkownika
 
 ### Strona główna:
+
 1. **Ładowanie listy przepisów**: Automatyczne pobieranie przy montowaniu komponentu
 2. **Wyszukiwanie**: Debounced search z automatycznym wywołaniem API
 3. **Sortowanie**: Zmiana parametrów sortowania z natychmiastowym odświeżeniem
@@ -165,6 +173,7 @@ Response: UserStatsDto | { error: string }
 5. **Retry**: Przycisk "Spróbuj ponownie" przy błędach sieciowych
 
 ### Profil użytkownika:
+
 1. **Ładowanie statystyk**: Automatyczne pobieranie przy montowaniu
 2. **Odświeżanie**: Aktualizacja statystyk po operacjach na przepisach
 3. **Obsługa błędów**: Wyświetlanie komunikatów przy problemach z ładowaniem
@@ -172,17 +181,20 @@ Response: UserStatsDto | { error: string }
 ## 8. Warunki i walidacja
 
 ### Walidacja po stronie frontendu:
+
 - Sprawdzenie czy użytkownik jest zalogowany przed wywołaniami API
 - Walidacja parametrów wyszukiwania i sortowania
 - Sprawdzenie poprawności danych przed wysłaniem na serwer
 
 ### Walidacja po stronie API:
+
 - Autoryzacja poprzez Supabase Auth middleware
 - Row-Level Security (RLS) w bazie danych
 - Walidacja schematów za pomocą Zod
 - Sprawdzenie limitów długości pól zgodnie z PRD
 
 ### Warunki biznesowe:
+
 - Użytkownik może przeglądać tylko swoje przepisy
 - Maksymalne długości: title (1000 znaków), content (5000 znaków), additional_params (5000 znaków)
 - Sortowanie dostępne po: created_at, updated_at, title
@@ -190,20 +202,25 @@ Response: UserStatsDto | { error: string }
 ## 9. Obsługa błędów
 
 ### Typy błędów do obsłużenia:
+
 1. **Błędy sieciowe (NetworkError)**:
+
    - Brak połączenia internetowego
    - Timeout żądania
    - Rozwiązanie: Retry logic z exponential backoff
 
 2. **Błędy autoryzacji (401)**:
+
    - Wygasła sesja użytkownika
    - Rozwiązanie: Przekierowanie do strony logowania
 
 3. **Błędy walidacji (400, 422)**:
+
    - Nieprawidłowe dane wejściowe
    - Rozwiązanie: Wyświetlenie szczegółowych komunikatów błędów
 
 4. **Błędy serwera (500)**:
+
    - Problemy z bazą danych
    - Problemy z Supabase
    - Rozwiązanie: Komunikat ogólny + możliwość retry
@@ -213,6 +230,7 @@ Response: UserStatsDto | { error: string }
    - Rozwiązanie: Przekierowanie do listy przepisów
 
 ### Strategie obsługi:
+
 - **Graceful degradation**: Wyświetlanie częściowych danych gdy to możliwe
 - **Optimistic updates**: Natychmiastowe odzwierciedlenie zmian w UI
 - **Rollback**: Przywracanie poprzedniego stanu przy błędach
@@ -221,17 +239,20 @@ Response: UserStatsDto | { error: string }
 ## 10. Kroki implementacji
 
 ### Etap 1: Przygotowanie infrastruktury
+
 1. Sprawdzenie eksportu `supabaseClient` w `src/db/supabase.client.ts`
 2. Dodanie nowych typów do `src/types.ts`
 3. Utworzenie nowego endpointu `GET /api/users/stats` dla statystyk użytkownika
 
 ### Etap 2: Implementacja serwisu RecipeService
+
 1. Sprawdzenie importu supabaseClient w `RecipeService`
 2. Implementacja metody `getUserRecipes()` z prawdziwymi zapytaniami SQL
 3. Implementacja pozostałych metod: `getRecipe()`, `createRecipe()`, `updateRecipe()`, `deleteRecipe()`
 4. Dodanie poprawnej obsługi błędów i logowania
 
 ### Etap 3: Aktualizacja hooków
+
 1. Refaktoryzacja `useRecipes.ts` - zastąpienie mockowych danych wywołaniami fetch
 2. Aktualizacja `useRecipe.ts` - podłączenie do API
 3. Modyfikacja `useRecipeMutations.ts` - zapewnienie działania operacji CRUD
@@ -239,12 +260,14 @@ Response: UserStatsDto | { error: string }
 5. Dodanie optimistic updates i retry logic
 
 ### Etap 4: Aktualizacja komponentów
+
 1. Aktualizacja `HomePage.tsx` - usunięcie referencji do mockowych danych
 2. Ulepszenie obsługi błędów i komunikatów w `HomePage.tsx`
 3. Aktualizacja `ProfilePage.tsx` - podłączenie do prawdziwych statystyk
 4. Dodanie loading states i error boundaries gdzie potrzeba
 
 ### Etap 5: Testowanie i finalizacja (opcjonalnie)
+
 1. Dokumentacja zmian i aktualizacja README, ale tylko jeśli będzie potrzebna
 2. Implementacja cache'owania wyników jeśli potrzeba
 3. Optymalizacja UX (skeleton loading, better error states)

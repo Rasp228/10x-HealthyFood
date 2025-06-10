@@ -58,8 +58,8 @@ export class OpenRouterService {
       max_tokens: 1024,
       ...config.defaultParameters,
     };
-    this.timeout = config.timeout || 30000;
-    this.retries = config.retries || 3;
+    this.timeout = config.timeout || 60000;
+    this.retries = config.retries || 2;
 
     // Inicjalizacja klienta HTTP
     this.httpClient = axios.create({

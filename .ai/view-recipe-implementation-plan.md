@@ -5,6 +5,7 @@
 Celem implementacji jest dodanie funkcjonalności wyświetlania pełnych szczegółów przepisu w postaci modala na stronie głównej aplikacji HealthyMeal. Modal będzie się otwierał po kliknięciu w kartę przepisu z listy i umożliwi użytkownikowi nie tylko przeczytanie pełnej treści przepisu, ale także wykonanie wszystkich operacji dostępnych z poziomu listy (edycja, usuwanie, modyfikacja AI).
 
 Główne cele implementacji:
+
 - Wyświetlanie pełnych szczegółów przepisu w atrakcyjnym modalu
 - Zachowanie wszystkich funkcjonalności zarządzania przepisem
 - Zapewnienie responsywności na urządzeniach mobilnych
@@ -32,8 +33,9 @@ src/
 ## 3. Szczegóły zmian w plikach
 
 ### HomePage.tsx
+
 - **Opis**: Aktualizacja komponentu strony głównej o obsługę modala szczegółów przepisu
-- **Główne elementy**: 
+- **Główne elementy**:
   - Dodanie stanu modala szczegółów
   - Integracja z hookiem `useRecipeModal`
   - Przekazanie funkcji otwierania modala do `RecipeCard`
@@ -47,6 +49,7 @@ src/
   - Obsługa błędów ładowania szczegółów
 
 ### RecipeCard.tsx
+
 - **Opis**: Modyfikacja karty przepisu o możliwość kliknięcia dla szczegółów
 - **Główne elementy**:
   - Dodanie nowego callbacka `onView` do props
@@ -61,6 +64,7 @@ src/
   - Event propagation - zapobieganie otwieraniu modala przy kliknięciu w przyciski akcji
 
 ### RecipeViewModal.tsx (NOWY)
+
 - **Opis**: Główny komponent modala do wyświetlania szczegółów przepisu
 - **Główne elementy**:
   - Struktura modala z nagłówkiem, treścią i stopką
@@ -78,6 +82,7 @@ src/
   - Walidacja uprawnień użytkownika do przepisu
 
 ### RecipeDetailContent.tsx (REFAKTOR z RecipeDetailPage.tsx)
+
 - **Opis**: Refaktoryzowany komponent z RecipeDetailPage, zawierający logikę wyświetlania szczegółów przepisu
 - **Główne elementy**:
   - Wyciągnięcie logiki renderowania z RecipeDetailPage
@@ -100,6 +105,7 @@ src/
   - Możliwość przekazania dodatkowych props dla customizacji wyglądu
 
 ### RecipeDetailPage.tsx (MODYFIKACJA)
+
 - **Opis**: Modyfikacja istniejącego komponentu strony szczegółów by wykorzystał nowy RecipeDetailContent
 - **Główne elementy**:
   - Zachowanie istniejącej funkcjonalności dla routing `/recipes/[id]`
@@ -113,6 +119,7 @@ src/
   - Kompatybilność wsteczna z istniejącym routingiem
 
 ### ActionPanel.tsx (EWENTUALNA MODYFIKACJA)
+
 - **Opis**: Istniejący komponent może zostać rozszerzony o dodatkowe właściwości jeśli będzie potrzeba
 - **Główne elementy**:
   - Zachowanie istniejącej funkcjonalności
@@ -126,6 +133,7 @@ src/
   - Dodanie tylko opcjonalnych props
 
 ### useRecipeModal.ts (NOWY)
+
 - **Opis**: Hook zarządzający stanem modala szczegółów przepisu
 - **Główne elementy**:
   - Stan otwarcia/zamknięcia modala
@@ -183,7 +191,7 @@ export interface UseRecipeModalResult {
 // Rozszerzenie istniejących props
 export interface RecipeCardProps {
   recipe: RecipeDto;
-  onView?: (id: number) => void;  // Nowy callback
+  onView?: (id: number) => void; // Nowy callback
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
   onAI?: (id: number) => void;
@@ -211,23 +219,26 @@ export interface ActionPanelProps {
   isEditing?: boolean;
   isDeleting?: boolean;
   isAIProcessing?: boolean;
-  layout?: 'horizontal' | 'vertical'; // dla różnych kontekstów
+  layout?: "horizontal" | "vertical"; // dla różnych kontekstów
 }
 ```
 
 ## 5. Zarządzanie stanem
 
 ### Stan główny aplikacji (HomePage)
+
 - **useRecipeModal**: Główny hook zarządzający stanem modala
 - **Synchronizacja**: Odświeżanie listy po operacjach w modalu
 - **Integracja z istniejącymi hookami**: Wykorzystanie `useRecipe` bez modyfikacji
 
 ### Stan lokalny komponentów
+
 - **RecipeViewModal**: Stan UI modala (animacje, focus management)
 - **RecipeDetailContent**: Stany dla operacji (edycja, usuwanie, AI) - przeniesione z RecipeDetailPage
 - **Cache management**: Przechowywanie ostatnio przeglądanych przepisów
 
 ### Optymalizacja stanu
+
 - **Lazy loading**: Ładowanie szczegółów tylko przy otwieraniu modala
 - **Cache strategy**: Przechowywanie ostatnich 10 przepisów w pamięci
 - **Error boundaries**: Obsługa błędów na poziomie modala
@@ -236,12 +247,14 @@ export interface ActionPanelProps {
 ## 6. Integracja API
 
 ### Wykorzystywane endpointy
+
 - **GET /api/recipes/:id**: Pobieranie szczegółów przepisu (już istnieje, używane przez `useRecipe`)
 - **PUT /api/recipes/:id**: Aktualizacja przepisu (już istnieje)
 - **DELETE /api/recipes/:id**: Usuwanie przepisu (już istnieje)
 - **POST /api/ai/modify-recipe/:id**: Modyfikacja AI (już istnieje)
 
 ### Typy żądań i odpowiedzi
+
 ```typescript
 // Wykorzystanie istniejących typów bez zmian
 // GET /api/recipes/:id - już obsługiwane przez useRecipe
@@ -249,6 +262,7 @@ export interface ActionPanelProps {
 ```
 
 ### Strategie zapytań
+
 - **Reuse existing implementations**: Wykorzystanie logiki z RecipeDetailPage i RecipeService
 - **Optimistic updates**: Zachowanie istniejących implementacji
 - **Error handling**: Wykorzystanie istniejącej obsługi błędów
@@ -257,11 +271,13 @@ export interface ActionPanelProps {
 ## 7. Interakcje użytkownika
 
 ### Na liście przepisów
+
 1. **Kliknięcie w kartę przepisu**: Otwiera modal szczegółów
 2. **Kliknięcie w przyciski akcji**: Wykonuje akcję bez otwierania modala (zachowanie bez zmian)
 3. **Hover na karcie**: Zwiększa elevation, wskazuje klikalność
 
 ### W modalu szczegółów
+
 1. **Wyświetlenie szczegółów**: Identyczne z obecną stroną `/recipes/[id]`
 2. **Edycja przepisu**: Otwiera modal edycji (logika z RecipeDetailPage)
 3. **Usuwanie przepisu**: Pokazuje dialog potwierdzenia, po usunięciu zamyka modal (logika z RecipeDetailPage)
@@ -269,11 +285,13 @@ export interface ActionPanelProps {
 5. **Zamykanie modala**: Klawisz ESC, kliknięcie X, kliknięcie poza modal
 
 ### Na stronie szczegółów (`/recipes/[id]`)
+
 1. **Zachowanie istniejącej funkcjonalności**: Wszystkie operacje działają jak dotychczas
 2. **Przycisk powrotu**: Pozostaje bez zmian
 3. **Wspólna logika**: Wykorzystuje ten sam komponent co modal
 
 ### Responsywność
+
 1. **Desktop**: Modal zajmuje maksymalnie 80% szerokości ekranu
 2. **Tablet**: Modal zajmuje 90% szerokości z padding
 3. **Mobile**: Modal w pełnej szerokości z zachowaniem marginesów
@@ -281,16 +299,19 @@ export interface ActionPanelProps {
 ## 8. Warunki i walidacja
 
 ### Walidacja dostępu
+
 - **Wykorzystanie istniejących mechanizmów**: RLS, autoryzacja z RecipeDetailPage
 - **Dostępność przepisu**: Wykorzystanie logiki z `useRecipe` hook
 - **Uprawnienia**: Zachowanie istniejących kontroli uprawnień
 
 ### Walidacja danych
+
 - **Wykorzystanie istniejących walidacji**: Wszystkie sprawdzenia z RecipeDetailPage
 - **Markdown processing**: Zachowanie istniejącej implementacji z marked.js
 - **Formatowanie dat**: Wykorzystanie istniejącej logiki
 
 ### Walidacja UI/UX
+
 - **Stan modala**: Sprawdzenie czy modal można otworzyć (brak innych modali)
 - **Focus management**: Zarządzanie focusem przy otwieraniu/zamykaniu
 - **Scroll lock**: Blokowanie scroll'u strony gdy modal jest otwarty
@@ -298,12 +319,15 @@ export interface ActionPanelProps {
 ## 9. Obsługa błędów
 
 ### Wykorzystanie istniejących mechanizmów
+
 - **Error handling z RecipeDetailPage**: Zachowanie wszystkich istniejących obsług błędów
 - **Toast notifications**: Wykorzystanie istniejących implementacji
 - **Loading states**: Przeniesienie logiki z RecipeDetailPage
 
 ### Dodatkowe błędy specyficzne dla modala
+
 1. **Błędy otwierania modala**:
+
    - Modal już otwarty
    - **Rozwiązanie**: Sprawdzenie stanu przed otwarciem
 
@@ -312,6 +336,7 @@ export interface ActionPanelProps {
    - **Rozwiązanie**: Implementacja proper ARIA i focus trapping
 
 ### Strategie obsługi
+
 - **Error boundaries**: Przechwytywanie błędów na poziomie modala
 - **Fallback UI**: Wykorzystanie istniejących implementacji
 - **Graceful degradation**: Możliwość przejścia do strony szczegółów przy problemach z modalem
@@ -319,6 +344,7 @@ export interface ActionPanelProps {
 ## 10. Kroki implementacji
 
 ### Etap 1: Refaktoryzacja istniejących komponentów
+
 1. **Ekstraktowanie RecipeDetailContent** z RecipeDetailPage.tsx
    - Wyciągnięcie logiki renderowania do osobnego komponentu
    - Zachowanie wszystkich istniejących funkcjonalności
@@ -329,23 +355,27 @@ export interface ActionPanelProps {
    - Testowanie kompatybilności wstecznej
 
 ### Etap 2: Implementacja infrastruktury modala
+
 1. Dodanie nowych typów do `src/types.ts`
 2. Utworzenie hooka `useRecipeModal.ts` z integracją z `useRecipe`
 3. Testowanie podstawowej funkcjonalności cache'owania
 
 ### Etap 3: Implementacja komponentu modala
+
 1. Utworzenie `RecipeViewModal.tsx` z wykorzystaniem RecipeDetailContent
 2. Implementacja obsługi klawiatury i focus management
 3. Dodanie responsywnych stylów
 4. Testowanie podstawowej funkcjonalności wyświetlania
 
 ### Etap 4: Integracja z HomePage
+
 1. Modyfikacja `RecipeCard.tsx` - dodanie obsługi kliknięcia
 2. Aktualizacja `HomePage.tsx` - integracja z `useRecipeModal`
 3. Testowanie otwierania/zamykania modala
 4. Sprawdzenie responsywności na różnych urządzeniach
 
 ### Etap 5: Implementacja akcji w modalu
+
 1. Integracja akcji edycji z istniejącym `RecipeFormModal`
 2. Integracja akcji usuwania z istniejącym `ConfirmDialog`
 3. Integracja akcji AI z istniejącym `AIModal`
@@ -353,12 +383,14 @@ export interface ActionPanelProps {
 5. Sprawdzenie synchronizacji z listą przepisów
 
 ### Etap 6: Optymalizacja i finalizacja
+
 1. Implementacja cache'owania przepisów w `useRecipeModal`
 2. Dodanie animacji otwierania/zamykania modala
 3. Optymalizacja accessibility (ARIA labels, focus management)
 4. Testy kompatybilności wstecznej z istniejącą stroną szczegółów
 
 ### Etap 7: Testowanie i dokumentacja
+
 1. Testowanie całego flow użytkownika
 2. Sprawdzenie działania na różnych urządzeniach
 3. Testy wydajności (szczególnie cache'owania)
@@ -367,16 +399,19 @@ export interface ActionPanelProps {
 ## 11. Korzyści z refaktoryzacji
 
 ### Eliminacja duplikacji kodu
+
 - **Wspólna logika**: RecipeDetailContent używany w modalu i na stronie
 - **Wspólne style**: Jednolity wygląd szczegółów przepisu
 - **Wspólne hooki**: Wykorzystanie istniejącego `useRecipe`
 
 ### Utrzymanie kompatybilności
+
 - **Istniejące routing**: Strona `/recipes/[id]` działa bez zmian
 - **Istniejące komponenty**: ActionPanel, ConfirmDialog, RecipeFormModal, AIModal
 - **Istniejące hooki**: useRecipe, useToast, useRecipeMutations
 
 ### Łatwość utrzymania
+
 - **Jedna implementacja logiki**: Zmiany w jednym miejscu wpływają na modal i stronę
 - **Consistent UX**: Identyczne zachowanie w różnych kontekstach
-- **Reusable components**: Możliwość wykorzystania w przyszłych funkcjonalnościach 
+- **Reusable components**: Możliwość wykorzystania w przyszłych funkcjonalnościach

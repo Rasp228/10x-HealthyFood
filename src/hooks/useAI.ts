@@ -30,14 +30,14 @@ interface UseAIActions {
   cancelOperation: () => void;
 }
 
-// Timeout w milisekundach (30 sekund)
-const AI_TIMEOUT = 30000;
+// Timeout w milisekundach (60 sekund)
+const AI_TIMEOUT = 60000;
 
 // Maksymalna liczba prób retry
 const MAX_RETRY_ATTEMPTS = 2;
 
 // Eksponencjalny backoff - opóźnienia między próbami
-const RETRY_DELAYS = [1000, 2000, 4000]; // 1s, 2s, 4s
+const RETRY_DELAYS = [1000, 4000]; // 1s, 4s
 
 export function useAI(): UseAIState & UseAIActions {
   const [state, setState] = useState<UseAIState>({

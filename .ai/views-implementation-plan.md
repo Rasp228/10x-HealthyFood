@@ -130,20 +130,20 @@ AppLayout
 
 ## 7. Integracja API
 
-| Akcja              | Endpoint                         | Req Type                  | Resp Type                 |
-| ------------------ | -------------------------------- | ------------------------- | ------------------------- |
-| Lista przepisów    | GET `/api/recipes`               | —                         | `RecipesDto`     |
-| Przepis detail     | GET `/api/recipes/:id`           | —                         | `RecipeDto`               |
-| Dodaj przepis      | POST `/api/recipes`              | `CreateRecipeCommand`     | `RecipeDto`               |
-| Edytuj przepis     | PUT `/api/recipes/:id`           | `UpdateRecipeCommand`     | `RecipeDto`               |
-| Usuń przepis       | DELETE `/api/recipes/:id`        | —                         | `{ success: true }`       |
-| Generuj AI         | POST `/api/ai/generate-recipe`   | `GenerateRecipeCommand`   | `GeneratedRecipeDto`      |
-| Modyfikuj AI       | POST `/api/ai/modify-recipe/:id` | `ModifyRecipeCommand`     | `ModifiedRecipeDto`       |
-| Zapisz AI result   | POST `/api/ai/save-recipe`       | `SaveRecipeCommand`       | `RecipeDto`               |
-| Lista preferencji  | GET `/api/preferences`           | —                         | `PreferencesDto` |
-| Dodaj preferencję  | POST `/api/preferences`          | `CreatePreferenceCommand` | `PreferenceDto`           |
-| Edytuj preferencję | PUT `/api/preferences/:id`       | `UpdatePreferenceCommand` | `PreferenceDto`           |
-| Usuń preferencję   | DELETE `/api/preferences/:id`    | —                         | 204 No Content            |
+| Akcja              | Endpoint                         | Req Type                  | Resp Type            |
+| ------------------ | -------------------------------- | ------------------------- | -------------------- |
+| Lista przepisów    | GET `/api/recipes`               | —                         | `RecipesDto`         |
+| Przepis detail     | GET `/api/recipes/:id`           | —                         | `RecipeDto`          |
+| Dodaj przepis      | POST `/api/recipes`              | `CreateRecipeCommand`     | `RecipeDto`          |
+| Edytuj przepis     | PUT `/api/recipes/:id`           | `UpdateRecipeCommand`     | `RecipeDto`          |
+| Usuń przepis       | DELETE `/api/recipes/:id`        | —                         | `{ success: true }`  |
+| Generuj AI         | POST `/api/ai/generate-recipe`   | `GenerateRecipeCommand`   | `GeneratedRecipeDto` |
+| Modyfikuj AI       | POST `/api/ai/modify-recipe/:id` | `ModifyRecipeCommand`     | `ModifiedRecipeDto`  |
+| Zapisz AI result   | POST `/api/ai/save-recipe`       | `SaveRecipeCommand`       | `RecipeDto`          |
+| Lista preferencji  | GET `/api/preferences`           | —                         | `PreferencesDto`     |
+| Dodaj preferencję  | POST `/api/preferences`          | `CreatePreferenceCommand` | `PreferenceDto`      |
+| Edytuj preferencję | PUT `/api/preferences/:id`       | `UpdatePreferenceCommand` | `PreferenceDto`      |
+| Usuń preferencję   | DELETE `/api/preferences/:id`    | —                         | 204 No Content       |
 
 ## 8. Interakcje użytkownika
 

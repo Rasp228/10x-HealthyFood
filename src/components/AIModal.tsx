@@ -462,7 +462,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                     {mode === "generate" ? "AI generuje przepis..." : "AI modyfikuje przepis..."}
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    To może potrwać do 30 sekund. AI uwzględnia Twoje preferencje i tworzy spersonalizowany przepis.
+                    To może potrwać do 60 sekund. AI uwzględnia Twoje preferencje i tworzy spersonalizowany przepis.
                   </p>
                 </div>
                 {canCancel && (

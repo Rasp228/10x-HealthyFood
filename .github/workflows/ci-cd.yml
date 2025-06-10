@@ -1,0 +1,183 @@
+name: Test & Build Master
+
+# Permissions dla GITHUB_TOKEN
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+# Uruchomienie workflow
+on:
+  # Automatycznie po push do mastera
+  push:
+    branches:
+      - master
+
+  # Automatycznie po pull request do mastera
+  pull_request:
+    branches:
+      - master
+
+  # Możliwość uruchomienia manualnego
+  workflow_dispatch:
+
+# Concurrency - anuluj poprzednie uruchomienia dla tej samej gałęzi
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Przygotowanie i walidacja kodu
+  code-quality:
+    name: Kontrola jakości kodu
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version-file: .nvmrc
+
+      - name: Linting kodu
+        run: npm run lint
+
+      - name: Sprawdzenie formatowania
+        run: npm run format -- --check
+
+  # Job 2: Testy jednostkowe i integracyjne
+  unit-tests:
+    name: Testy jednostkowe
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: code-quality
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version-file: .nvmrc
+
+      - name: Uruchomienie testów z pokryciem
+        run: npm run test:coverage
+
+      - name: Upload pokrycia testów
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          directory: ./coverage
+          fail_ci_if_error: false
+
+  # Job 3: Build produkcyjny
+  build:
+    name: Build produkcyjny
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [code-quality, unit-tests]
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version-file: .nvmrc
+
+      - name: Build aplikacji
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files-${{ github.run_number }}
+          path: dist/
+          retention-days: 7
+
+  # Job 4: Testy E2E
+  e2e-tests:
+    name: Testy E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version-file: .nvmrc
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Instalacja przeglądarek Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+        continue-on-error: false
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files-${{ github.run_number }}
+          path: dist/
+
+      - name: Uruchomienie testów E2E
+        run: npm run test:e2e
+
+      - name: Upload raportów Playwright
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
+
+  # Job 5: Podsumowanie pipeline
+  pipeline-summary:
+    name: Podsumowanie pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [unit-tests, build, e2e-tests]
+    if: always()
+
+    steps:
+      - name: Sprawdzenie statusu jobs
+        run: |
+          echo "Status podsumowania pipeline:"
+          echo "- Testy jednostkowe: ${{ needs.unit-tests.result }}"
+          echo "- Build: ${{ needs.build.result }}"
+          echo "- Testy E2E: ${{ needs.e2e-tests.result }}"
+
+          # Sprawdź czy wszystkie job'y się powiodły
+          if [[ "${{ needs.unit-tests.result }}" == "success" && \
+                "${{ needs.build.result }}" == "success" && \
+                "${{ needs.e2e-tests.result }}" == "success" ]]; then
+            echo "Pipeline zakończony sukcesem!"
+            exit 0
+          else
+            echo "Pipeline zakończony niepowodzeniem!"
+            exit 1
+          fi
