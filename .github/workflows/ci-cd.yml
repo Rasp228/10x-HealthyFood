@@ -79,7 +79,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-
     steps:
       - name: Checkout kodu
         uses: actions/checkout@v4
@@ -97,10 +96,11 @@ jobs:
     name: Testy E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     environment: integration
 
     env:
+      TEST_MODE: true
+      NODE_ENV: test
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
