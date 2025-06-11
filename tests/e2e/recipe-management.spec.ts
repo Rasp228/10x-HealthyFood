@@ -42,8 +42,7 @@ Przygotowanie:
     // 1. Logowanie
     await app.loginPage.goto();
     await app.loginPage.login(testCredentials.email, testCredentials.password);
-
-    await app.page.waitForTimeout(30000);
+    await app.loginPage.expectSuccessfulLogin();
 
     // 2. Kliknięcie dodaj przepis
     await app.homePage.clickAddRecipe();

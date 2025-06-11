@@ -38,19 +38,28 @@ export class LoginPage {
     await expect(this.loginForm).toBeVisible();
     await expect(this.submitButton).toBeEnabled();
 
-    // Wypełnij pola
+    // Poczekaj na pełne załadowanie aplikacji (szczególnie przy pierwszym uruchomieniu)
+    await this.page.waitForLoadState("networkidle");
+
+    // Dodatkowe oczekiwanie na React hydration przy pierwszym uruchomieniu
+    await this.page.waitForTimeout(2000);
+
+    // Wypełnij pola formularza
+    await this.emailInput.click();
     await this.emailInput.fill(email);
+    await this.passwordInput.click();
     await this.passwordInput.fill(password);
 
     // Upewnij się, że formularz jest gotowy do wysłania
     await expect(this.emailInput).toHaveValue(email);
     await expect(this.passwordInput).toHaveValue(password);
+    await expect(this.submitButton).toBeEnabled();
 
-    // Czekaj krótki czas na React hydration
-    await this.page.waitForTimeout(500);
-
-    // Kliknij przycisk submit
+    // Wyślij formularz
     await this.submitButton.click();
+
+    // Poczekaj na rozpoczęcie loading state, co potwierdza że formularz został wysłany
+    await expect(this.submitButton).toContainText("Logowanie...", { timeout: 5000 });
   }
 
   async expectLoginFormVisible() {
@@ -73,10 +82,24 @@ export class LoginPage {
     await expect(this.errorMessage).toContainText(errorText);
   }
 
-  // async expectSuccessfulLogin() {
-  //   // Poczekaj na zakończenie procesu logowania i przekierowanie
-  //   await this.page.waitForURL(/\/$/, { timeout: 30000 });
-  // }
+  async expectSuccessfulLogin() {
+    // Czekaj na przekierowanie na stronę główną
+    try {
+      await this.page.waitForURL("/", { timeout: 10000 });
+    } catch {
+      // W przypadku błędu sprawdź czy jest komunikat o błędzie logowania
+      const errorVisible = await this.errorMessage.isVisible();
+      if (errorVisible) {
+        const errorText = await this.errorMessage.textContent();
+        throw new Error(`Login failed: ${errorText}`);
+      }
+
+      throw new Error(`Login timeout - current URL: ${this.page.url()}`);
+    }
+
+    // Sprawdź czy strona główna się załadowała
+    await expect(this.page.getByTestId("homepage")).toBeVisible({ timeout: 10000 });
+  }
 
   async expectLoadingState() {
     await expect(this.submitButton).toBeDisabled();
