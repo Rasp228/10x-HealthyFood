@@ -40,7 +40,7 @@ jobs:
       - name: Setup Node.js Environment
         uses: ./.github/actions/setup-node
         with:
-          node-version-file: .nvmrc
+          node-version: .nvmrc
 
       - name: Linting kodu
         run: npm run lint
@@ -53,7 +53,6 @@ jobs:
     name: Testy jednostkowe
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: code-quality
 
     steps:
       - name: Checkout kodu
@@ -62,7 +61,7 @@ jobs:
       - name: Setup Node.js Environment
         uses: ./.github/actions/setup-node
         with:
-          node-version-file: .nvmrc
+          node-version: .nvmrc
 
       - name: Uruchomienie testów z pokryciem
         run: npm run test:coverage
@@ -88,7 +87,7 @@ jobs:
       - name: Setup Node.js Environment
         uses: ./.github/actions/setup-node
         with:
-          node-version-file: .nvmrc
+          node-version: .nvmrc
 
       - name: Build aplikacji
         run: npm run build
@@ -114,7 +113,7 @@ jobs:
       - name: Setup Node.js Environment
         uses: ./.github/actions/setup-node
         with:
-          node-version-file: .nvmrc
+          node-version: .nvmrc
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
