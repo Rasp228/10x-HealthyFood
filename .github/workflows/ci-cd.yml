@@ -48,30 +48,11 @@ jobs:
       - name: Sprawdzenie formatowania
         run: npm run format -- --check
 
-  # Job 2: Testy jednostkowe i integracyjne
-  unit-tests:
-    name: Testy jednostkowe
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout kodu
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js Environment
-        uses: ./.github/actions/setup-node
-        with:
-          node-version-file: .nvmrc
-
-      - name: Uruchomienie testów jednostkowych
-        run: npm run test
-
-  # Job 3: Build produkcyjny
+  # Job 2: Build produkcyjny
   build:
     name: Build produkcyjny
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: unit-tests
 
     steps:
       - name: Checkout kodu
@@ -92,12 +73,39 @@ jobs:
           path: dist/
           retention-days: 7
 
+  # Job 3: Testy jednostkowe
+  unit-tests:
+    name: Testy jednostkowe
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version-file: .nvmrc
+
+      - name: Uruchomienie testów jednostkowych
+        run: npm run test
+
   # Job 4: Testy E2E
   e2e-tests:
     name: Testy E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: build
+
+    environment: integration
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
+      E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
 
     steps:
       - name: Checkout kodu
@@ -147,29 +155,21 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  # Job 5: Podsumowanie pipeline
-  pipeline-summary:
-    name: Podsumowanie pipeline
+  # Job 5: Status comment - uruchamia się tylko gdy wszystkie poprzednie przejdą
+  status-comment:
+    name: Status comment
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [unit-tests, build, e2e-tests]
-    if: always()
+    needs: [code-quality, build, unit-tests, e2e-tests]
+    if: always() && needs.code-quality.result == 'success' && needs.build.result == 'success' && needs.unit-tests.result == 'success' && needs.e2e-tests.result == 'success'
 
     steps:
-      - name: Sprawdzenie statusu jobs
+      - name: Komentarz o sukcesie pipeline
         run: |
-          echo "Status podsumowania pipeline:"
-          echo "- Testy jednostkowe: ${{ needs.unit-tests.result }}"
-          echo "- Build: ${{ needs.build.result }}"
-          echo "- Testy E2E: ${{ needs.e2e-tests.result }}"
-
-          # Sprawdź czy wszystkie job'y się powiodły
-          if [[ "${{ needs.unit-tests.result }}" == "success" && \
-                "${{ needs.build.result }}" == "success" && \
-                "${{ needs.e2e-tests.result }}" == "success" ]]; then
-            echo "Pipeline zakończony sukcesem!"
-            exit 0
-          else
-            echo "Pipeline zakończony niepowodzeniem!"
-            exit 1
-          fi
+          echo "🎉 Pipeline zakończony sukcesem!"
+          echo "✅ Kontrola jakości kodu: ${{ needs.code-quality.result }}"
+          echo "✅ Build produkcyjny: ${{ needs.build.result }}"
+          echo "✅ Testy jednostkowe: ${{ needs.unit-tests.result }}"
+          echo "✅ Testy E2E: ${{ needs.e2e-tests.result }}"
+          echo ""
+          echo "Wszystkie etapy pipeline'a zostały ukończone pomyślnie."
