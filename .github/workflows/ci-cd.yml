@@ -53,6 +53,7 @@ jobs:
     name: Build produkcyjny
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: code-quality
 
     steps:
       - name: Checkout kodu
@@ -78,6 +79,7 @@ jobs:
     name: Testy jednostkowe
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: build
 
     steps:
       - name: Checkout kodu
@@ -96,6 +98,7 @@ jobs:
     name: Testy E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: build
     environment: integration
 
     env:
