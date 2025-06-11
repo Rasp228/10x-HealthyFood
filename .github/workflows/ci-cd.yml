@@ -71,7 +71,7 @@ jobs:
     name: Build produkcyjny
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [code-quality, unit-tests]
+    needs: unit-tests
 
     steps:
       - name: Checkout kodu
