@@ -63,15 +63,8 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Uruchomienie testów z pokryciem
-        run: npm run test:coverage
-
-      - name: Upload pokrycia testów
-        uses: codecov/codecov-action@v5
-        if: always()
-        with:
-          directory: ./coverage
-          fail_ci_if_error: false
+      - name: Uruchomienie testów jednostkowych
+        run: npm run test
 
   # Job 3: Build produkcyjny
   build:

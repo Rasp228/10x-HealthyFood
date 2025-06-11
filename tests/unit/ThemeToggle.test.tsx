@@ -59,6 +59,8 @@ const createMockMatchMedia = (matches: boolean) => {
       }
     }),
     dispatchEvent: jest.fn(),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
     // Dodaj metodę do symulowania zmiany
     _triggerChange: (newMatches: boolean) => {
       act(() => {
@@ -74,7 +76,6 @@ const createMockMatchMedia = (matches: boolean) => {
 
 describe("ThemeToggle", () => {
   let mockMatchMedia: jest.MockedFunction<typeof window.matchMedia>;
-  let mockMediaQuery: ReturnType<typeof createMockMatchMedia>;
 
   beforeEach(() => {
     // Reset wszystkich mocków
@@ -87,7 +88,6 @@ describe("ThemeToggle", () => {
 
     // Setup domyślnego matchMedia
     mockMatchMedia = createMockMatchMedia(false);
-    mockMediaQuery = mockMatchMedia();
     window.matchMedia = mockMatchMedia;
   });
 
@@ -167,7 +167,10 @@ describe("ThemeToggle", () => {
 
       // Sprawdź czy addEventListener został wywołany
       expect(mockMatchMedia).toHaveBeenCalled();
-      expect(mockMatchMedia().addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+      expect(mockMatchMedia("(prefers-color-scheme: dark)").addEventListener).toHaveBeenCalledWith(
+        "change",
+        expect.any(Function)
+      );
     });
   });
 
@@ -255,8 +258,13 @@ describe("ThemeToggle", () => {
 
       render(<ThemeToggle />);
 
+      // Pobierz nowy wynik mocka po renderowaniu
+      const mediaQueryResult = mockMatchMedia("(prefers-color-scheme: dark)") as MediaQueryList & {
+        _triggerChange: (matches: boolean) => void;
+      };
+
       // Symuluj zmianę preferencji systemowych na ciemny motyw
-      mockMatchMedia()._triggerChange(true);
+      mediaQueryResult._triggerChange(true);
 
       await waitFor(() => {
         expect(mockClassList.toggle).toHaveBeenCalledWith("dark", true);
@@ -270,8 +278,13 @@ describe("ThemeToggle", () => {
 
       render(<ThemeToggle />);
 
+      // Pobierz nowy wynik mocka po renderowaniu
+      const mediaQueryResult = mockMatchMedia("(prefers-color-scheme: dark)") as MediaQueryList & {
+        _triggerChange: (matches: boolean) => void;
+      };
+
       // Symuluj zmianę preferencji systemowych
-      mockMatchMedia()._triggerChange(true);
+      mediaQueryResult._triggerChange(true);
 
       // Nie powinno być zmian w classList
       expect(mockClassList.toggle).not.toHaveBeenCalled();
@@ -287,13 +300,13 @@ describe("ThemeToggle", () => {
 
       // Sprawdź czy addEventListener został wywołany
       expect(mockMatchMedia).toHaveBeenCalled();
-      expect(mockMatchMedia().addEventListener).toHaveBeenCalled();
+      expect(mockMatchMedia("(prefers-color-scheme: dark)").addEventListener).toHaveBeenCalled();
 
       // Unmount komponentu
       unmount();
 
       // Sprawdź czy removeEventListener został wywołany
-      expect(mockMatchMedia().removeEventListener).toHaveBeenCalled();
+      expect(mockMatchMedia("(prefers-color-scheme: dark)").removeEventListener).toHaveBeenCalled();
     });
   });
 
