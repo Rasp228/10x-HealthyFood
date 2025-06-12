@@ -49,5 +49,17 @@ const { title = "HealthyMeal" } = Astro.props;
     <main class="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4" transition:animate="slide">
       <slot />
     </main>
+
+    <script>
+      // Zachowanie motywu podczas przejść między stronami
+      document.addEventListener("astro:after-swap", function () {
+        const theme = localStorage.getItem("theme");
+        if (theme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else if (theme === "light") {
+          document.documentElement.classList.remove("dark");
+        }
+      });
+    </script>
   </body>
 </html>

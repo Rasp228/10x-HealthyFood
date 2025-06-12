@@ -4,11 +4,25 @@ import { Button } from "@/components/ui/button";
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
 
-  useEffect(() => {
-    // Sprawdź początkowy stan motywu
+  // Funkcja do synchronizacji motywu z DOM
+  const syncThemeWithDOM = () => {
     const theme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialIsDark = theme === "dark" || (!theme && prefersDark);
+    const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+
+    // Synchronizuj DOM
+    if (shouldBeDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+
+    return shouldBeDark;
+  };
+
+  useEffect(() => {
+    // Synchronizuj motyw przy inicjalizacji
+    const initialIsDark = syncThemeWithDOM();
     setIsDark(initialIsDark);
 
     // Nasłuchuj zmian w preferencjach systemowych
@@ -19,9 +33,20 @@ export default function ThemeToggle() {
         document.documentElement.classList.toggle("dark", e.matches);
       }
     };
-    mediaQuery.addEventListener("change", handleChange);
 
-    return () => mediaQuery.removeEventListener("change", handleChange);
+    // Nasłuchuj przejść między stronami Astro
+    const handleAstroSwap = () => {
+      const newIsDark = syncThemeWithDOM();
+      setIsDark(newIsDark);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    document.addEventListener("astro:after-swap", handleAstroSwap);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+      document.removeEventListener("astro:after-swap", handleAstroSwap);
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -42,8 +67,8 @@ export default function ThemeToggle() {
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
+        width="24"
+        height="24"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -56,8 +81,8 @@ export default function ThemeToggle() {
       </svg>
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
+        width="24"
+        height="24"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

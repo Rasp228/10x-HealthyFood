@@ -46,27 +46,6 @@ if (!user) {
     <slot name="modals" />
 
     <script>
-      // Obsługa przycisku motywu
-      function initThemeToggle() {
-        const themeToggle = document.getElementById("theme-toggle");
-        if (themeToggle) {
-          themeToggle.addEventListener("click", function () {
-            const isDark = document.documentElement.classList.toggle("dark");
-            localStorage.setItem("theme", isDark ? "dark" : "light");
-          });
-        }
-      }
-
-      // Inicjalizacja przycisków po załadowaniu strony
-      document.addEventListener("DOMContentLoaded", function () {
-        initThemeToggle();
-      });
-
-      // Inicjalizacja przycisków po przejściu między stronami
-      document.addEventListener("astro:page-load", function () {
-        initThemeToggle();
-      });
-
       // Zachowanie motywu podczas przejść między stronami
       document.addEventListener("astro:after-swap", function () {
         const theme = localStorage.getItem("theme");
