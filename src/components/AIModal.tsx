@@ -27,9 +27,10 @@ interface AIModalProps {
   mode: "generate" | "modify";
   originalRecipe?: RecipeDto;
   onSuccess?: () => void;
+  onEditSuccess?: () => void;
 }
 
-export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSuccess }: AIModalProps) {
+export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSuccess, onEditSuccess }: AIModalProps) {
   const [formValues, setFormValues] = useState<AIModalFormValues>({
     additional_params: "",
     base_recipe: "",
@@ -245,6 +246,11 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
 
         if (onSuccess) {
           onSuccess();
+        }
+
+        // Jeśli była to modyfikacja istniejącego przepisu, wywołaj dodatkowy callback
+        if (mode === "modify" && originalRecipe && onEditSuccess) {
+          onEditSuccess();
         }
 
         onClose();

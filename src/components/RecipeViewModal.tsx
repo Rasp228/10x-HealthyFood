@@ -7,10 +7,9 @@ interface RecipeViewModalContainerProps {
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
   onAI?: (id: number) => void;
-  onSuccess?: () => void;
 }
 
-export default function RecipeViewModalContainer({ onEdit, onDelete, onAI, onSuccess }: RecipeViewModalContainerProps) {
+export default function RecipeViewModalContainer({ onEdit, onDelete, onAI }: RecipeViewModalContainerProps) {
   const { isOpen, recipeId, recipe, isLoading, error, closeModal } = useRecipeModal();
 
   // Obsługa akcji - przekazanie callbacków z ID
@@ -33,10 +32,6 @@ export default function RecipeViewModalContainer({ onEdit, onDelete, onAI, onSuc
     }
   }, [recipeId, onAI]);
 
-  const handleSuccess = useCallback(() => {
-    onSuccess?.();
-  }, [onSuccess]);
-
   return (
     <BaseModal isOpen={isOpen} onClose={closeModal} title="Szczegóły przepisu" maxWidth="5xl">
       {error ? (
@@ -51,7 +46,6 @@ export default function RecipeViewModalContainer({ onEdit, onDelete, onAI, onSuc
           onEdit={handleEdit}
           onDelete={handleDelete}
           onAI={handleAI}
-          onSuccess={handleSuccess}
           showBackButton={false}
           className="animate-in fade-in-0 slide-in-from-bottom-4 duration-300 delay-100"
         />

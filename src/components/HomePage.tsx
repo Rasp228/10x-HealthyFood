@@ -27,7 +27,7 @@ export default function HomePage() {
   const { showToast } = useToast();
 
   // Hook do obsługi modala szczegółów
-  const { openModal } = useRecipeModal();
+  const { openModal, closeModal } = useRecipeModal();
 
   // Użycie hooka do pobrania wszystkich przepisów z uwzględnieniem wyszukiwania i sortowania
   const {
@@ -140,6 +140,11 @@ export default function HomePage() {
   const handleRecipeSuccess = () => {
     refetch();
     showToast("Operacja zakończona pomyślnie", "success");
+  };
+
+  // Obsługa zamknięcia modala szczegółów po udanej edycji
+  const handleCloseAfterEdit = () => {
+    closeModal();
   };
 
   // Status wyszukiwania
@@ -371,6 +376,7 @@ export default function HomePage() {
         onClose={() => setIsRecipeFormOpen(false)}
         recipe={selectedRecipe || undefined}
         onSuccess={handleRecipeSuccess}
+        onEditSuccess={handleCloseAfterEdit}
       />
 
       {/* Modal AI */}
@@ -380,6 +386,7 @@ export default function HomePage() {
         mode={selectedRecipeId ? "modify" : "generate"}
         originalRecipe={selectedRecipe || undefined}
         onSuccess={handleRecipeSuccess}
+        onEditSuccess={handleCloseAfterEdit}
       />
 
       {/* Dialog potwierdzenia usunięcia */}
@@ -395,12 +402,7 @@ export default function HomePage() {
       />
 
       {/* Modal szczegółów przepisu */}
-      <RecipeViewModalContainer
-        onEdit={handleEditRecipe}
-        onDelete={handleDeleteRecipe}
-        onAI={handleAIRecipe}
-        onSuccess={handleRecipeSuccess}
-      />
+      <RecipeViewModalContainer onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} onAI={handleAIRecipe} />
     </div>
   );
 }

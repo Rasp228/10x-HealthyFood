@@ -171,7 +171,6 @@ export interface RecipeDetailContentProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onAI?: () => void;
-  onSuccess?: () => void;
   showBackButton?: boolean; // dla rozróżnienia strony vs modala
   className?: string; // dla customizacji stylów
 }

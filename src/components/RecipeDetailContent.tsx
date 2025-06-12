@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { BackButton } from "@/components/ui/ActionButtons";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import RecipeContent from "@/components/ui/RecipeContent";
 import ActionPanel from "./ActionPanel";
-import ConfirmDialog from "./ConfirmDialog";
-import { useToast } from "../hooks/useToast";
-import { RecipeService } from "../lib/services/recipe.service";
+
 import type { RecipeDetailContentProps } from "../types";
 
 export default function RecipeDetailContent({
@@ -15,57 +13,17 @@ export default function RecipeDetailContent({
   onEdit,
   onDelete,
   onAI,
-  onSuccess,
   showBackButton = false,
   className = "",
 }: RecipeDetailContentProps) {
-  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-  const { showToast } = useToast();
-
   // Funkcje do obsługi akcji
   const handleEdit = () => {
     onEdit?.(); // Tylko wywołaj callback, nie otwieraj własnego modala
   };
 
   const handleDelete = () => {
-    setIsConfirmDeleteOpen(true); // Pozostaw dialog potwierdzenia usunięcia
-  };
-
-  const handleConfirmDelete = async () => {
-    try {
-      const recipeService = new RecipeService();
-
-      if (!recipe?.id || recipe.id <= 0) {
-        throw new Error("Nieprawidłowe ID przepisu");
-      }
-
-      // Używamy rzeczywistego API zamiast mockowanych danych
-      const success = await recipeService.deleteRecipe(recipe.id, "current-user");
-
-      if (success) {
-        // Pokazujemy powiadomienie o sukcesie
-        showToast("Przepis został pomyślnie usunięty", "success");
-
-        // Wywołujemy callback delete z ID
-        onDelete?.();
-        onSuccess?.();
-      } else {
-        throw new Error("Nie można usunąć przepisu - możliwe, że już nie istnieje");
-      }
-    } catch (err) {
-      // Pokazujemy powiadomienie o błędzie
-      let errorMessage = "Wystąpił błąd podczas usuwania przepisu";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      showToast(errorMessage, "error");
-    } finally {
-      setIsConfirmDeleteOpen(false);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setIsConfirmDeleteOpen(false);
+    // Bezpośrednio wywołaj callback - pozwól rodzicowi obsłużyć logikę usuwania
+    onDelete?.();
   };
 
   const handleAIModify = () => {
@@ -156,18 +114,6 @@ export default function RecipeDetailContent({
 
       {/* Treść przepisu - teraz używa RecipeContent zamiast dangerouslySetInnerHTML */}
       <RecipeContent content={recipe.content} className="mx-auto" />
-
-      {/* Dialog potwierdzenia usunięcia - pozostaje tutaj */}
-      <ConfirmDialog
-        isOpen={isConfirmDeleteOpen}
-        title="Usuń przepis"
-        message={`Czy na pewno chcesz usunąć przepis "${recipe.title}"? Tej operacji nie można cofnąć.`}
-        confirmLabel="Usuń"
-        cancelLabel="Anuluj"
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-        severity="danger"
-      />
     </div>
   );
 }

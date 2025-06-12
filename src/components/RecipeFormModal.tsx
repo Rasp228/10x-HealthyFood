@@ -34,9 +34,10 @@ interface RecipeFormModalProps {
   onClose: () => void;
   recipe?: RecipeDto; // Jeśli przekazano, tryb edycji; w przeciwnym razie tryb dodawania
   onSuccess?: () => void;
+  onEditSuccess?: () => void;
 }
 
-export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: RecipeFormModalProps) {
+export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, onEditSuccess }: RecipeFormModalProps) {
   const [formValues, setFormValues] = useState<RecipeFormValues>({
     title: "",
     content: "",
@@ -149,9 +150,11 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess }: 
         await createRecipe(createData);
       }
 
-      // Sukces - zamykamy modal i wywołujemy callback
+      // Sukces - zamykamy modal i wywołujemy callbacki
       onClose();
       if (onSuccess) onSuccess();
+      // Jeśli była to edycja, wywołaj dodatkowy callback
+      if (isEditMode && onEditSuccess) onEditSuccess();
     } catch (err) {
       // Błąd już jest ustawiony w state poprzez hook useRecipeMutations
       console.error("Błąd podczas zapisywania przepisu:", err);
