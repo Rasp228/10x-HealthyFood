@@ -93,7 +93,7 @@ export class AIService {
         
         1. **Wejście**  
           - \`base_recipe\` (string | null): przepis bazowy do inspiracji/modyfikacji, albo \`null\`, gdy brak przepisu bazowego.  
-          - \`user_preferences\` (string): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety). Może być puste.  
+          - \`user_preferences\` (string | null): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety), albo \`null\`. 
           - \`additional_params\` (string | null): opcjonalne dodatkowe instrukcje od użytkownika (np. "mniej soli", "wegańskie zamienniki"), albo \`null\`.  
 
         2. **Zasady działania** 
@@ -101,13 +101,13 @@ export class AIService {
             - ZAWSZE traktuj to jako modyfikację/ulepszenie podanego przepisu bazowego
             - Dostosuj składniki, kroki przygotowania zgodnie z \`user_preferences\` i \`additional_params\`
             - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
-            - Uwzględnij wszystkie preferencje użytkownika i dodatkowe instrukcje
+            - Uwzględnij wszystkie preferencje użytkownika mające zastosowanie w przypadku danego przepisu i dodatkowe instrukcje
             - NIE generuj zupełnie nowego losowego przepisu
             - Maksymalna długość: 5000 znaków
 
           b) **Jeżeli NIE podano \`base_recipe\`** (brak przepisu bazowego):  
             i) Jeżeli \`user_preferences\` niepuste:  
-              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie podane preferencje  
+              - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie preferencje, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
             ii) Jeżeli \`user_preferences\` puste:  
               - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis  
             - Przepis nie może przekroczyć 5000 znaków
@@ -212,14 +212,14 @@ export class AIService {
         
         1. **Wejście**  
           - \`base_recipe\` (string): istniejący przepis do modyfikacji
-          - \`user_preferences\` (string): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety)
-          - \`additional_params\` (string): instrukcje modyfikacji od użytkownika
+          - \`user_preferences\` (string | null): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety), albo \`null\`.
+          - \`additional_params\` (string | null): instrukcje modyfikacji od użytkownika, albo \`null\`.
           
         2. **Zasady modyfikacji**
           - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
-          - Dostosuj składniki zgodnie z preferencjami użytkownika
+          - Dostosuj składniki zgodnie z preferencjami użytkownika, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
           - Uwzględnij wszystkie instrukcje modyfikacji z \`additional_params\`
-          - Nie dodawaj składników sprzecznych z preferencjami użytkownika
+          - Nie dodawaj składników sprzecznych z preferencjami użytkownika, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
           - Zachowaj proporcje i logikę kulinarną
           - Maksymalna długość treści: 5000 znaków
           
