@@ -422,7 +422,12 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                 Przerwij operację
               </Button>
             )}
-            <Button onClick={handleAIOperation} disabled={isLoading || hasValidationErrors} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleAIOperation}
+              disabled={isLoading || hasValidationErrors}
+              className="gap-2 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
+            >
               {isLoading ? (
                 <>
                   <LoadingSpinner size="sm" />
@@ -441,10 +446,7 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="m4.9 4.9 14.2 14.2" />
-                    <path d="M9 9h.01" />
-                    <path d="M15 15h.01" />
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                   </svg>
                   {mode === "generate" ? "Wygeneruj" : "Modyfikuj"}
                 </>

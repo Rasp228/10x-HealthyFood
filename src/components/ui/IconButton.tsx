@@ -49,10 +49,7 @@ const icons = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="m4.9 4.9 14.2 14.2"></path>
-      <path d="M9 9h.01"></path>
-      <path d="M15 15h.01"></path>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
     </svg>
   ),
   plus: (
