@@ -4,6 +4,7 @@ import { getTestCredentials } from "./config/test-data";
 
 test.describe("Recipe Management", () => {
   let app: Application;
+  let testPassed = false;
 
   // Dane testowe z .env.test
   const testCredentials: LoginCredentials = getTestCredentials();
@@ -32,30 +33,52 @@ Przygotowanie:
 
   test.beforeEach(async ({ page }) => {
     app = new Application(page);
+    testPassed = false; // Reset flag before each test
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }, testInfo) => {
+    // Podstawowe czyszczenie UI
     await app.cleanup();
+
+    // Czyszczenie danych testowych TYLKO jeśli test się powiódł
+    if (testInfo.status === "passed" && testPassed) {
+      try {
+        const cleanupResult = await app.cleanupTestData();
+        if (!cleanupResult.success) {
+          console.warn(`⚠️ Nie udało się wyczyścić danych testowych: ${cleanupResult.message}`);
+        }
+      } catch (error) {
+        console.warn("⚠️ Błąd podczas czyszczenia danych testowych:", error);
+      }
+    } else if (testInfo.status !== "passed") {
+      console.log("🔍 Test nie powiódł się - dane testowe zostają zachowane do debugowania");
+    }
   });
 
-  test("should complete full recipe addition flow @smoke", async () => {
+  test("should complete full recipe addition flow @smoke", async ({ baseURL }) => {
     // 1. Logowanie
     await app.loginPage.goto();
     await app.loginPage.login(testCredentials.email, testCredentials.password);
     await app.loginPage.expectSuccessfulLogin();
 
-    // 2. Kliknięcie dodaj przepis
+    // 2. Inicjalizuj serwis czyszczenia po zalogowaniu
+    app.initializeCleanup(baseURL || "http://localhost:3000", testCredentials.userId);
+
+    // 3. Kliknięcie dodaj przepis
     await app.homePage.clickAddRecipe();
     await app.recipeFormPage.expectAddRecipeModal();
 
-    // 3. Wypełnienie modala
+    // 4. Wypełnienie modala
     await app.recipeFormPage.fillRecipeForm(sampleRecipe);
 
-    // 4. Dodanie przepisu
+    // 5. Dodanie przepisu
     await app.recipeFormPage.submitForm();
     await app.recipeFormPage.expectModalClosed();
 
-    // Sprawdź czy przepis pojawił się na liście
+    // 6. Sprawdź czy przepis pojawił się na liście
     await app.homePage.expectRecipesGridVisible();
+
+    // 7. Oznacz test jako zaliczony (umożliwia czyszczenie danych)
+    testPassed = true;
   });
 });
