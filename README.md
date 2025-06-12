@@ -51,10 +51,9 @@ HealthyMeal solves several challenges users face when looking for suitable recip
 - Playwright - End-to-end testing framework for web applications
 - Supertest - HTTP testing library for API endpoints
 
-### CI/CD & Hosting
+### CI/CD
 
 - GitHub Actions - For CI/CD pipelines
-- DigitalOcean - For application hosting via Docker image
 
 ## Getting Started Locally
 

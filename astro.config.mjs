@@ -4,10 +4,11 @@ import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
-import node from "@astrojs/node";
+import vercel from "@astrojs/vercel";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://your-domain.vercel.app", // Zmień na swoją domenę
   output: "server",
   integrations: [react(), sitemap()],
   server: {
@@ -17,14 +18,9 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  adapter: node({
-    mode: "standalone",
+  adapter: vercel({
+    webAnalytics: { enabled: true },
   }),
-  experimental: {
-    session: true,
-  },
-  // Włączamy obsługę przejść między widokami
-  viewTransitions: true,
   // Włączamy prefetch dla lepszego doświadczenia użytkownika
   prefetch: true,
 });
