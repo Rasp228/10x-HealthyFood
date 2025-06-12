@@ -10,6 +10,6 @@
       "@/*": ["./src/*"],
       "@tests/*": ["./tests/*"]
     },
-    "types": ["jest"]
+    "types": ["@types/jest"]
   }
 }
