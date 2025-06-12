@@ -117,6 +117,10 @@ export const useAuth = () => {
     setError(null);
 
     try {
+      // Wyczyść localStorage i sessionStorage przed wywołaniem API
+      localStorage.clear();
+      sessionStorage.clear();
+
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
@@ -132,13 +136,24 @@ export const useAuth = () => {
         return false;
       }
 
-      // Przekierowanie po pomyślnym wylogowaniu
-      window.location.href = "/auth/login";
+      // Wyczyść cache przeglądarki dla bezpieczeństwa
+      if ("caches" in window) {
+        caches.keys().then(function (names) {
+          for (const name of names) caches.delete(name);
+        });
+      }
+
+      // Użyj window.location.replace zamiast href aby zapobiec powrotowi poprzez "Wstecz"
+      window.location.replace("/auth/login");
       return true;
     } catch {
+      // Fallback - wyczyść storage i przekieruj mimo błędu
+      localStorage.clear();
+      sessionStorage.clear();
       setError({
         message: "Wystąpił błąd połączenia. Spróbuj ponownie.",
       });
+      window.location.replace("/auth/login");
       return false;
     } finally {
       setIsLoading(false);

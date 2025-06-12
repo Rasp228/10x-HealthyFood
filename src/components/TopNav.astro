@@ -36,6 +36,10 @@ import ThemeToggle from "./ThemeToggle";
 <script>
   async function handleLogout() {
     try {
+      // Wyczyść localStorage i sessionStorage przed wywołaniem API
+      localStorage.clear();
+      sessionStorage.clear();
+
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
@@ -43,17 +47,25 @@ import ThemeToggle from "./ThemeToggle";
         },
       });
 
-      if (response.ok) {
-        window.location.href = "/auth/login";
-      } else {
+      if (!response.ok) {
         console.error("Błąd podczas wylogowania");
-        // Fallback - przekieruj mimo błędu
-        window.location.href = "/auth/login";
       }
+
+      // Wyczyść cache przeglądarki dla bezpieczeństwa
+      if ("caches" in window) {
+        caches.keys().then(function (names) {
+          for (const name of names) caches.delete(name);
+        });
+      }
+
+      // Użyj window.location.replace zamiast href aby zapobiec powrotowi poprzez "Wstecz"
+      window.location.replace("/auth/login");
     } catch (error) {
       console.error("Błąd połączenia podczas wylogowania:", error);
-      // Fallback - przekieruj mimo błędu
-      window.location.href = "/auth/login";
+      // Fallback - wyczyść storage i przekieruj mimo błędu
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace("/auth/login");
     }
   }
 

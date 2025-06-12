@@ -13,6 +13,10 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
     setIsLoading(true);
 
     try {
+      // Wyczyść localStorage i sessionStorage przed wywołaniem API
+      localStorage.clear();
+      sessionStorage.clear();
+
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
@@ -24,12 +28,21 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
         console.error("Błąd podczas wylogowania");
       }
 
-      // Przekierowanie po wylogowaniu
-      window.location.href = "/auth/login";
+      // Wyczyść cache przeglądarki dla bezpieczeństwa
+      if ("caches" in window) {
+        caches.keys().then(function (names) {
+          for (const name of names) caches.delete(name);
+        });
+      }
+
+      // Użyj window.location.replace zamiast href aby zapobiec powrotowi poprzez "Wstecz"
+      window.location.replace("/auth/login");
     } catch (error) {
       console.error("Błąd połączenia podczas wylogowania:", error);
-      // Fallback - przekieruj mimo błędu
-      window.location.href = "/auth/login";
+      // Fallback - wyczyść storage i przekieruj mimo błędu
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace("/auth/login");
     } finally {
       setIsLoading(false);
     }

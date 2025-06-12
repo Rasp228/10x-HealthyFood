@@ -17,6 +17,15 @@ export default function LoginForm() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const { login, isLoading, error, clearError } = useAuth();
 
+  // Wyczyść formularz po załadowaniu strony dla bezpieczeństwa
+  React.useEffect(() => {
+    // Proste czyszczenie formularza przy mont komponenta
+    setFormValues({
+      email: "",
+      password: "",
+    });
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));

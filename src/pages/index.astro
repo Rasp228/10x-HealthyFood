@@ -1,8 +1,10 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
 import HomePage from "../components/HomePage";
+import SecurityGuard from "../components/SecurityGuard";
 ---
 
 <MainLayout title="HealthyMeal - Przepisy na zdrowe posiłki">
+  <SecurityGuard client:load />
   <HomePage client:load />
 </MainLayout>
