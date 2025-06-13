@@ -6,8 +6,8 @@ import type {
   ModifiedRecipeDto,
   PreferenceDto,
 } from "../../types";
-import { OpenRouterService } from "../openrouter.service";
-import type { JSONSchema, ChatResponse } from "../openrouter.types";
+import { OpenRouterService } from "../api/openrouter.service";
+import type { JSONSchema, ChatResponse } from "../api/openrouter.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
 

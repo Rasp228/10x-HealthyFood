@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../types";
-import { RecipeService } from "../lib/services/recipe.service";
+import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../../types";
+import { RecipeService } from "../../lib/services/recipe.service";
 
 type MutationStatus = "idle" | "loading" | "success" | "error";
 

@@ -1,6 +1,6 @@
-import axios, { AxiosInstance } from "axios";
-import { OpenRouterError, NetworkError, AuthenticationError } from "./openrouter.types";
-import type { ModelInfo, ApiModelData, ModelParameters } from "./openrouter.types";
+import axios, { type AxiosInstance } from "axios";
+import { OpenRouterError, NetworkError, AuthenticationError } from "../api/openrouter.types";
+import type { ModelInfo, ApiModelData, ModelParameters } from "../api/openrouter.types";
 
 /**
  * Manager modeli

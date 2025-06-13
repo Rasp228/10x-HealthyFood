@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { RecipeDto } from "../types";
-import { RecipeService } from "../lib/services/recipe.service";
+import type { RecipeDto } from "../../types";
+import { RecipeService } from "../../lib/services/recipe.service";
 
 interface UseRecipeResult {
   recipe: RecipeDto | null;

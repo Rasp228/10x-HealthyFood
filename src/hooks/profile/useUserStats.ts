@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { UserStatsDto } from "../types";
+import type { UserStatsDto } from "../../types";
 
 interface UseUserStatsResult {
   stats: UserStatsDto | null;

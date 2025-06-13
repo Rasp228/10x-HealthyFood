@@ -3,8 +3,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import BaseModal from "@/components/ui/BaseModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../types";
-import { useRecipeMutations } from "../hooks/useRecipeMutations";
+import type { RecipeDto, CreateRecipeCommand, UpdateRecipeCommand } from "../../types";
+import { useRecipeMutations } from "../../hooks/recipe/useRecipeMutations";
 
 // Schemat walidacji Zod
 const recipeSchema = z.object({

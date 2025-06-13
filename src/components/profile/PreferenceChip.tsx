@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Edit2, Check, Trash2 } from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
-import type { PreferenceDto } from "../types";
+import ConfirmDialog from "../common/ConfirmDialog";
+import type { PreferenceDto } from "../../types";
 
 // Tymczasowy komponent Input, dopóki nie zostanie zaimplementowany w shadcn/ui
 const Input = ({

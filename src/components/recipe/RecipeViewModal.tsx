@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import BaseModal from "@/components/ui/BaseModal";
 import RecipeDetailContent from "./RecipeDetailContent";
-import { useRecipeModal } from "../hooks/useRecipeModal";
+import { useRecipeModal } from "../../hooks/recipe/useRecipeModal";
 
 interface RecipeViewModalContainerProps {
   onEdit?: (id: number) => void;

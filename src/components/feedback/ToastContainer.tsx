@@ -1,6 +1,6 @@
 import React from "react";
 import Toast from "./Toast";
-import { useToast, ToastType } from "../hooks/useToast";
+import { useToast, type ToastType } from "../../hooks/common/useToast";
 
 export default function ToastContainer() {
   const { toasts, hideToast } = useToast();

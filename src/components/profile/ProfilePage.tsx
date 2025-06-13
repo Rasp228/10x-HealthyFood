@@ -2,12 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PreferenceChip from "./PreferenceChip";
-import { useAuth } from "../hooks/useAuth";
-import { useToast } from "../hooks/useToast";
-import { usePreferences } from "../hooks/usePreferences";
-import { useUserStats } from "../hooks/useUserStats";
+import { useAuth } from "../../hooks/auth/useAuth";
+import { useToast } from "../../hooks/common/useToast";
+import { usePreferences } from "../../hooks/profile/usePreferences";
+import { useUserStats } from "../../hooks/profile/useUserStats";
 import { z } from "zod";
-import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferenceCategoryEnum } from "../types";
+import type {
+  PreferenceDto,
+  CreatePreferenceCommand,
+  UpdatePreferenceCommand,
+  PreferenceCategoryEnum,
+} from "../../types";
 
 // Schemat walidacji dla nowej preferencji
 const preferenceSchema = z.object({

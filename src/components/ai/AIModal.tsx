@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import BaseModal from "@/components/ui/BaseModal";
-import type { RecipeDto, GenerateRecipeCommand, ModifyRecipeCommand, SaveRecipeCommand } from "../types";
-import { useAI } from "../hooks/useAI";
-import { useToast } from "../hooks/useToast";
+import type { RecipeDto, GenerateRecipeCommand, ModifyRecipeCommand, SaveRecipeCommand } from "../../types";
+import { useAI } from "../../hooks/ai/useAI";
+import { useToast } from "../../hooks/common/useToast";
 
 interface AIModalFormValues {
   additional_params: string;

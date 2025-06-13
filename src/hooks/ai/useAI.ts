@@ -7,7 +7,7 @@ import type {
   SaveRecipeCommand,
   RecipeDto,
   AIErrorResponse,
-} from "../types";
+} from "../../types";
 
 interface UseAIState {
   isGenerating: boolean;

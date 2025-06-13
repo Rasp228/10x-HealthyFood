@@ -1,4 +1,4 @@
-import { useSecurityGuard } from "@/hooks/useSecurityGuard";
+import { useSecurityGuard } from "@/hooks/auth/useSecurityGuard";
 
 /**
  * Komponent zabezpieczający strony chronione przed dostępem po wylogowaniu

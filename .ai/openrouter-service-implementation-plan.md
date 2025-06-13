@@ -124,14 +124,14 @@ class BudgetExceededError extends OpenRouterError {}
    ```
    src/
    ├── lib/
-   │   ├── openrouter/
+   │   ├── api/
    │   │   ├── index.ts              # Eksport głównej usługi
-   │   │   ├── openrouter-service.ts # Główna implementacja
-   │   │   ├── types.ts              # Typy i interfejsy
-   │   │   ├── error-handling.ts     # System obsługi błędów
-   │   │   ├── response-formats.ts   # Predefiniowane formaty odpowiedzi
+   │   │   ├── openrouter.service.ts # Główna implementacja
+   │   │   ├── openrouter.types.ts   # Typy i interfejsy
+   │   │   └── axios.d.ts            # Definicje typów Axios
+   │   ├── utils/
    │   │   ├── models-manager.ts     # Zarządzanie modelami
-   │   │   └── utils.ts              # Funkcje pomocnicze
+   │   │   └── errors.ts             # System obsługi błędów
    │   └── ...
    └── ...
    ```
@@ -143,38 +143,38 @@ class BudgetExceededError extends OpenRouterError {}
 
 ### Etap 2: Implementacja Podstawowej Funkcjonalności
 
-1. Implementacja klienta HTTP (`src/lib/openrouter/http-client.ts`):
+1. Implementacja klienta HTTP (`src/lib/api/axios.d.ts`):
 
    - Konfiguracja Axios z interceptorami
    - Obsługa nagłówków autoryzacyjnych
    - Podstawowa obsługa błędów HTTP
 
-2. Implementacja głównej usługi (`src/lib/openrouter/openrouter-service.ts`):
+2. Implementacja głównej usługi (`src/lib/api/openrouter.service.ts`):
 
    - Konstruktor z konfiguracją
    - Podstawowe metody chat
    - Inicjalizacja managera modeli
 
-3. Implementacja typów (`src/lib/openrouter/types.ts`):
+3. Implementacja typów (`src/lib/api/openrouter.types.ts`):
    - Definicje interfejsów wiadomości
    - Typy parametrów modeli
    - Interfejsy formatu odpowiedzi
 
 ### Etap 3: Implementacja Zaawansowanych Funkcji
 
-1. System obsługi błędów (`src/lib/openrouter/error-handling.ts`):
+1. System obsługi błędów (`src/lib/utils/errors.ts`):
 
    - Implementacja hierarchii klas błędów
    - System retryingu z wykładniczym opóźnieniem
    - Integracja z systemem logowania aplikacji
 
-2. Manager modeli (`src/lib/openrouter/models-manager.ts`):
+2. Manager modeli (`src/lib/utils/models-manager.ts`):
 
    - Pobieranie i cache'owanie dostępnych modeli
    - Logika wyboru optymalnych modeli
    - Zarządzanie parametrami modeli
 
-3. Predefiniowane formaty odpowiedzi (`src/lib/openrouter/response-formats.ts`):
+3. Predefiniowane formaty odpowiedzi (`src/lib/api/openrouter.types.ts`):
    - Biblioteka gotowych schematów JSON
    - Funkcje pomocnicze do tworzenia i walidacji schematów
    - Przykładowe schematy dla typowych przypadków użycia
@@ -186,7 +186,7 @@ class BudgetExceededError extends OpenRouterError {}
    - Provider kontekstu OpenRouter
    - Hook useOpenRouter do wykorzystania w komponentach
 
-2. Implementacja w Supabase (`src/lib/openrouter/supabase-cache.ts`):
+2. Implementacja w Supabase (`src/lib/supabase/client.ts`):
    - Statystyki wykorzystania API
 
 ### Podsumowanie implementacji

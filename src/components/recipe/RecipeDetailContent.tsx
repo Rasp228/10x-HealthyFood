@@ -2,9 +2,9 @@ import React from "react";
 import { BackButton } from "@/components/ui/ActionButtons";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import RecipeContent from "@/components/ui/RecipeContent";
-import ActionPanel from "./ActionPanel";
+import ActionPanel from "../common/ActionPanel";
 
-import type { RecipeDetailContentProps } from "../types";
+import type { RecipeDetailContentProps } from "../../types";
 
 export default function RecipeDetailContent({
   recipe,

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { AddButton, AIButton } from "@/components/ui/ActionButtons";
-import RecipeCard from "./RecipeCard";
-import ConfirmDialog from "./ConfirmDialog";
-import RecipeFormModal from "./RecipeFormModal";
-import AIModal from "./AIModal";
-import RecipeViewModalContainer from "./RecipeViewModal";
-import { useRecipeModal } from "../hooks/useRecipeModal";
-import { useToast } from "../hooks/useToast";
-import { useFetchRecipes } from "../hooks/useRecipes";
-import { RecipeService } from "../lib/services/recipe.service";
+import RecipeCard from "../recipe/RecipeCard";
+import ConfirmDialog from "../common/ConfirmDialog";
+import RecipeFormModal from "../recipe/RecipeFormModal";
+import AIModal from "../ai/AIModal";
+import RecipeViewModalContainer from "../recipe/RecipeViewModal";
+import { useRecipeModal } from "../../hooks/recipe/useRecipeModal";
+import { useToast } from "../../hooks/common/useToast";
+import { useFetchRecipes } from "../../hooks/recipe/useRecipes";
+import { RecipeService } from "../../lib/services/recipe.service";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function HomePage() {

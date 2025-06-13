@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { RecipeDto, RecipeSortParams } from "../types";
-import { RecipeService } from "../lib/services/recipe.service";
+import type { RecipeDto, RecipeSortParams } from "../../types";
+import { RecipeService } from "../../lib/services/recipe.service";
 
 interface UseFetchRecipesParams extends RecipeSortParams {
   search?: string;

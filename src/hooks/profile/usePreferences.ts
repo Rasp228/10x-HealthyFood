@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferencesDto } from "../types";
+import type { PreferenceDto, CreatePreferenceCommand, UpdatePreferenceCommand, PreferencesDto } from "../../types";
 
 interface UsePreferencesState {
   preferences: PreferenceDto[];

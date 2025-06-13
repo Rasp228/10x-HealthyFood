@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useRecipe } from "./useRecipe";
-import type { UseRecipeModalResult, RecipeDto } from "../types";
+import type { UseRecipeModalResult, RecipeDto } from "../../types";
 
 // Cache dla przepisów (ograniczony do ostatnich 10)
 const MAX_CACHE_SIZE = 10;

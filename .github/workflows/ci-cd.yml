@@ -150,14 +150,6 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.run_number }}
-          path: test-results/
-          retention-days: 7
-
   # Job 5: Status comment - uruchamia się tylko gdy wszystkie poprzednie przejdą
   status-comment:
     name: Status comment

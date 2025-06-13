@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { LoginSchema } from "../lib/validations/auth/login.ts";
-import type { RegisterSchema } from "../lib/validations/auth/register.ts";
+import type { LoginSchema } from "../../lib/validations/auth/login.ts";
+import type { RegisterSchema } from "../../lib/validations/auth/register.ts";
 
 interface AuthError {
   message: string;

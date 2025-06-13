@@ -1,5 +1,5 @@
 import React from "react";
-import { useRecipe } from "../hooks/useRecipe";
+import { useRecipe } from "../../hooks/recipe/useRecipe";
 import RecipeDetailContent from "./RecipeDetailContent";
 
 interface RecipeDetailPageProps {
