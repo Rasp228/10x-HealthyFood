@@ -163,20 +163,29 @@ export class BudgetExceededError extends OpenRouterError {
 }
 
 // Eksportujemy własne typy dla axios
-export interface AxiosResponse<T = any> {
+export interface AxiosResponse<T = unknown> {
   data: T;
   status: number;
   statusText: string;
   headers: Record<string, string>;
-  config: any;
+  config: AxiosRequestConfig;
+}
+
+export interface AxiosRequestConfig {
+  method?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  data?: unknown;
+  timeout?: number;
+  [key: string]: unknown;
 }
 
 export interface AxiosInstance {
-  post: <T = any>(url: string, data?: any, config?: any) => Promise<AxiosResponse<T>>;
-  create: (config: any) => AxiosInstance;
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) => Promise<AxiosResponse<T>>;
+  create: (config: AxiosRequestConfig) => AxiosInstance;
   interceptors: {
     response: {
-      use: (onFulfilled: (value: AxiosResponse) => any, onRejected: (error: any) => any) => number;
+      use: (onFulfilled: (value: AxiosResponse) => unknown, onRejected: (error: unknown) => unknown) => number;
     };
   };
 }

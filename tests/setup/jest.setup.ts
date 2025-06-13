@@ -32,6 +32,10 @@ Object.defineProperty(window, "matchMedia", {
 // Mock dla IntersectionObserver
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).IntersectionObserver = class MockIntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "0px";
+  readonly thresholds: number[] = [];
+
   constructor(
     public callback: IntersectionObserverCallback,
     public options?: IntersectionObserverInit
@@ -50,15 +54,6 @@ Object.defineProperty(window, "matchMedia", {
     // Mock method
   }
   takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
-  get root() {
-    return null;
-  }
-  get rootMargin() {
-    return "0px";
-  }
-  get thresholds() {
     return [];
   }
 };

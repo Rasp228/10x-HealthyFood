@@ -1,32 +1,8 @@
 ---
 import AppLayout from "../../layouts/AppLayout.astro";
+import RecipeFormContainer from "../../components/RecipeFormContainer";
 ---
 
 <AppLayout title="Dodaj nowy przepis - HealthyMeal">
-  <div id="recipe-form-container"></div>
+  <RecipeFormContainer client:load />
 </AppLayout>
-
-<script>
-  // Skrypt kliencki do obsługi formularza
-  import { createRoot } from "react-dom/client";
-  import { createElement } from "react";
-  import RecipeFormModal from "../../components/RecipeFormModal";
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById("recipe-form-container");
-    if (container) {
-      const root = createRoot(container);
-
-      // Renderujemy komponent z otwartym modalem
-      root.render(
-        createElement(RecipeFormModal, {
-          isOpen: true,
-          onClose: () => {
-            // Przekierowanie na stronę główną po zamknięciu
-            window.location.href = "/";
-          },
-        })
-      );
-    }
-  });
-</script>

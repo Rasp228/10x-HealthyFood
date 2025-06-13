@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import { ViewTransitions } from "astro:transitions";
 import ThemeToggle from "../components/ThemeToggle";
+import ThemeScript from "../components/ThemeScript";
 
 interface Props {
   title?: string;
@@ -18,21 +19,10 @@ const { title = "HealthyMeal" } = Astro.props;
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    <script is:inline>
-      // Wczytaj preferencje motywu z localStorage
-      const theme = localStorage.getItem("theme");
-
-      // Ustaw motyw zgodnie z preferencjami
-      if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    </script>
     <ViewTransitions />
   </head>
   <body class="min-h-screen bg-background">
-    <!-- Minimalistyczna nawigacja dla stron autentykacji -->
+    <ThemeScript client:load />
     <header class="border-b">
       <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <a href="/" class="flex items-center font-bold text-xl">
@@ -45,21 +35,8 @@ const { title = "HealthyMeal" } = Astro.props;
       </div>
     </header>
 
-    <!-- Centrowanie formularzy autentykacji -->
     <main class="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4" transition:animate="slide">
       <slot />
     </main>
-
-    <script>
-      // Zachowanie motywu podczas przejść między stronami
-      document.addEventListener("astro:after-swap", function () {
-        const theme = localStorage.getItem("theme");
-        if (theme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else if (theme === "light") {
-          document.documentElement.classList.remove("dark");
-        }
-      });
-    </script>
   </body>
 </html>

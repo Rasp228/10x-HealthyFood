@@ -41,10 +41,9 @@ export class RecipeService {
   /**
    * Pobiera pojedynczy przepis
    * @param recipeId - ID przepisu
-   * @param userId - ID użytkownika (dla walidacji)
    * @returns Przepis lub null jeśli nie znaleziono
    */
-  async getRecipe(recipeId: number, userId?: string): Promise<RecipeDto | null> {
+  async getRecipe(recipeId: number): Promise<RecipeDto | null> {
     try {
       const response = await fetch(`/api/recipes/${recipeId}`, {
         method: "GET",
@@ -133,10 +132,9 @@ export class RecipeService {
   /**
    * Usuwa przepis
    * @param recipeId - ID przepisu do usunięcia
-   * @param userId - ID użytkownika (dla weryfikacji właściciela)
    * @returns true jeśli usunięto, false jeśli nie znaleziono
    */
-  async deleteRecipe(recipeId: number, userId: string): Promise<boolean> {
+  async deleteRecipe(recipeId: number): Promise<boolean> {
     try {
       const response = await fetch(`/api/recipes/${recipeId}`, {
         method: "DELETE",

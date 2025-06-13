@@ -36,6 +36,7 @@ Przygotowanie:
     testPassed = false; // Reset flag before each test
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   test.afterEach(async ({ page }, testInfo) => {
     // Podstawowe czyszczenie UI
     await app.cleanup();

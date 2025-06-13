@@ -1,6 +1,7 @@
 ---
 // Plik komponentu TopNav.astro
 import ThemeToggle from "./ThemeToggle";
+import LogoutButton from "./LogoutButton";
 ---
 
 <header class="border-b">
@@ -33,52 +34,4 @@ import ThemeToggle from "./ThemeToggle";
   </div>
 </header>
 
-<script>
-  async function handleLogout() {
-    try {
-      // Wyczyść localStorage i sessionStorage przed wywołaniem API
-      localStorage.clear();
-      sessionStorage.clear();
-
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        console.error("Błąd podczas wylogowania");
-      }
-
-      // Wyczyść cache przeglądarki dla bezpieczeństwa
-      if ("caches" in window) {
-        caches.keys().then(function (names) {
-          for (const name of names) caches.delete(name);
-        });
-      }
-
-      // Użyj window.location.replace zamiast href aby zapobiec powrotowi poprzez "Wstecz"
-      window.location.replace("/auth/login");
-    } catch (error) {
-      console.error("Błąd połączenia podczas wylogowania:", error);
-      // Fallback - wyczyść storage i przekieruj mimo błędu
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.replace("/auth/login");
-    }
-  }
-
-  function initLogoutButton() {
-    const logoutButton = document.getElementById("logout-button");
-    if (logoutButton) {
-      logoutButton.addEventListener("click", handleLogout);
-    }
-  }
-
-  // Inicjalizacja po załadowaniu strony
-  document.addEventListener("DOMContentLoaded", initLogoutButton);
-
-  // Inicjalizacja przy przejściach stron
-  document.addEventListener("astro:page-load", initLogoutButton);
-</script>
+<LogoutButton client:load />

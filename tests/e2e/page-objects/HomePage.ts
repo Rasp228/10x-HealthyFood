@@ -63,7 +63,7 @@ export class HomePage {
     await expect(this.emptyRecipesState).toContainText("Brak przepisów");
   }
 
-  async expectEmptySearchState(query: string) {
+  async expectEmptySearchState() {
     await expect(this.emptyRecipesState).toBeVisible();
     await expect(this.emptyRecipesState).toContainText("Nie znaleziono przepisów");
   }
