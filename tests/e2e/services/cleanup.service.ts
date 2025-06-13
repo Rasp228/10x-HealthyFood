@@ -38,7 +38,7 @@ export class CleanupService {
         return { deleted: 0, errors: [] };
       }
 
-      console.log(`🔍 Znaleziono ${recipes.length} przepisów do usunięcia`);
+      console.log(`Znaleziono ${recipes.length} przepis do usunięcia`);
 
       // 2. Usuń każdy przepis (API już sprawdza czy należy do użytkownika)
       for (const recipe of recipes) {
@@ -47,7 +47,7 @@ export class CleanupService {
 
           if (deleteResponse.ok()) {
             deletedCount++;
-            console.log(`✓ Usunięto przepis testowy: "${recipe.title}" (ID: ${recipe.id})`);
+            console.log(`Usunięto przepis testowy: "${recipe.title}" (ID: ${recipe.id})`);
           } else {
             const errorText = await deleteResponse.text();
             errors.push(`Nie udało się usunąć przepisu ${recipe.id}: ${deleteResponse.status()} - ${errorText}`);

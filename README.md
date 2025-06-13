@@ -107,11 +107,12 @@ OPENROUTER_API_KEY=your_openrouter_key
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm run preview` - Preview production build
 - `npm run astro` - Run Astro CLI commands
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
 - `npm run format` - Format code with Prettier
+- `npm run test` - Unit test
+- `npm run test:e2e` - E2E playwright test
 
 ## Project Scope
 
