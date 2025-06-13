@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
+import { AIService } from "../../../lib/services/ai.service";
 
 export const prerender = false;
 
@@ -18,6 +19,7 @@ const saveRecipeSchema = z.object({
       .optional(),
   }),
   is_new: z.boolean(),
+  logId: z.number().nullable().optional(),
   replace_existing: z
     .object({
       recipe_id: z.number(),
@@ -80,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { recipe, is_new, replace_existing } = validationResult.data;
+    const { recipe, is_new, logId, replace_existing } = validationResult.data;
 
     // Sprawdź czy chcemy zastąpić istniejący przepis
     if (!is_new && replace_existing?.replace) {
@@ -134,6 +136,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
+      if (logId) {
+        const aiService = new AIService(locals.supabase);
+        await aiService.updateAIActionLog(logId, true);
+      }
+
       return new Response(JSON.stringify(updatedRecipe), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -162,6 +169,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    if (logId) {
+      const aiService = new AIService(locals.supabase);
+      await aiService.updateAIActionLog(logId, true);
     }
 
     return new Response(JSON.stringify(newRecipe), {

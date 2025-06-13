@@ -62,6 +62,7 @@ export interface GeneratedRecipeDto {
   recipe: RecipeBasicDto;
   ai_model: string;
   generate_response_time: number;
+  logId?: number | null;
 }
 
 // Zmodyfikowany przepis
@@ -70,12 +71,14 @@ export interface ModifiedRecipeDto {
   modified_recipe: RecipeBasicDto;
   ai_model: string;
   generate_response_time: number;
+  logId?: number | null;
 }
 
 // Command do zapisania wygenerowanego/zmodyfikowanego przepisu
 export interface SaveRecipeCommand {
   recipe: RecipeBasicDto;
   is_new: boolean;
+  logId?: number | null;
   replace_existing?: {
     recipe_id: number;
     replace: boolean;

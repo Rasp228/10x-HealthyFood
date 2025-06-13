@@ -142,7 +142,7 @@ export class AIService {
       const parsedRecipe = this.parseAIResponse(response);
 
       // Zapisz log akcji
-      await this.logAIAction(userId, "generate_new", aiModel, responseTime);
+      const logId = await this.logAIAction(userId, "generate_new", aiModel, responseTime);
 
       return {
         recipe: {
@@ -152,6 +152,7 @@ export class AIService {
         },
         ai_model: aiModel,
         generate_response_time: responseTime,
+        logId,
       };
     } catch (error) {
       console.error("Błąd podczas generowania przepisu:", error);
@@ -253,7 +254,7 @@ export class AIService {
       const parsedRecipe = this.parseAIResponse(response);
 
       // Zapisz log akcji
-      await this.logAIAction(userId, "generate_modification", aiModel, responseTime);
+      const logId = await this.logAIAction(userId, "generate_modification", aiModel, responseTime);
 
       // Parsuj oryginalny przepis z base_recipe
       let originalRecipe;
@@ -281,6 +282,7 @@ export class AIService {
         },
         ai_model: aiModel,
         generate_response_time: responseTime,
+        logId,
       };
     } catch (error) {
       console.error("Błąd podczas modyfikacji przepisu:", error);
@@ -606,22 +608,49 @@ export class AIService {
    * @param actionType - Typ akcji
    * @param aiModel - Nazwa modelu AI
    * @param responseTime - Czas odpowiedzi w ms
+   * @returns ID zapisanego logu lub null w przypadku błędu
    */
   private async logAIAction(
     userId: string,
     actionType: ActionTypeEnum,
     aiModel: string,
     responseTime: number
-  ): Promise<void> {
+  ): Promise<number | null> {
     try {
-      await this.supabase.from("logs").insert({
-        user_id: userId,
-        action_type: actionType,
-        actual_ai_model: aiModel,
-        generate_response_time: responseTime,
-      });
+      const { data, error } = await this.supabase
+        .from("logs")
+        .insert({
+          user_id: userId,
+          action_type: actionType,
+          actual_ai_model: aiModel,
+          generate_response_time: responseTime,
+          is_accepted: false, // Domyślnie false - zmieniane na true tylko po zapisaniu
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id; // Zwróć ID logu do późniejszej aktualizacji
     } catch (error) {
       console.error("Błąd podczas zapisywania logu:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Aktualizuje log akcji AI po podjęciu decyzji przez użytkownika
+   * @param logId - ID logu do aktualizacji
+   * @param isAccepted - Czy propozycja została zaakceptowana
+   */
+  async updateAIActionLog(logId: number, isAccepted: boolean): Promise<void> {
+    try {
+      const { error } = await this.supabase.from("logs").update({ is_accepted: isAccepted }).eq("id", logId);
+
+      if (error) {
+        console.error("Błąd podczas aktualizacji logu:", error);
+      }
+    } catch (error) {
+      console.error("Błąd podczas aktualizacji logu:", error);
     }
   }
 }

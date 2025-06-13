@@ -1,6 +1,6 @@
 import React from "react";
 import { EditButton, DeleteButton, AIButton } from "@/components/ui/ActionButtons";
-import type { RecipeDto } from "../types";
+import type { RecipeDto } from "../../types";
 
 interface RecipeCardProps {
   recipe: RecipeDto;
@@ -116,8 +116,12 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, onAI }: R
           {recipe.additional_params
             .split(",")
             .slice(0, 3)
-            .map((tag, index) => (
-              <span key={index} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+            .map((tag: string, index: number) => (
+              <span
+                key={index}
+                className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs text-secondary-foreground"
+                data-testid={`recipe-tag-${index}`}
+              >
                 {tag.trim()}
               </span>
             ))}

@@ -226,9 +226,12 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
       const recipeToSave = generatedRecipe?.recipe || modifiedRecipe?.modified_recipe;
       if (!recipeToSave) return;
 
+      const logId = generatedRecipe?.logId || modifiedRecipe?.logId;
+
       const saveParams: SaveRecipeCommand = {
         recipe: recipeToSave,
         is_new: !(mode === "modify" && originalRecipe && formValues.replace_original),
+        logId,
         replace_existing:
           mode === "modify" && originalRecipe && formValues.replace_original
             ? {
