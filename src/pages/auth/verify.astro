@@ -1,10 +1,10 @@
 ---
 import AuthLayout from "../../layouts/AuthLayout.astro";
-import { VerifyPage } from "../../components/auth/VerifyPage";
+import { VerifyMessage } from "../../components/auth/VerifyMessage";
 
 export const prerender = false;
 ---
 
 <AuthLayout title="Weryfikacja email - HealthyMeal">
-  <VerifyPage client:load />
+  <VerifyMessage client:load />
 </AuthLayout>

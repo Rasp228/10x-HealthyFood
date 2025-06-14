@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "../../hooks/auth/useAuth";
@@ -15,15 +15,26 @@ export default function LoginForm() {
     password: "",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { login, isLoading, error, clearError } = useAuth();
 
-  // Wyczyść formularz po załadowaniu strony dla bezpieczeństwa
-  React.useEffect(() => {
+  // Obsługa komunikatów z URL i czyszczenie formularza
+  useEffect(() => {
     // Proste czyszczenie formularza przy mont komponenta
     setFormValues({
       email: "",
       password: "",
     });
+
+    // Sprawdź komunikaty z URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get("message");
+
+    if (message === "password-updated") {
+      setSuccessMessage("Hasło zostało pomyślnie zmienione. Możesz się teraz zalogować.");
+      // Wyczyść URL
+      window.history.replaceState({}, "", "/auth/login");
+    }
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,6 +85,15 @@ export default function LoginForm() {
       <h1 className="mb-6 text-2xl font-bold text-center" data-testid="login-form-title">
         Logowanie
       </h1>
+
+      {successMessage && (
+        <div
+          className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-600"
+          data-testid="login-success-message"
+        >
+          {successMessage}
+        </div>
+      )}
 
       {error && (
         <div

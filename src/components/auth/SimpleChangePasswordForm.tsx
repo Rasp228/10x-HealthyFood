@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/hooks/auth/useAuth";
 
 interface ChangePasswordFormValues {
@@ -9,7 +8,6 @@ interface ChangePasswordFormValues {
   confirmPassword: string;
 }
 
-// Schemat walidacji dla ustawienia nowego hasła
 const changePasswordSchema = z
   .object({
     password: z
@@ -24,56 +22,29 @@ const changePasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export default function ChangePasswordForm() {
-  const { isLoading, error, clearError, exchangeCodeForSession, changePassword } = useAuth();
+export default function SimpleChangePasswordForm() {
+  const { isLoading, error, clearError, changePassword } = useAuth();
   const [formValues, setFormValues] = useState<ChangePasswordFormValues>({
     password: "",
     confirmPassword: "",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [isCodeValid, setIsCodeValid] = useState<boolean | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
-  // Sprawdź czy w URL jest code i wymień go na sesję
   useEffect(() => {
-    const handleCodeExchange = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
+    const urlParams = new URLSearchParams(window.location.search);
+    const verified = urlParams.get("verified");
 
-      if (!code) {
-        setIsCodeValid(false);
-        return;
-      }
-
-      try {
-        const success = await exchangeCodeForSession(code);
-
-        if (success) {
-          setIsCodeValid(true);
-          // Usuń code z URL żeby nie było problemów przy odświeżeniu
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, "", newUrl);
-        } else {
-          setIsCodeValid(false);
-          if (error) {
-            setAuthError(error.message);
-          }
-        }
-      } catch (err) {
-        console.error("Exception during code exchange:", err);
-        setAuthError("Wystąpił błąd podczas przetwarzania linku");
-        setIsCodeValid(false);
-      }
-    };
-
-    handleCodeExchange();
-  }, [exchangeCodeForSession, error]);
+    if (verified === "true") {
+      setIsVerified(true);
+      window.history.replaceState({}, "", "/auth/change-password");
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
 
-    // Usuwamy błędy walidacji i auth po zmianie wartości pola
     if (validationErrors[name]) {
       setValidationErrors((prev) => {
         return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== name));
@@ -81,9 +52,6 @@ export default function ChangePasswordForm() {
     }
     if (error) {
       clearError();
-    }
-    if (authError) {
-      setAuthError(null);
     }
   };
 
@@ -116,47 +84,19 @@ export default function ChangePasswordForm() {
     const success = await changePassword(formValues.password, formValues.confirmPassword);
 
     if (success) {
-      // Przekierowanie po pomyślnej zmianie hasła
       window.location.href = "/auth/login?message=password-updated";
-    } else if (error) {
-      setAuthError(error.message);
     }
   };
 
-  // Jeśli nie ma kodu lub jest nieprawidłowy
-  if (isCodeValid === false) {
+  if (!isVerified) {
     return (
       <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-red-600">Nieprawidłowy link</h1>
-          <p className="mb-4 text-sm text-muted-foreground">Link do zmiany hasła jest nieprawidłowy lub wygasł.</p>
-          {authError && (
-            <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{authError}</div>
-          )}
+          <h1 className="mb-4 text-2xl font-bold text-red-600">Dostęp zabroniony</h1>
+          <p className="mb-4 text-sm text-muted-foreground">Aby zmienić hasło, musisz kliknąć link z emaila.</p>
           <Button asChild>
-            <a href="/auth/reset-password">Poproś o nowy link</a>
+            <a href="/auth/reset-password">Poproś o link resetujący</a>
           </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Ładowanie - sprawdzanie i wymiana kodu
-  if (isCodeValid === null) {
-    return (
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-        <div className="text-center">
-          <div className="mb-4 flex justify-center">
-            <svg className="h-8 w-8 animate-spin" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          </div>
-          <p className="text-sm text-muted-foreground">Aktywacja linku resetującego...</p>
         </div>
       </div>
     );
@@ -166,10 +106,8 @@ export default function ChangePasswordForm() {
     <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
       <h1 className="mb-6 text-2xl font-bold text-center">Ustaw nowe hasło</h1>
 
-      {(error || authError) && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-          {error?.message || authError}
-        </div>
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error.message}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -212,26 +150,31 @@ export default function ChangePasswordForm() {
           )}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isLoading || !formValues.password || !formValues.confirmPassword}
-        >
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
-            <span className="flex items-center gap-2">
-              <LoadingSpinner size="sm" />
-              Ustawianie nowego hasła...
-            </span>
+            <>
+              <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Zapisywanie...
+            </>
           ) : (
             "Ustaw nowe hasło"
           )}
         </Button>
-
-        <div className="text-center text-sm">
-          <a href="/auth/login" className="text-primary hover:underline">
-            Powrót do logowania
-          </a>
-        </div>
       </form>
     </div>
   );
