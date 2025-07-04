@@ -120,7 +120,7 @@ OPENROUTER_API_KEY=your_openrouter_key
 
 - User account management (registration, login, logout)
 - User profile with dietary preferences
-- Recipe management (add, view, edit, delete text-based recipes)
+- Recipe management (add, view, edit, delete recipes)
 - AI integration for recipe generation and modification
 
 ## Project Status
