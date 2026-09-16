@@ -20,14 +20,32 @@ pnpm-debug.log*
 .env
 .env.production
 .env.test
+.env.keys
+.env.local
+.env.*.local
 
 # macOS-specific files
 .DS_Store
 
 # jetbrains setting folder
 .idea/
+.cursor/
+.vscode/
 
 # tests reports
 coverage/
 playwright-report/
 test-results/
+
+#skills & ai
+skills-lock.json
+CLAUDE.md
+.10x-cli.json
+.agents/
+.claude/
+.ai/
+context/
+
+# Supabase
+supabase/.branches
+supabase/.temp
