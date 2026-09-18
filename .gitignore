@@ -39,13 +39,10 @@ test-results/
 
 #skills & ai
 skills-lock.json
-CLAUDE.md
-AGENTS.md
 .10x-cli.json
 .agents/
 .claude/
 .ai/
-context/
 
 # Supabase
 supabase/.branches

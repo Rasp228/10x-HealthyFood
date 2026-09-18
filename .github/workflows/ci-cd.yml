@@ -45,8 +45,14 @@ jobs:
       - name: Linting kodu
         run: npm run lint
 
+      - name: Sprawdzenie typów
+        run: npm run typecheck
+
       - name: Sprawdzenie formatowania
-        run: npm run format -- --check
+        run: npm run format:check
+
+      - name: Audyt bezpieczeństwa zależności
+        run: npm run test:security
 
   # Job 2: Build produkcyjny
   build:

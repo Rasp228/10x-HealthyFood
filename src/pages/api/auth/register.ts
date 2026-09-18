@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerInstance } from "../../../db/supabase.client.ts";
 import { registerSchema } from "../../../lib/validations/auth/register.ts";
+import { zodIssues } from "../../../lib/utils/validation-errors.ts";
 
 export const prerender = false;
 
@@ -14,7 +15,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(
         JSON.stringify({
           error: "Nieprawidłowe dane",
-          details: validationResult.error.errors,
+          details: zodIssues(validationResult.error),
         }),
         { status: 400 }
       );

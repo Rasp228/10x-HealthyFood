@@ -5,10 +5,16 @@ import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import vercel from "@astrojs/vercel";
+import process from "node:process";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://your-domain.vercel.app", // Zmień na swoją domenę
+  // Vercel podaje domenę produkcyjną (także własną, jeśli przypisana) w zmiennej systemowej,
+  // więc nie trzymamy jej zaszytej w repo. Lokalnie i w CI schodzimy na localhost - sitemap
+  // generowany poza Vercelem i tak nie trafia na produkcję.
+  site: process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000",
   output: "server",
   integrations: [react(), sitemap()],
   server: {

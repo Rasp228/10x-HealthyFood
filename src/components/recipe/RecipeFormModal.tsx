@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import BaseModal from "@/components/ui/BaseModal";
@@ -37,12 +37,19 @@ interface RecipeFormModalProps {
   onEditSuccess?: () => void;
 }
 
+const EMPTY_FORM: RecipeFormValues = {
+  title: "",
+  content: "",
+  additional_params: "",
+};
+
+const formFor = (recipe?: RecipeDto): RecipeFormValues =>
+  recipe
+    ? { title: recipe.title, content: recipe.content, additional_params: recipe.additional_params || "" }
+    : EMPTY_FORM;
+
 export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, onEditSuccess }: RecipeFormModalProps) {
-  const [formValues, setFormValues] = useState<RecipeFormValues>({
-    title: "",
-    content: "",
-    additional_params: "",
-  });
+  const [formValues, setFormValues] = useState<RecipeFormValues>(() => formFor(recipe));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { createRecipe, updateRecipe, createStatus, updateStatus, createError, updateError } = useRecipeMutations();
@@ -50,24 +57,17 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, on
   const isLoading = createStatus === "loading" || updateStatus === "loading";
   const isEditMode = !!recipe;
 
-  // Przy otwarciu modalu w trybie edycji, ustawiamy wartości formularza
-  useEffect(() => {
-    if (recipe) {
-      setFormValues({
-        title: recipe.title,
-        content: recipe.content,
-        additional_params: recipe.additional_params || "",
-      });
-    } else {
-      // Resetujemy formularz przy otwieraniu w trybie dodawania
-      setFormValues({
-        title: "",
-        content: "",
-        additional_params: "",
-      });
-    }
+  // Formularz jest pochodną propsa `recipe` i tego, czy modal właśnie otwarto. Ustawiamy go
+  // w trakcie renderu zamiast w efekcie - inaczej pierwszy render pokazywał puste pola,
+  // a dopiero drugi wartości przepisu.
+  const formKey = `${isOpen}:${recipe?.id ?? "new"}`;
+  const [prevFormKey, setPrevFormKey] = useState(formKey);
+
+  if (prevFormKey !== formKey) {
+    setPrevFormKey(formKey);
+    setFormValues(formFor(recipe));
     setErrors({});
-  }, [recipe, isOpen]);
+  }
 
   // Walidacja formularza z użyciem Zod
   const validate = (): boolean => {
@@ -78,7 +78,7 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, on
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }
@@ -96,8 +96,8 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, on
       fieldSchema.parse(value);
       return null;
     } catch (error) {
-      if (error instanceof z.ZodError && error.errors.length > 0) {
-        return error.errors[0].message;
+      if (error instanceof z.ZodError && error.issues.length > 0) {
+        return error.issues[0].message;
       }
       return null;
     }
@@ -161,16 +161,11 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, on
     }
   };
 
-  // Obsługa błędów API
-  useEffect(() => {
-    const error = createError || updateError;
-    if (error) {
-      setErrors((prev) => ({
-        ...prev,
-        form: error.message || "Wystąpił błąd podczas zapisywania przepisu",
-      }));
-    }
-  }, [createError, updateError]);
+  // Błąd zapisu jest pochodną stanu mutacji - wyliczamy go przy renderze, zamiast kopiować
+  // do lokalnego stanu w efekcie.
+  const apiError = createError || updateError;
+  const formError =
+    errors.form || (apiError ? apiError.message || "Wystąpił błąd podczas zapisywania przepisu" : undefined);
 
   return (
     <BaseModal
@@ -183,9 +178,9 @@ export default function RecipeFormModal({ isOpen, onClose, recipe, onSuccess, on
     >
       <form onSubmit={handleSubmit} className="space-y-6" data-testid="recipe-form">
         {/* Wyświetlenie błędów formularza */}
-        {errors.form && (
+        {formError && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-3" data-testid="recipe-form-error">
-            <p className="text-sm text-destructive">{errors.form}</p>
+            <p className="text-sm text-destructive">{formError}</p>
           </div>
         )}
 

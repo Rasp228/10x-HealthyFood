@@ -11,6 +11,7 @@ import { useToast } from "../../hooks/common/useToast";
 import { useFetchRecipes } from "../../hooks/recipe/useRecipes";
 import { RecipeService } from "../../lib/services/recipe.service";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import ToastContainer from "../feedback/ToastContainer";
 
 export default function HomePage() {
   const [filterText, setFilterText] = useState("");
@@ -96,7 +97,7 @@ export default function HomePage() {
 
     try {
       const recipeService = new RecipeService();
-      const success = await recipeService.deleteRecipe(recipeToDelete, "current-user");
+      const success = await recipeService.deleteRecipe(recipeToDelete);
 
       if (success) {
         // Pokazujemy powiadomienie o sukcesie
@@ -403,6 +404,8 @@ export default function HomePage() {
 
       {/* Modal szczegółów przepisu */}
       <RecipeViewModalContainer onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} onAI={handleAIRecipe} />
+
+      <ToastContainer />
     </div>
   );
 }

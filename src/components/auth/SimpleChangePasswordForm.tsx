@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { useSearchParam } from "@/hooks/common/useSearchParam";
 
 interface ChangePasswordFormValues {
   password: string;
@@ -29,17 +30,14 @@ export default function SimpleChangePasswordForm() {
     confirmPassword: "",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [isVerified, setIsVerified] = useState(false);
+  const isVerified = useSearchParam("verified") === "true";
 
+  // Sam efekt nie dotyka stanu - tylko sprząta adres, żeby parametr nie został w historii.
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const verified = urlParams.get("verified");
-
-    if (verified === "true") {
-      setIsVerified(true);
+    if (isVerified) {
       window.history.replaceState({}, "", "/auth/change-password");
     }
-  }, []);
+  }, [isVerified]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -63,7 +61,7 @@ export default function SimpleChangePasswordForm() {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }

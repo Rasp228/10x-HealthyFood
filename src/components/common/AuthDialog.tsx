@@ -15,7 +15,7 @@ interface AuthDialogProps {
 
 // Schemat walidacji Zod
 const authSchema = z.object({
-  email: z.string().email("Wprowadź poprawny adres email"),
+  email: z.email("Wprowadź poprawny adres email"),
   password: z.string().min(6, "Hasło musi mieć co najmniej 6 znaków"),
 });
 
@@ -48,7 +48,7 @@ export default function AuthDialog({ mode, onSuccess }: AuthDialogProps) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }

@@ -33,11 +33,7 @@ export function useFetchRecipes(params: UseFetchRecipesParams = {}): UseFetchRec
         const recipeService = new RecipeService();
 
         // Używamy prawdziwego serwisu z API endpoints
-        const result = await recipeService.getUserRecipes(
-          "current-user", // userId - auth jest zarządzane przez cookies w API
-          { sort, order },
-          search || undefined
-        );
+        const result = await recipeService.getUserRecipes({ sort, order }, search || undefined);
 
         setData(result.data);
         setTotal(result.total);

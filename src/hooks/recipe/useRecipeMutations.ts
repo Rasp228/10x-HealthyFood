@@ -61,7 +61,7 @@ export function useRecipeMutations(): RecipeMutations {
       const recipeService = new RecipeService();
 
       // Używamy rzeczywistego API zamiast mockowanych danych
-      const data = await recipeService.createRecipe("current-user", recipe);
+      const data = await recipeService.createRecipe(recipe);
 
       setCreateState((prev) => ({
         ...prev,
@@ -89,7 +89,7 @@ export function useRecipeMutations(): RecipeMutations {
       const recipeService = new RecipeService();
 
       // Używamy rzeczywistego API zamiast mockowanych danych
-      const data = await recipeService.updateRecipe(id, "current-user", recipe);
+      const data = await recipeService.updateRecipe(id, recipe);
 
       if (!data) {
         throw new Error("Przepis nie został znaleziony");
@@ -121,7 +121,7 @@ export function useRecipeMutations(): RecipeMutations {
       const recipeService = new RecipeService();
 
       // Używamy rzeczywistego API zamiast mockowanych danych
-      const result = await recipeService.deleteRecipe(id, "current-user");
+      const result = await recipeService.deleteRecipe(id);
 
       setDeleteState((prev) => ({
         ...prev,

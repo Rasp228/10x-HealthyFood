@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PreferenceChip from "./PreferenceChip";
+import ToastContainer from "../feedback/ToastContainer";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { useToast } from "../../hooks/common/useToast";
 import { usePreferences } from "../../hooks/profile/usePreferences";
@@ -98,7 +99,7 @@ export default function ProfilePage() {
       showToast("Preferencja została dodana", "success");
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const errors = err.errors.map((e) => e.message);
+        const errors = err.issues.map((e) => e.message);
         setFormError(errors[0]);
       } else if (err instanceof Error) {
         setFormError(err.message);
@@ -336,6 +337,8 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      <ToastContainer />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Schemat dla etapu żądania resetowania (przez email)
 export const requestResetSchema = z.object({
-  email: z.string().email("Wprowadź poprawny adres email"),
+  email: z.email("Wprowadź poprawny adres email"),
 });
 
 // Schemat dla etapu ustawiania nowego hasła

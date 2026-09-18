@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
 import { AIService } from "../../../lib/services/ai.service";
+import { zodMessage } from "../../../lib/utils/validation-errors";
 
 export const prerender = false;
 
@@ -74,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const errorResponse: AIErrorResponse = {
         error: "Nieprawidłowe dane wejściowe",
         code: "INVALID_INPUT",
-        details: validationResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", "),
+        details: zodMessage(validationResult.error),
       };
       return new Response(JSON.stringify(errorResponse), {
         status: 400,

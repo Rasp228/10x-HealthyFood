@@ -7,12 +7,11 @@ import type { CreateRecipeCommand, RecipesDto, RecipeDto, RecipeSortParams, Upda
 export class RecipeService {
   /**
    * Pobiera listę przepisów użytkownika z sortowaniem
-   * @param userId - ID użytkownika (używane dla walidacji, ale auth jest przez cookies)
    * @param sort - Parametry sortowania (sort, order)
    * @param search - Opcjonalne wyszukiwanie
    * @returns Lista przepisów
    */
-  async getUserRecipes(userId: string, sort: RecipeSortParams = {}, search?: string): Promise<RecipesDto> {
+  async getUserRecipes(sort: RecipeSortParams = {}, search?: string): Promise<RecipesDto> {
     try {
       // Budowanie query string
       const queryParams = new URLSearchParams();
@@ -68,11 +67,10 @@ export class RecipeService {
 
   /**
    * Tworzy nowy przepis
-   * @param userId - ID użytkownika (dla walidacji)
    * @param command - Dane do utworzenia przepisu
    * @returns Utworzony przepis
    */
-  async createRecipe(userId: string, command: CreateRecipeCommand): Promise<RecipeDto> {
+  async createRecipe(command: CreateRecipeCommand): Promise<RecipeDto> {
     try {
       const response = await fetch("/api/recipes", {
         method: "POST",
@@ -98,11 +96,10 @@ export class RecipeService {
   /**
    * Aktualizuje istniejący przepis
    * @param recipeId - ID przepisu do aktualizacji
-   * @param userId - ID użytkownika (dla weryfikacji właściciela)
    * @param command - Dane do aktualizacji przepisu
    * @returns Zaktualizowany przepis lub null jeśli nie znaleziono
    */
-  async updateRecipe(recipeId: number, userId: string, command: UpdateRecipeCommand): Promise<RecipeDto | null> {
+  async updateRecipe(recipeId: number, command: UpdateRecipeCommand): Promise<RecipeDto | null> {
     try {
       const response = await fetch(`/api/recipes/${recipeId}`, {
         method: "PUT",

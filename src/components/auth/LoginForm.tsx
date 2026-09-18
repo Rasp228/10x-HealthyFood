@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { loginSchema } from "../../lib/validations/auth/login";
+import { useSearchParam } from "../../hooks/common/useSearchParam";
 
 interface LoginFormValues {
   email: string;
@@ -15,27 +16,18 @@ export default function LoginForm() {
     password: "",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { login, isLoading, error, clearError } = useAuth();
 
-  // Obsługa komunikatów z URL i czyszczenie formularza
+  const passwordUpdated = useSearchParam("message") === "password-updated";
+  const successMessage = passwordUpdated ? "Hasło zostało pomyślnie zmienione. Możesz się teraz zalogować." : null;
+
+  // Wcześniej ten efekt czyścił też pola formularza po hydratacji, kasując to, co użytkownik
+  // (albo menedżer haseł) zdążył wpisać. Pola startują puste, więc reset był zbędny i szkodliwy.
   useEffect(() => {
-    // Proste czyszczenie formularza przy mont komponenta
-    setFormValues({
-      email: "",
-      password: "",
-    });
-
-    // Sprawdź komunikaty z URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const message = urlParams.get("message");
-
-    if (message === "password-updated") {
-      setSuccessMessage("Hasło zostało pomyślnie zmienione. Możesz się teraz zalogować.");
-      // Wyczyść URL
+    if (passwordUpdated) {
       window.history.replaceState({}, "", "/auth/login");
     }
-  }, []);
+  }, [passwordUpdated]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,10 +50,10 @@ export default function LoginForm() {
       setValidationErrors({});
       return true;
     } catch (validationError: unknown) {
-      if (validationError && typeof validationError === "object" && "errors" in validationError) {
-        const zodError = validationError as { errors: { path: (string | number)[]; message: string }[] };
+      if (validationError && typeof validationError === "object" && "issues" in validationError) {
+        const zodError = validationError as { issues: { path: (string | number)[]; message: string }[] };
         const newErrors: Record<string, string> = {};
-        zodError.errors.forEach((err) => {
+        zodError.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }

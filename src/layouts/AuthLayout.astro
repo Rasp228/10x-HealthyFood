@@ -1,6 +1,6 @@
 ---
 import "../styles/global.css";
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 import ThemeToggle from "../components/layout/ThemeToggle";
 import ThemeScript from "../components/layout/ThemeScript";
 
@@ -19,7 +19,7 @@ const { title = "HealthyMeal" } = Astro.props;
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    <ViewTransitions />
+    <ClientRouter />
   </head>
   <body class="min-h-screen bg-background">
     <ThemeScript client:load />

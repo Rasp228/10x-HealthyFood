@@ -12,14 +12,23 @@ interface UseRecipeResult {
 // Hook do pobierania szczegółów przepisu po ID
 export function useRecipe(id: number | string | undefined): UseRecipeResult {
   const [recipe, setRecipe] = useState<RecipeDto | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(Boolean(id));
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<number>(0);
 
+  // Zmiana identyfikatora czyści poprzedni wynik jeszcze w trakcie renderu - dzięki temu
+  // konsument nigdy nie zobaczy przepisu o poprzednim id, a brak id nie wymaga efektu.
+  const [prevId, setPrevId] = useState(id);
+
+  if (prevId !== id) {
+    setPrevId(id);
+    setRecipe(null);
+    setError(null);
+    setIsLoading(Boolean(id));
+  }
+
   useEffect(() => {
     if (!id) {
-      setRecipe(null);
-      setIsLoading(false);
       return;
     }
 
@@ -36,7 +45,7 @@ export function useRecipe(id: number | string | undefined): UseRecipeResult {
         }
 
         // Używamy rzeczywistego API zamiast mockowanych danych
-        const data = await recipeService.getRecipe(recipeId, "current-user");
+        const data = await recipeService.getRecipe(recipeId);
 
         if (!data) {
           throw new Error("Przepis nie został znaleziony");

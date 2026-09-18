@@ -1,25 +1,16 @@
-import { useState, useEffect } from "react";
+import { useSearchParam } from "../../hooks/common/useSearchParam";
 
 export function VerifyMessage() {
-  const [message, setMessage] = useState("");
-  const [type, setType] = useState<"loading" | "success" | "error">("loading");
+  const error = useSearchParam("error");
+  const success = useSearchParam("success");
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get("error");
-    const success = urlParams.get("success");
-
-    if (error) {
-      setType("error");
-      setMessage(decodeURIComponent(error));
-    } else if (success) {
-      setType("success");
-      setMessage("Weryfikacja zakończona pomyślnie!");
-    } else {
-      setType("loading");
-      setMessage("Przetwarzanie...");
-    }
-  }, []);
+  // Widok jest w całości funkcją adresu - nie ma tu czego trzymać w stanie.
+  const type: "loading" | "success" | "error" = error ? "error" : success ? "success" : "loading";
+  const message = error
+    ? decodeURIComponent(error)
+    : success
+      ? "Weryfikacja zakończona pomyślnie!"
+      : "Przetwarzanie...";
 
   return (
     <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">

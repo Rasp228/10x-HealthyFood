@@ -7,18 +7,41 @@ import ThemeToggle from "@/components/layout/ThemeToggle";
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {};
 
+  const getItem = jest.fn((key: string) => store[key] || null);
+  const setItem = jest.fn((key: string, value: string) => {
+    store[key] = value;
+  });
+  const removeItem = jest.fn((key: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete store[key];
+  });
+  const clear = jest.fn(() => {
+    store = {};
+  });
+
   return {
-    getItem: jest.fn((key: string) => store[key] || null),
-    setItem: jest.fn((key: string, value: string) => {
-      store[key] = value;
-    }),
-    removeItem: jest.fn((key: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete store[key];
-    }),
-    clear: jest.fn(() => {
+    getItem,
+    setItem,
+    removeItem,
+    clear,
+    /**
+     * Ustawia zapisany motyw tak, jak zrobiłby to prawdziwy localStorage.
+     *
+     * Testy robiły to wcześniej przez `getItem.mockReturnValue(...)`, ale `jest.clearAllMocks()`
+     * nie usuwa wymuszonej wartości zwracanej - przypięcie z jednego testu wyciekało na kolejne,
+     * a zapis przez `setItem` przestawał być widoczny dla odczytu.
+     */
+    __setStoredTheme(theme: string | null) {
+      store = theme === null ? {} : { theme };
+    },
+    /** Przywraca stanowe implementacje po `jest.clearAllMocks()`. */
+    __reset() {
       store = {};
-    }),
+      getItem.mockImplementation((key: string) => store[key] || null);
+      setItem.mockImplementation((key: string, value: string) => {
+        store[key] = value;
+      });
+    },
   };
 })();
 
@@ -64,6 +87,8 @@ const createMockMatchMedia = (matches: boolean) => {
     // Dodaj metodę do symulowania zmiany
     _triggerChange: (newMatches: boolean) => {
       act(() => {
+        // Prawdziwy MediaQueryList aktualizuje `matches` przed powiadomieniem nasłuchujących.
+        mockMediaQuery.matches = newMatches;
         listeners.forEach((listener) => {
           listener({ matches: newMatches } as MediaQueryListEvent);
         });
@@ -80,7 +105,7 @@ describe("ThemeToggle", () => {
   beforeEach(() => {
     // Reset wszystkich mocków
     jest.clearAllMocks();
-    mockLocalStorage.clear();
+    mockLocalStorage.__reset();
     mockClassList.toggle.mockClear();
     mockClassList.add.mockClear();
     mockClassList.remove.mockClear();
@@ -122,7 +147,7 @@ describe("ThemeToggle", () => {
 
   describe("Inicjalizacja z localStorage", () => {
     it("powinien inicjalizować ciemny motyw gdy localStorage zawiera 'dark'", async () => {
-      mockLocalStorage.getItem.mockReturnValue("dark");
+      mockLocalStorage.__setStoredTheme("dark");
 
       render(<ThemeToggle />);
 
@@ -133,7 +158,7 @@ describe("ThemeToggle", () => {
     });
 
     it("powinien inicjalizować jasny motyw gdy localStorage zawiera 'light'", async () => {
-      mockLocalStorage.getItem.mockReturnValue("light");
+      mockLocalStorage.__setStoredTheme("light");
 
       render(<ThemeToggle />);
 
@@ -146,7 +171,7 @@ describe("ThemeToggle", () => {
 
   describe("Inicjalizacja z preferencjami systemowymi", () => {
     it("powinien używać preferencji systemowych gdy brak localStorage", async () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
+      mockLocalStorage.__setStoredTheme(null);
       mockMatchMedia = createMockMatchMedia(true); // System preferuje ciemny motyw
       window.matchMedia = mockMatchMedia;
 
@@ -159,7 +184,7 @@ describe("ThemeToggle", () => {
     });
 
     it("powinien nasłuchiwać zmian preferencji systemowych", () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
+      mockLocalStorage.__setStoredTheme(null);
       mockMatchMedia = createMockMatchMedia(false);
       window.matchMedia = mockMatchMedia;
 
@@ -199,7 +224,7 @@ describe("ThemeToggle", () => {
 
     it("powinien przełączać z ciemnego na jasny motyw", async () => {
       const user = userEvent.setup();
-      mockLocalStorage.getItem.mockReturnValue("dark");
+      mockLocalStorage.__setStoredTheme("dark");
 
       render(<ThemeToggle />);
 
@@ -252,7 +277,7 @@ describe("ThemeToggle", () => {
 
   describe("Reaktywność na zmiany systemowe", () => {
     it("powinien reagować na zmiany preferencji systemowych gdy brak localStorage", async () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
+      mockLocalStorage.__setStoredTheme(null);
       mockMatchMedia = createMockMatchMedia(false);
       window.matchMedia = mockMatchMedia;
 
@@ -272,7 +297,7 @@ describe("ThemeToggle", () => {
     });
 
     it("nie powinien reagować na zmiany systemowe gdy localStorage jest ustawiony", async () => {
-      mockLocalStorage.getItem.mockReturnValue("light");
+      mockLocalStorage.__setStoredTheme("light");
       mockMatchMedia = createMockMatchMedia(false);
       window.matchMedia = mockMatchMedia;
 

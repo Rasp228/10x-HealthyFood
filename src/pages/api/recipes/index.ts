@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
+import { zodIssues } from "../../../lib/utils/validation-errors";
 
 export const prerender = false;
 
@@ -43,7 +44,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
       return new Response(
         JSON.stringify({
           error: "Nieprawidłowe parametry",
-          details: validationResult.error.format(),
+          details: zodIssues(validationResult.error),
         }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
@@ -117,7 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(
         JSON.stringify({
           error: "Nieprawidłowe dane wejściowe",
-          details: validationResult.error.format(),
+          details: zodIssues(validationResult.error),
         }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );

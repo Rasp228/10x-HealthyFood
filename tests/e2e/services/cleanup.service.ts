@@ -43,7 +43,11 @@ export class CleanupService {
       // 2. Usuń każdy przepis (API już sprawdza czy należy do użytkownika)
       for (const recipe of recipes) {
         try {
-          const deleteResponse = await this.page.request.delete(`${this.baseUrl}/api/recipes/${recipe.id}`);
+          // Astro odrzuca zapytania niebędące GET bez nagłówka Origin (security.checkOrigin),
+          // a APIRequestContext Playwrighta go nie dokłada - stąd jawny nagłówek.
+          const deleteResponse = await this.page.request.delete(`${this.baseUrl}/api/recipes/${recipe.id}`, {
+            headers: { Origin: this.baseUrl },
+          });
 
           if (deleteResponse.ok()) {
             deletedCount++;

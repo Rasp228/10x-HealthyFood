@@ -1,0 +1,22 @@
+# Plik generowany przez `npm run supabase:gen` - nie formatujemy, bo reformat
+# i tak znika przy kolejnej regeneracji i zaśmieca diff.
+src/db/database.types.ts
+
+# Artefakty buildów i testów - `prettier --check .` nie ma czego w nich pilnować.
+dist/
+.vercel/
+.astro/
+coverage/
+playwright-report/
+test-results/
+
+# Generowane przez menedżer pakietów.
+package-lock.json
+
+# Dokumenty pisane i regenerowane przez skille agentowe (10x CLI, /10x-prd, /10x-health-check...).
+# Prettier rozpycha w nich tabele markdown do wyrównanych kolumn, więc każda regeneracja
+# kłóciłaby się z bramką formatowania. Treść pilnuje skill, nie formatter.
+.ai/
+context/
+CLAUDE.md
+audit-ci.jsonc

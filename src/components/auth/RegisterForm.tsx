@@ -46,10 +46,10 @@ export default function RegisterForm() {
       setValidationErrors({});
       return true;
     } catch (validationError: unknown) {
-      if (validationError && typeof validationError === "object" && "errors" in validationError) {
-        const zodError = validationError as { errors: { path: (string | number)[]; message: string }[] };
+      if (validationError && typeof validationError === "object" && "issues" in validationError) {
+        const zodError = validationError as { issues: { path: (string | number)[]; message: string }[] };
         const newErrors: Record<string, string> = {};
-        zodError.errors.forEach((err) => {
+        zodError.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }

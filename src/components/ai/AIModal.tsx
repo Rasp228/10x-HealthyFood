@@ -30,14 +30,21 @@ interface AIModalProps {
   onEditSuccess?: () => void;
 }
 
+const EMPTY_FORM: AIModalFormValues = {
+  additional_params: "",
+  base_recipe: "",
+  temp_title: "",
+  temp_content: "",
+  replace_original: false,
+};
+
+const formFor = (recipe?: RecipeDto): AIModalFormValues =>
+  recipe ? { ...EMPTY_FORM, temp_title: recipe.title, temp_content: recipe.content } : EMPTY_FORM;
+
 export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSuccess, onEditSuccess }: AIModalProps) {
-  const [formValues, setFormValues] = useState<AIModalFormValues>({
-    additional_params: "",
-    base_recipe: "",
-    temp_title: "",
-    temp_content: "",
-    replace_original: false,
-  });
+  const [formValues, setFormValues] = useState<AIModalFormValues>(() =>
+    isOpen ? formFor(originalRecipe) : EMPTY_FORM
+  );
   const [step, setStep] = useState<"input" | "preview">("input");
   const [showBaseRecipe, setShowBaseRecipe] = useState(false);
   const [editingOriginal, setEditingOriginal] = useState(false);
@@ -116,32 +123,30 @@ export default function AIModal({ isOpen, onClose, mode, originalRecipe, onSucce
     return Object.keys(filteredErrors).length === 0;
   };
 
-  // Reset stanu przy zamykaniu/otwieraniu modala
-  useEffect(() => {
+  // Modal zostaje zamontowany także po zamknięciu, a jego stan jest pochodną `isOpen`
+  // i przepisu wejściowego. Ustawiamy go w trakcie renderu (wzorzec "adjusting state when props
+  // change" z dokumentacji Reacta) zamiast w efekcie, który dokładał render ze starą zawartością.
+  const modalKey = `${isOpen}:${originalRecipe?.id ?? "none"}`;
+  const [prevModalKey, setPrevModalKey] = useState(modalKey);
+
+  if (prevModalKey !== modalKey) {
+    setPrevModalKey(modalKey);
+    setFormValues(isOpen ? formFor(originalRecipe) : EMPTY_FORM);
+
     if (!isOpen) {
       setStep("input");
-      resetAIState();
       setShowBaseRecipe(false);
       setEditingOriginal(false);
       setValidationErrors({});
-      setFormValues({
-        additional_params: "",
-        base_recipe: "",
-        temp_title: "",
-        temp_content: "",
-        replace_original: false,
-      });
-    } else if (isOpen && originalRecipe) {
-      // Jeśli otwieramy modal z przepisem do modyfikacji, ustawiamy pola tymczasowej edycji
-      setFormValues({
-        additional_params: "",
-        base_recipe: "",
-        temp_title: originalRecipe.title,
-        temp_content: originalRecipe.content,
-        replace_original: false,
-      });
     }
-  }, [isOpen, originalRecipe, resetAIState]);
+  }
+
+  // `resetAIState` czyści stan hooka `useAI`, więc nie może biec w trakcie renderu.
+  useEffect(() => {
+    if (!isOpen) {
+      resetAIState();
+    }
+  }, [isOpen, resetAIState]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const { name, value, type } = e.target;

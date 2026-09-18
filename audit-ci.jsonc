@@ -1,0 +1,14 @@
+{
+  // Bramka bezpieczeństwa dla `npm run test:security`.
+  // Wywraca się na wszystkim od poziomu "moderate" w górę.
+  "moderate": true,
+
+  // Znane advisory, których nie da się dziś zamknąć.
+  //
+  // GHSA-9wv6-86v2-598j (path-to-regexp, high) przychodzi tranzytywnie przez
+  // @vercel/routing-utils w @astrojs/vercel. Adapter jest już w najnowszej wersji,
+  // a `npm audit fix --force` proponuje cofnięcie do @astrojs/vercel@8.0.4, co zabrałoby
+  // łatkę CVE `x-astro-path` i wymusiłoby powrót do Astro 5. Przeglądać przy każdym
+  // bumpie @astrojs/vercel. Stan na 2026-09-18.
+  "allowlist": ["GHSA-9wv6-86v2-598j"]
+}

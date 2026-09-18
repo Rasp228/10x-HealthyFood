@@ -27,7 +27,7 @@ HealthyMeal solves several challenges users face when looking for suitable recip
 
 ### Frontend
 
-- Astro 5 - Fast, efficient pages with minimal JavaScript
+- Astro 7 - Fast, efficient pages with minimal JavaScript
 - React 19 - For interactive components
 - TypeScript 5 - For static typing and better IDE support
 - Tailwind 4 - For convenient styling
@@ -49,7 +49,6 @@ HealthyMeal solves several challenges users face when looking for suitable recip
 - Jest - JavaScript testing framework for unit and integration tests
 - React Testing Library - Simple and complete testing utilities for React components
 - Playwright - End-to-end testing framework for web applications
-- Supertest - HTTP testing library for API endpoints
 
 ### CI/CD & Hosting
 
@@ -60,7 +59,7 @@ HealthyMeal solves several challenges users face when looking for suitable recip
 
 ### Prerequisites
 
-- Node.js v22.14.0 (as specified in `.nvmrc`)
+- Node.js v24.13.0 (as specified in `.nvmrc`)
 - npm (comes with Node.js)
 
 ### Installation

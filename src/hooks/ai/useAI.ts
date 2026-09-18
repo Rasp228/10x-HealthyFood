@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, type RefObject } from "react";
 import type {
   GenerateRecipeCommand,
   ModifyRecipeCommand,
@@ -38,6 +38,85 @@ const MAX_RETRY_ATTEMPTS = 2;
 
 // Eksponencjalny backoff - opóźnienia między próbami
 const RETRY_DELAYS = [1000, 4000]; // 1s, 4s
+
+/** Ciało żądania do tras AI. */
+type AIRequestBody =
+  GenerateRecipeCommand | ModifyRecipeCommand | SaveRecipeCommand | (ModifyRecipeCommand & { recipe_id: number });
+
+/**
+ * Żądanie z ponowieniami. Funkcja siedzi poza komponentem, bo nie potrzebuje niczego ze stanu -
+ * wcześniej był to `useCallback` wołający sam siebie, czyli referencja do zmiennej przed jej
+ * deklaracją, i ponowienie zamykało się na starej wersji funkcji.
+ */
+async function requestWithRetry(
+  abortControllerRef: RefObject<AbortController | null>,
+  url: string,
+  body: AIRequestBody,
+  timeout: number = AI_TIMEOUT,
+  retryCount = 0
+): Promise<Response> {
+  // Utwórz nowy AbortController dla tej operacji
+  const controller = new AbortController();
+  abortControllerRef.current = controller;
+
+  // Timeout handler
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    abortControllerRef.current = null;
+
+    if (!response.ok) {
+      const errorData: AIErrorResponse = await response.json().catch(() => ({
+        error: "Błąd komunikacji z serwerem",
+        code: "NETWORK_ERROR" as const,
+      }));
+
+      // Sprawdź czy warto retry dla tego typu błędu
+      if (
+        retryCount < MAX_RETRY_ATTEMPTS &&
+        (response.status >= 500 || errorData.code === "AI_TIMEOUT" || errorData.code === "NETWORK_ERROR")
+      ) {
+        // Exponential backoff
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[retryCount] || 4000));
+        return requestWithRetry(abortControllerRef, url, body, timeout, retryCount + 1);
+      }
+
+      throw errorData;
+    }
+
+    return response;
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    abortControllerRef.current = null;
+
+    const errorObj = error as { name?: string; code?: string; message?: string };
+
+    if (errorObj.name === "AbortError") {
+      throw { code: "AI_TIMEOUT", message: "Request timeout" };
+    }
+
+    // Retry dla błędów sieciowych
+    if (retryCount < MAX_RETRY_ATTEMPTS && (errorObj.code === "NETWORK_ERROR" || !navigator.onLine)) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[retryCount] || 4000));
+      return requestWithRetry(abortControllerRef, url, body, timeout, retryCount + 1);
+    }
+
+    throw error;
+  }
+}
 
 export function useAI(): UseAIState & UseAIActions {
   const [state, setState] = useState<UseAIState>({
@@ -140,81 +219,10 @@ export function useAI(): UseAIState & UseAIActions {
   }, []);
 
   const makeRequest = useCallback(
-    async (
-      url: string,
-      body:
-        | GenerateRecipeCommand
-        | ModifyRecipeCommand
-        | SaveRecipeCommand
-        | (ModifyRecipeCommand & { recipe_id: number }),
-      timeout: number = AI_TIMEOUT,
-      retryCount = 0
-    ): Promise<Response> => {
-      // Utwórz nowy AbortController dla tej operacji
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      // Timeout handler
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, timeout);
-
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-        abortControllerRef.current = null;
-
-        if (!response.ok) {
-          const errorData: AIErrorResponse = await response.json().catch(() => ({
-            error: "Błąd komunikacji z serwerem",
-            code: "NETWORK_ERROR" as const,
-          }));
-
-          // Sprawdź czy warto retry dla tego typu błędu
-          if (
-            retryCount < MAX_RETRY_ATTEMPTS &&
-            (response.status >= 500 || errorData.code === "AI_TIMEOUT" || errorData.code === "NETWORK_ERROR")
-          ) {
-            // Exponential backoff
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[retryCount] || 4000));
-            return makeRequest(url, body, timeout, retryCount + 1);
-          }
-
-          throw errorData;
-        }
-
-        return response;
-      } catch (error: unknown) {
-        clearTimeout(timeoutId);
-        abortControllerRef.current = null;
-
-        const errorObj = error as { name?: string; code?: string; message?: string };
-
-        if (errorObj.name === "AbortError") {
-          throw { code: "AI_TIMEOUT", message: "Request timeout" };
-        }
-
-        // Retry dla błędów sieciowych
-        if (retryCount < MAX_RETRY_ATTEMPTS && (errorObj.code === "NETWORK_ERROR" || !navigator.onLine)) {
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[retryCount] || 4000));
-          return makeRequest(url, body, timeout, retryCount + 1);
-        }
-
-        throw error;
-      }
-    },
+    (url: string, body: AIRequestBody, timeout: number = AI_TIMEOUT): Promise<Response> =>
+      requestWithRetry(abortControllerRef, url, body, timeout),
     []
   );
-
   const generateRecipe = useCallback(
     async (params: GenerateRecipeCommand): Promise<GeneratedRecipeDto | null> => {
       // Zapisz operację dla retry

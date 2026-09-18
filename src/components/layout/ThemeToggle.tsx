@@ -1,59 +1,66 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Wybrany motyw żyje poza Reactem - w localStorage i w preferencji systemowej - więc czytamy go
+ * przez `useSyncExternalStore`, a nie przez `setState` w efekcie. Podczas SSR i hydratacji
+ * obowiązuje migawka serwerowa (jasny motyw), zaraz po niej React przełącza się na wartość
+ * z przeglądarki.
+ */
+const listeners = new Set<() => void>();
+
+function notifyThemeChange() {
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(onStoreChange: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  listeners.add(onStoreChange);
+  mediaQuery.addEventListener("change", onStoreChange);
+  document.addEventListener("astro:after-swap", onStoreChange);
+
+  return () => {
+    listeners.delete(onStoreChange);
+    mediaQuery.removeEventListener("change", onStoreChange);
+    document.removeEventListener("astro:after-swap", onStoreChange);
+  };
+}
+
+function getIsDark() {
+  const theme = localStorage.getItem("theme");
+
+  return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
+const getServerIsDark = () => false;
+
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+  const isDark = useSyncExternalStore(subscribe, getIsDark, getServerIsDark);
+  const isFirstSync = useRef(true);
 
-  // Funkcja do synchronizacji motywu z DOM
-  const syncThemeWithDOM = () => {
-    const theme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = theme === "dark" || (!theme && prefersDark);
+  // Klasa na <html> to efekt uboczny, nie stan. Pierwsza synchronizacja ustawia klasę wprost,
+  // kolejne tylko przełączają - dzięki temu wejście na stronę nie dotyka DOM bez potrzeby.
+  useEffect(() => {
+    if (isFirstSync.current) {
+      isFirstSync.current = false;
 
-    // Synchronizuj DOM
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+
+      return;
     }
 
-    return shouldBeDark;
-  };
-
-  useEffect(() => {
-    // Synchronizuj motyw przy inicjalizacji
-    const initialIsDark = syncThemeWithDOM();
-    setIsDark(initialIsDark);
-
-    // Nasłuchuj zmian w preferencjach systemowych
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("theme")) {
-        setIsDark(e.matches);
-        document.documentElement.classList.toggle("dark", e.matches);
-      }
-    };
-
-    // Nasłuchuj przejść między stronami Astro
-    const handleAstroSwap = () => {
-      const newIsDark = syncThemeWithDOM();
-      setIsDark(newIsDark);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    document.addEventListener("astro:after-swap", handleAstroSwap);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-      document.removeEventListener("astro:after-swap", handleAstroSwap);
-    };
-  }, []);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList.toggle("dark", newIsDark);
-    localStorage.setItem("theme", newIsDark ? "dark" : "light");
+    localStorage.setItem("theme", isDark ? "light" : "dark");
+    // localStorage nie emituje zdarzenia we własnej karcie - powiadamiamy store ręcznie.
+    notifyThemeChange();
   };
 
   return (
