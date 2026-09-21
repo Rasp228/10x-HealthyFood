@@ -1,9 +1,7 @@
 ---
 project: 10x-healthy-food
-checked_at: 2026-09-16T00:00:00Z
-remediated_at: 2026-09-17T00:00:00Z
-modified_at: 2026-09-18T00:00:00Z
-health_status: remediated-with-followups
+checked_at: 2026-09-21T00:00:00Z
+health_status: needs-attention
 context_type: brownfield
 language_family: js
 stack_assessment_available: true
@@ -19,62 +17,12 @@ audit_findings:
   high: 3
   moderate: 0
   low: 0
-audit_findings_at_check:
-  critical: 3
-  high: 25
-  moderate: 6
-  low: 7
 test_runner_detected: true
 ci_provider: GitHub Actions
-recommended_fixes: 10
+recommended_fixes: 5
 ---
 
 # Health Check: 10x-HealthyFood
-
-> **Status update 2026-09-17.** The dependency remediation described under "Recommended Fixes" was
-> carried out. Everything below the frontmatter is the original 2026-09-16 assessment and is kept
-> for the audit trail; read this block first for what is still true.
->
-> | Item | Then (2026-09-16) | Now (2026-09-17) |
-> |---|---|---|
-> | npm audit | 3 critical / 25 high / 6 moderate / 7 low | **0 critical / 3 high / 0 moderate / 0 low** |
-> | astro | 5.5.5 | **7.3.3** |
-> | @astrojs/vercel / @astrojs/react | 8.1.5 / 4.2.2 | **11.0.10 / 6.0.6** |
-> | zod | 3.25.28 | **4.6.5** |
-> | Node (.nvmrc) | 22.14.0 | **24.13.0** |
-> | Type-check gate | absent | `npm run typecheck` (`astro check`) exists, 4 known errors |
-> | node_modules installed | no | yes |
-> | Unit tests / build | not runnable | **17/17 pass, build green** |
->
-> **Fix status:** 1 done - 2 NOT done (.gitignore still hides `CLAUDE.md` and `context/`) -
-> 3 done - 4 partly (script added, not wired into CI, 4 errors to triage first) - 5 NOT done -
-> 6 done (`typescript` and `@astrojs/check` now explicit) - 7 done (`@types/jest` 30) -
-> 8 NOT done - 9 done (Astro trio, `marked` removed, lucide 1.x, zod 4) - 10 done
-> (`.editorconfig` was added before this run).
->
-> **The 3 remaining high advisories are a single upstream issue**, not a deferred decision:
-> `path-to-regexp` (`GHSA-9wv6-86v2-598j`) reached through `@vercel/routing-utils` inside
-> `@astrojs/vercel`, which is already at its latest release (11.0.10). `npm audit fix --force`
-> "resolves" it by proposing a downgrade to `@astrojs/vercel@8.0.4` - do not take it. Nothing to
-> do locally; track the upstream fix.
->
-> **Corrections to the original text below.** Three claims were wrong or have been overtaken:
-> - The AVIF advisory `GHSA-26w7-cxv4-gfx2` was never backported to the 5.x line. The fix requires
->   `sharp >= 0.35.4`; both `astro@5.18.2` and `astro@6.4.8` pin `sharp ^0.34.0`. Only Astro 7
->   closes it, which is why the upgrade went to 7 rather than stopping at 5.18.2.
-> - The `x-astro-path` advisory (`GHSA-mr6q-rp88-fx84`) is patched in `@astrojs/vercel` 10.0.2,
->   which peers `astro ^6`. Fixing it while staying on Astro 5 was impossible - the original text
->   implied a choice that did not exist.
-> - `typescript` was indeed undeclared, but `prettier` had already been added to
->   `devDependencies` by the time of this run.
->
-> **New findings this run, not present in the original assessment:**
-> - `eslint-plugin-import` and `eslint-import-resolver-typescript` were declared but never wired
->   into `eslint.config.js`; same for the `marked` runtime dependency and `supertest`. All removed.
-> - A hand-written `declare module "axios"` shim in `src/lib/api/axios.d.ts` shadowed the real
->   axios types and hid `.get()` and `isAxiosError` from the compiler. Removed.
-> - ESLint cannot go to 10 yet: `eslint-plugin-react` and `eslint-plugin-jsx-a11y` cap at 9.
-> - Playwright E2E is blocked - see "E2E is currently blocked locally" in `AGENTS.md`.
 
 ## Dependency Health
 
@@ -85,219 +33,156 @@ Status: present (package-lock.json)
 Package manager: npm
 ```
 
-`.nvmrc` pins Node 22.14.0 and the CI composite action reads the version from it, so the toolchain
-version is pinned as well as the dependency tree. No competing lockfiles (`yarn.lock`,
-`pnpm-lock.yaml`, `bun.lockb`) are present.
-
-One caveat: `node_modules/` is **not installed** in the working copy. The audit below was resolved
-from `package-lock.json`, which is accurate, but no command that needs the dependency tree
-(`npm run lint`, `npm run test`, `npm run build`) can execute until `npm ci` has been run. See
-Category A fix 3.
+`package-lock.json` is the only lockfile — no `yarn.lock`, `pnpm-lock.yaml` or `bun.lockb` competes
+with it. `node_modules/` is installed, so every script in `package.json` runs from a clean checkout
+after `npm ci`. The toolchain is pinned as well as the tree: `.nvmrc` carries Node 24.13.0 and the
+composite action at `.github/actions/setup-node` reads the version from that file
+(`node-version-file: .nvmrc`), so local and CI Node versions cannot drift apart.
 
 ### Security Audit
 
 ```
 Tool: npm audit --json
-Summary: 3 CRITICAL, 25 HIGH, 6 MODERATE, 7 LOW  (41 advisories over 1411 resolved packages)
-Direct vs transitive: 7 direct (1 critical, 4 high, 2 low) / 34 transitive
+Summary: 0 CRITICAL, 3 HIGH, 0 MODERATE, 0 LOW  (3 advisories over 1203 resolved packages)
+Direct vs transitive: 1 direct (@astrojs/vercel) / 2 transitive
 ```
-
-The dependency tree was last pinned around March–May 2025 (Astro 5.5.5, axios 1.9.0, Tailwind
-4.0.17). Roughly eighteen months of advisories have accumulated against those pins, which is why
-the count is high relative to a project of this size.
-
-#### CRITICAL findings
-
-- **astro** 5.5.5 — `GHSA-26w7-cxv4-gfx2`: remote code execution through AVIF image optimization
-  (CVSS 9.8, out-of-bounds read/write reached via `sharp`). Advisory range is `<7.2.8`. Direct
-  dependency. Fix: see the note under HIGH findings — `npm audit fix` proposes 5.18.2, which is
-  still inside the advisory range as published.
-- **form-data** (transitive, via axios) — `GHSA-fjxv-7rqg-78g4`: unsafe random function used to
-  choose the multipart boundary, allowing boundary prediction and request tampering. Also carries
-  `GHSA-hmw2-7cc7-3qxx` (HIGH, CVSS 7.5) CRLF injection via unescaped field names. Fix: update
-  `axios` — it pulls the patched `form-data` along.
-- **tar** (transitive, via the `supabase` CLI) — `GHSA-23hp-3jrh-7fpw`: decompression/parse
-  denial-of-service via unlimited input, plus eight HIGH path-traversal and symlink-poisoning
-  advisories (`GHSA-34x7-hfp2-rc4v`, `GHSA-83g3-92jg-28cx`, `GHSA-r6q2-hw4h-h46w` and others).
-  Reached only through the dev-time Supabase CLI, not through runtime code. Fix: update `supabase`.
 
 #### HIGH findings
 
-Direct dependencies:
+The three advisories are one root cause reported at three points in a single dependency chain:
+`@astrojs/vercel` (direct) → `@vercel/routing-utils` → `path-to-regexp`.
 
-- **axios** 1.9.0 — twelve HIGH advisories, the most severe being `GHSA-35jp-ww65-95wh` (CVSS 8.7,
-  full man-in-the-middle via prototype-pollution gadget in `config.proxy`), `GHSA-4hjh-wcwx-xvwj`
-  (CVSS 7.5, DoS through missing data-size check) and `GHSA-p92q-9vqr-4j8v`
-  (`Proxy-Authorization` credential leak across an HTTP-to-HTTPS redirect). Fix: update to 1.17.1
-  or later (`npm i axios@latest` — non-major). **This is the highest-priority runtime finding**:
-  `src/lib/services/ai.service.ts` reaches OpenRouter.ai over axios, and the diary module in the
-  PRD (FR-003, FR-010) routes every free-text calorie estimate through that same client.
-- **supabase** 2.24.3 (dev) — inherits the `tar` advisories above. Fix: `npm i -D supabase@latest`.
-- **@playwright/test** 1.52.0 (dev) — inherits an advisory from `playwright`. Fix:
-  `npm i -D @playwright/test@latest` (non-major).
-- **@astrojs/vercel** 8.1.5 — `GHSA-mr6q-rp88-fx84` (unauthenticated path override via
-  `x-astro-path`) plus a HIGH `path-to-regexp` advisory reached through `@vercel/routing-utils`.
-  Fix requires the **major** bump to 11.0.10.
+- **path-to-regexp** (transitive) — `GHSA-9wv6-86v2-598j`: the generated matcher backtracks, so a
+  crafted path can drive quadratic matching time (CVSS 7.5, denial of service). Patched range is
+  `>= 6.3.0`; the resolved copy sits in `4.0.0 - 6.2.2`.
+- **@vercel/routing-utils** (transitive) — inherits the advisory through its `path-to-regexp` pin.
+- **@astrojs/vercel** 11.0.10 (direct) — inherits it through `@vercel/routing-utils`.
 
-Transitive (18 further HIGH advisories, all resolved by updating their parents):
-`@vercel/routing-utils`, `brace-expansion`, `browserslist`, `defu`, `devalue`, `flatted`, `glob`,
-`h3`, `js-yaml`, `lodash`, `minimatch`, `nanoid`, `path-to-regexp`, `picomatch`, `playwright`,
-`postcss`, `rollup`, `sharp`, `smol-toml`, `vite`, `ws`.
+**There is no safe local fix.** `@astrojs/vercel` is already at its latest release, and
+`npm audit fix --force` "resolves" the chain by proposing `@astrojs/vercel@8.0.4` — a major
+downgrade that drops the `x-astro-path` patch and forces a return to Astro 5. The advisory is
+allowlisted in `audit-ci.jsonc` with a comment stating exactly that reasoning, which is why
+`npm run test:security` passes while `npm audit` still reports three highs. The correct action is
+review on the next adapter bump, not a version change today.
 
-**A note on the Astro fix.** `npm audit fix` reports `astro@5.18.2` as a non-major upgrade, and it
-clears the majority of the Astro advisories (the middleware-bypass family `GHSA-ggxq-hp9w-j794` /
-`GHSA-whqg-ppgf-wp8c`, the `X-Forwarded-Host` reflection, the dev-server file read). But the AVIF
-RCE advisory is published with range `<7.2.8`, and 5.18.2 falls inside it. Before assuming a
-two-major upgrade is required, open `GHSA-26w7-cxv4-gfx2` and check whether the fix was backported
-to the 5.x line — the advisory range as published does not say so. The middleware-bypass advisories
-matter here regardless of AVIF: `src/middleware/index.ts` gates every non-public route on
-`url.pathname` against `PUBLIC_PATHS`, which is exactly the surface those two CVEs attack.
-
-#### MODERATE findings (log only, 6)
-
-`@humanfs/node` (recursive copy follows symlinks), `ajv` (ReDoS via `$data`), `follow-redirects`,
-`mdast-util-to-hast`, `qs`, `yaml`. All transitive, all with a fix available through a parent
-update.
-
-#### LOW findings (log only, 7)
-
-`@supabase/supabase-js` 2.49.4 and `@supabase/auth-js` (`GHSA-8r88-6cj9-9fh5`, insecure path
-routing from malformed user input), `eslint` 9.23.0 via `@eslint/plugin-kit` (ReDoS in
-`ConfigCommentParser`), `@babel/core`, `diff`, `postcss-selector-parser`.
+This chain is the only thing keeping the verdict below `healthy`. It is an accepted, documented risk
+rather than an outstanding task.
 
 ### Outdated Dependencies
 
 ```
-Packages with major version gaps: 6  (21 packages outdated in total)
+Packages with major version gaps: 4
 ```
 
-- **astro**: 5.5.5 → 7.3.2 (2 major versions behind)
-- **@astrojs/vercel**: 8.1.5 → 11.0.10 (3 major versions behind)
-- **marked**: 15.0.11 → 18.0.13 (3 major versions behind)
-- **@astrojs/react**: 4.2.2 → 6.0.5 (2 major versions behind)
-- **zod**: 3.25.28 → 4.6.5 (1 major version behind)
-- **lucide-react**: 0.487.0 → 1.46.0 (1 major version behind)
+- **typescript**: 5.9.3 → 7.0.2 (2 major versions behind). Not a casual bump — `astro check`,
+  `ts-jest` and `typescript-eslint` all resolve the compiler, so the whole type pipeline moves
+  together.
+- **@types/node**: 24.13.5 → 26.6.2 (2 major versions behind). Runtime Node is pinned at 24.13.0,
+  so the types should track the runtime, not the registry `latest`. The in-range patch is 24.13.6.
+- **eslint**: 9.39.5 → 10.11.0 (1 major behind). Blocked upstream: `eslint-plugin-react` and
+  `eslint-plugin-jsx-a11y` do not declare ESLint 10 support.
+- **@eslint/js**: 9.39.5 → 10.0.1 (1 major behind). Moves with `eslint`; same block.
 
-The remaining 15 are minor/patch drift and are not listed.
-
-Astro, `@astrojs/vercel` and `@astrojs/react` move together — they are one upgrade, not three. Zod 4
-is a separate decision: 18 source files import Zod, and `CLAUDE.md` documents the Zod 3 boundary
-convention, so a Zod 4 migration would touch validation across the codebase and should not be
-bundled with a security patch.
+Four further packages are behind by a patch only: `jest` and `jest-environment-jsdom`
+(30.5.1 → 30.5.2), `dotenv` (18.0.0 → 18.0.1), `@types/node` (24.13.5 → 24.13.6).
 
 ## Test Suite
 
 ```
-Test runner: Jest 30 (ts-jest, ESM, jsdom) + Playwright 1.52 for E2E
-Tests found: 2 test files
-Test execution: not attempted — node_modules/ is not installed
+Test runner: Jest 30.5.1 (ts-jest, ESM) + Playwright 1.63.0
+Tests found: 23 unit tests across 2 suites; 1 E2E test in 1 spec
+Test execution: passing
 ```
 
 ```
-Configuration: jest.config.js (unit/integration), playwright.config.ts (E2E)
-TypeScript config for tests: tsconfig.test.json
-Setup file: tests/setup/jest.setup.ts (present)
-Framework: Jest 30.x with ts-jest 29.4, jest-environment-jsdom 30.x, @testing-library/react 16
+Configuration: jest.config.js (unit) / playwright.config.ts (E2E), types from tsconfig.test.json
+Framework: ts-jest 29.4.12 with useESM, jsdom environment, @testing-library/react 16.3.3
 ```
 
-The infrastructure is complete and coherent — both runners are configured, the setup file exists,
-`moduleNameMapper` mirrors the `tsconfig.json` path aliases, and `transformIgnorePatterns` carries
-the `@astrojs/*` / `astro/*` carve-out that the ESM arrangement needs. What is thin is the suite
-itself:
+`npm run test` completes at **23/23 passing** over `tests/unit/ThemeToggle.test.tsx` and
+`tests/unit/validation-errors.test.ts`. `.astro` files have no Jest transformer and are excluded
+from coverage, so page-level behaviour is Playwright's responsibility.
 
-- **2 test files** (`tests/unit/ThemeToggle.test.tsx`, `tests/e2e/recipe-management.spec.ts`)
-  against 73 `.ts`/`.tsx` source files, 17 `.astro` files and 15 API routes.
-- `jest.config.js` declares an **80% global coverage threshold** across branches, functions, lines
-  and statements. CI runs `npm run test`, not `npm run test:coverage`, so the threshold never
-  executes. An agent reading the config will assume a coverage baseline that does not exist.
-- **Version mismatch**: `jest` is `^30.0.0` and `jest-environment-jsdom` is `^30.0.0`, but
-  `@types/jest` is `^29.5.14`. `tsconfig.json` sets `"types": ["@types/jest"]`, so test-file type
-  hints come from the v29 definitions while the runtime is v30.
+The Playwright harness enumerates cleanly — `TEST_MODE=true npx playwright test --list` injects five
+variables from `.env.test` and lists `recipe-management.spec.ts` with page objects under
+`tests/e2e/page-objects/`. Without `TEST_MODE` the guard in `tests/e2e/config/test-data.ts` throws
+before collection, which is the intended behaviour: `npm run test:e2e` sets the flag.
 
-Test execution could not be verified in this run. Install dependencies and run `npm run test` to
-confirm the ESM-on-Jest arrangement still works before relying on it as an agent feedback loop.
+Two limits worth naming rather than hiding. The suite is **3 files** against 110 type-checked source
+files, and `jest.config.js` declares an 80% coverage threshold that CI never evaluates — the
+`unit-tests` job runs `npm run test`, not `npm run test:coverage`. The threshold is a target for new
+code, not a measurement of the current suite.
 
 ## CI/CD
 
 ```
 Provider: GitHub Actions
-Configuration: .github/workflows/ci-cd.yml (+ .github/actions/setup-node/action.yml)
+Configuration: .github/workflows/ci-cd.yml
 ```
 
-| Stage      | Status | Notes                                                                    |
-|------------|--------|--------------------------------------------------------------------------|
-| Lint       | ✓      | `npm run lint` — ESLint 9 flat config, typescript-eslint strict+stylistic |
-| Test       | ✓      | `npm run test` (Jest) and `npm run test:e2e` (Playwright), parallel jobs  |
-| Build      | ✓      | `npm run build` — `astro build`, artifact uploaded                       |
-| Type check | ✗      | not configured — no `astro check`, no `tsc --noEmit`, no type-aware lint  |
-| Security   | ✗      | not configured — `npm run test:security` exists but is not wired into CI  |
+| Stage      | Status | Notes                                                        |
+|------------|--------|--------------------------------------------------------------|
+| Lint       | ✓      | `npm run lint` (`eslint .`), flat config in eslint.config.js  |
+| Test       | ✓      | `npm run test` (Jest) and `npm run test:e2e` (Playwright)     |
+| Build      | ✓      | `npm run build` (`astro build`), artifact uploaded 7 days     |
+| Type check | ✓      | `npm run typecheck` (`astro check`)                           |
+| Security   | ✓      | `npm run test:security` (`audit-ci --config audit-ci.jsonc`)  |
 
-The pipeline shape is good: `code-quality` → `build` → (`unit-tests` ‖ `e2e-tests`) →
-`status-comment`, with concurrency cancellation, a `.nvmrc`-driven composite setup action, cached
-Playwright browsers, and E2E running against the `integration` environment with secrets. Two gates
-are missing and one is broken.
+Five jobs run as `code-quality` → `build` → (`unit-tests` ‖ `e2e-tests`) → `status-comment`, with
+concurrency cancellation on the same ref and per-job timeouts. `code-quality` runs its four gates in
+one job, in order — lint, typecheck, format check, security audit — so nothing reaches `build`
+without passing all four. `e2e-tests` runs against the `integration` environment with Supabase and
+test-user credentials from secrets, and caches Playwright browsers keyed on `package-lock.json`.
 
-**Missing — type check.** `tsconfig.json` extends `astro/tsconfigs/strict`, but nothing in the
-pipeline ever runs the TypeScript compiler. `astro build` transpiles through esbuild, which strips
-types without checking them. ESLint would be the second line of defence, except `eslint.config.js`
-uses `tseslint.configs.strict` (syntactic) rather than `strictTypeChecked`, and declares no
-`parserOptions.project` or `projectService` — so no type-aware rule runs either. `@astrojs/check`
-is not installed. The net effect: **`strict: true` is enforced only in the editor.** A type error
-can be committed, pass every CI job, and ship.
+All five stages were executed locally against the current tree and all five pass:
 
-**Broken — the formatting gate.** `code-quality` runs `npm run format -- --check`, which expands to
-`prettier --write . --check`. Verified against Prettier 3.5.3: with both flags, Prettier **writes
-the fixes and exits 0**. The step reformats files inside the runner's checkout, prints
-`Code style issues fixed in the above file`, and reports success. It cannot fail, so it is not a
-gate. The fix is to call `prettier --check .` without `--write`.
+```
+npm run lint          exit 0
+npm run typecheck     0 errors, 0 warnings, 29 hints over 110 files
+npm run format:check  All matched files use Prettier code style
+npm run test:security Passed npm security audit (allowlisted: GHSA-9wv6-86v2-598j)
+npm run build         Server built in 8.43s, Complete!
+npm run test          23/23 passing
+```
 
-**Missing — security.** `package.json` already defines
-`"test:security": "npm audit --audit-level high && npx audit-ci --moderate"` and `audit-ci` is a
-devDependency, but no job invokes it. Had it been wired in, the 3 CRITICAL and 25 HIGH advisories
-above would have failed a build months ago.
+One forward-looking warning surfaces during lint: `lighthouserc.js:1` carries an `/* eslint-env */`
+comment, which flat config no longer recognizes and which becomes an error in ESLint 10.
 
 ## Configuration
 
 ### High severity
 
-- **`.gitignore` excludes the entire agent-context layer** — `CLAUDE.md`, `context/`, `.claude/`,
-  `.agents/` and `.ai/` are all listed under the `#skills & ai` block, and `git ls-files` confirms
-  none of them are tracked. Commit `cf5aa8a` ("chore: remove AI tooling artifacts … from repo")
-  made this deliberate. The consequence is specific and severe for this chain: the seven
-  compensation blocks that `/10x-stack-assess` produced **are** now present in `CLAUDE.md` (198
-  lines, correctly placed outside the `@przeprogramowani/10x-cli` markers) — but they exist only on
-  this machine. A fresh clone, a teammate, a CI-hosted agent, or a cloud session gets a repo with
-  no Tailwind 4 warning, no Jest-not-Vitest rule, and no service-layer convention. The single
-  highest-leverage artifact of the brownfield chain is invisible to everyone but you.
-  Fix: decide per path. `CLAUDE.md` and `context/` are project documentation and should be tracked;
-  `.claude/`, `.agents/`, `.ai/` and `.10x-cli.json` are tooling state and can stay ignored.
-- **No type-check gate** — see the CI/CD section. `strict: true` is declared and never verified.
-- **`typescript` and `prettier` are not declared dependencies** — both are absent from
-  `package.json` yet both are required by `package.json` scripts and config. They resolve today
-  only as hoisted transitives (`typescript@5.8.3` via Astro, `prettier@3.5.3` via
-  `eslint-plugin-prettier` / `prettier-plugin-astro`). Any parent update that changes its own
-  requirement silently changes the compiler or formatter version this project builds with — or
-  removes it, breaking `npm run format` and `.prettierrc.json`. `@astrojs/check` is likewise
-  absent, which is why no type-check command exists to run.
+None.
 
 ### Medium severity
 
-- **`@types/jest` ^29 against Jest 30** — type definitions one major behind the runtime, wired into
-  `tsconfig.json` via `"types": ["@types/jest"]`. Agent-written tests get signatures from a version
-  the runner is not.
-- **Coverage threshold declared but never executed** — `jest.config.js` asserts 80%; CI runs the
-  non-coverage script. Either enforce it or annotate it as aspirational (`CLAUDE.md` already does
-  the latter, which is the honest position for now).
+None.
 
 ### Low severity
 
-- **`.editorconfig` missing** — no cross-editor baseline for indentation and line endings. On a
-  Windows checkout with Prettier in play this is worth five minutes.
+- **`lighthouserc.js`** — `/* eslint-env */` comment on line 1, deprecated under flat config and an
+  error as of ESLint 10. Fix: replace with `/* global */` or declare the globals in
+  `eslint.config.js`.
 
-Present and correct: `.gitignore` (scope issue aside), `.env.example` (documents `SUPABASE_URL`,
-`SUPABASE_KEY`, `OPENROUTER_API_KEY`), `.env.test.example`, `.nvmrc`, `.prettierrc.json`,
-`eslint.config.js`, `tsconfig.json` with `strict` and path aliases, `components.json`, husky
-`pre-commit` → `lint-staged`, `.vercelignore`, `lighthouserc.js`.
+Everything expected is present and wired: `.editorconfig` (utf-8, lf, 2-space, final newline),
+`.prettierrc.json` with a `.prettierignore` that excludes agent-written documents from the format
+gate, `eslint.config.js` (flat, with `tseslint.configs.strict` and `eslint-plugin-react-hooks` v7),
+`.gitignore`, `.env.example` and `.env.test.example`, `tsconfig.json` extending
+`astro/tsconfigs/strict`, `tsconfig.test.json`, `components.json`, `audit-ci.jsonc`, and a Husky
+`pre-commit` hook running `lint-staged`.
+
+The instruction layer resolves end to end. Every `@`-reference in `AGENTS.md` and `CLAUDE.md` — 31
+distinct paths — points at a file that exists, including the two that guard the riskiest rules:
+`@context/foundation/lessons.md`, cited by the session-cookie hard rule at `AGENTS.md:28` and again
+at `AGENTS.md:56`, and `@docs/reference/contract-surfaces.md` at `AGENTS.md:61`. `CLAUDE.md` lists
+both under "Foundation paths", at lines 42 and 43. `git check-ignore` confirms `CLAUDE.md`,
+`AGENTS.md`, `context/` and `docs/` are all tracked rather than excluded.
+
+Two paths listed in `CLAUDE.md` are absent — `context/foundation/tech-stack.md` and
+`context/deployment/deploy-plan.md`. Both are labelled optional inputs in that list rather than
+rules to read, and both belong to skills this brownfield project never ran: `tech-stack.md` is
+written by `/10x-tech-stack-selector`, which applies to greenfield work. They are unused slots, not
+dangling pointers.
 
 ## Stack Assessment Cross-Reference
 
@@ -306,290 +191,139 @@ Stack assessment: context/foundation/stack-assessment.md
 Agent readiness (from stack-assess): ready-with-compensation
 ```
 
-| Quality Gate Gap | Health-Check Finding | Status |
-|---|---|---|
-| Gap 1 — Tailwind 4 written as Tailwind 3 | `CLAUDE.md` now carries the CSS-first rule block — but `CLAUDE.md` is gitignored and untracked | **Mitigated locally, unresolved in the repo** |
-| Gap 2 — Jest/ts-jest ESM undocumented | `CLAUDE.md` carries the runner-split block; compounded by `@types/jest` v29 vs Jest v30 and a 2-file suite under an unenforced 80% threshold | Reinforced |
-| Gap 3 — Astro 5 / React 19 version skew | The pin that prevents skew is now 2 majors stale and carries a CRITICAL RCE plus two middleware-bypass CVEs against `PUBLIC_PATHS` | **Reinforced, and inverted** |
-| Gap 4 — two data-access patterns | `CLAUDE.md` states the service-layer rule for new code — again, untracked | Mitigated locally |
-| Gap 5 — `components/ui` repurposed | `CLAUDE.md` states the separation and names the five drifted files | Mitigated locally |
-| `typed: pass` (TypeScript strict, zero `any`) | Nothing in CI or ESLint verifies it — no `tsc`, no `astro check`, no type-aware lint | **Reinforced — the gate passes on paper only** |
+| Quality Gate Gap                    | Health-Check Finding                                                   | Status     |
+|-------------------------------------|------------------------------------------------------------------------|------------|
+| Training data: Astro 7 — fail       | Build green on 7.3.3; `--ignore-lock` present in playwright.config.ts  | Mitigated  |
+| Training data: Tailwind 4 — fail    | No `tailwind.config.js` on disk; CSS-first config intact in global.css | Mitigated  |
+| Training data: Zod 4 — fail         | `validation-errors.ts` covered by a passing unit suite; 0 type errors  | Mitigated  |
+| Training data: Jest 30 ESM — fail   | Runner executes cleanly, 23/23; but only 3 test files exist            | Reinforced |
+| Documented: Jest-on-Astro — fail    | Setup works and is described in AGENTS.md; nothing upstream to cite    | Mitigated  |
+| Typed — pass                        | `astro check` 0 errors / 110 files, gated in CI, zero `: any` in `src/` | Mitigated  |
+| Gap 1: misleading service exemplar  | `AGENTS.md:37` now names `ai.service.ts` and flags the wrapper          | Closed     |
+| Gap 2: dangling document references | Both files exist; all 31 `@`-references resolve                        | Closed     |
+| Convention: Supabase — partial      | 3 of 15 API routes go through a server-side service                     | Reinforced |
+| Convention: Zod — partial           | 7 of 15 API routes declare `z.object` inline                            | Reinforced |
 
-Two cross-references change the picture the stack assessment left.
+Both gaps `stack-assessment.md` left open are closed. `AGENTS.md:37` now points server-side business
+logic at `src/lib/services/ai.service.ts` — constructed with the request-scoped
+`SupabaseClient<Database>` — and states explicitly that `recipe.service.ts` is a browser-side `fetch`
+wrapper not to be modelled on, which removes the contradiction with the type-debt note at
+`AGENTS.md:154`. `context/foundation/lessons.md` and `docs/reference/contract-surfaces.md` both exist
+and are reachable from the "Project structure" bullets at `AGENTS.md:56` and `AGENTS.md:61`.
 
-The assessment closed with "the compensation is not yet in place … pasting the seven blocks above is
-the single highest-leverage action available." That has been done — and it was the right move. But
-because `.gitignore` excludes `CLAUDE.md`, the work did not land where it needs to be. Tracking that
-file is now the highest-leverage action, and it costs one line.
-
-The assessment also scored `typed` as the stack's standout strength: strict TypeScript, zero `any`
-in `src/`, generated Supabase row types, Zod at every boundary. That holds as a description of the
-source. What health-check adds is that **no automated gate enforces any of it**. For the diary
-module — a new table, new API routes, and a calorie cascade spanning FR-009/FR-010 — an agent's
-type errors would reach `master` with a green pipeline.
+Of the five quality-gate failures recorded by the stack assessment, the operational evidence
+mitigates four: the versions an agent's priors get wrong are exactly the versions that build,
+type-check and test green, with `AGENTS.md` carrying the mechanism behind each rule. The one
+reinforced is the Jest setup — the runner works, but a 3-file suite gives an agent very little to
+verify a change against. The two remaining reinforcements are structural drifts the instruction
+files contain but do not undo.
 
 ## Recommended Fixes
 
 ### Fix before agent work (Category A)
 
-### 1. Patch the direct runtime dependencies carrying CRITICAL/HIGH advisories
+### 1. `path-to-regexp` advisory has no local fix — put it on the adapter bump
 
-**Impact**: `axios` is the client `src/lib/services/ai.service.ts` uses to reach OpenRouter, and the
-diary module routes every free-text calorie estimate (FR-003, FR-010) through it. It currently
-carries twelve HIGH advisories including a full MitM prototype-pollution gadget (CVSS 8.7) and a
-`Proxy-Authorization` leak across redirects. Astro's middleware-bypass CVEs
-(`GHSA-ggxq-hp9w-j794`, `GHSA-whqg-ppgf-wp8c`) attack `url.pathname` allowlists — precisely how
-`src/middleware/index.ts` implements `PUBLIC_PATHS`, which will guard the new diary routes.
-**Severity**: critical
-**Effort**: significant (> 1 hour — the Astro line needs judgment, the rest does not)
-**Fix**:
-
-Start with the non-major, low-risk half:
-
-```bash
-npm ci
-npm i axios@latest
-npm i -D supabase@latest @playwright/test@latest
-npm audit --audit-level=high
-```
-
-Then handle Astro deliberately, not with `npm audit fix`:
-
-```bash
-# Read the advisory first — check for a 5.x backport of the AVIF fix:
-#   https://github.com/advisories/GHSA-26w7-cxv4-gfx2
-npm i astro@5.18.2          # clears the middleware-bypass and X-Forwarded-Host CVEs
-npm run build && npm run test:e2e
-```
-
-`@astrojs/vercel` needs a major bump (8 → 11) to clear its advisories, and `@astrojs/react`,
-`@astrojs/vercel` and `astro` must move as one set. Treat the full Astro 5 → 7 upgrade as its own
-piece of work with the E2E suite as the safety net — not as a prerequisite to starting the diary
-module, but not as something to leave open indefinitely either.
-
-### 2. Track `CLAUDE.md` and `context/` in git
-
-**Impact**: the seven compensation blocks are written and correct, but `.gitignore` hides them.
-Every agent session outside this machine — a teammate, a fresh clone, CI, a cloud session — starts
-with no Tailwind 4 warning, no Jest-not-Vitest rule, no service-layer convention. This is the one
-finding that silently undoes the entire brownfield chain.
-**Severity**: high
+**Impact**: three HIGH advisories stay visible in `npm audit` with no action available today. The
+risk is not the advisory but the temptation: `npm audit fix --force` proposes
+`@astrojs/vercel@8.0.4`, which drops the `x-astro-path` patch and drags the project back to Astro 5.
+An agent running audit remediation unattended will take that suggestion.
+**Severity**: medium
 **Effort**: quick (< 5 min)
-**Fix**:
+**Fix**: nothing to change now. The allowlist entry in `audit-ci.jsonc` already carries the
+reasoning. On every `@astrojs/vercel` bump, re-run:
 
-Edit the `#skills & ai` block in `.gitignore` to keep tooling state ignored but track the
-documentation:
-
-```gitignore
-#skills & ai
-skills-lock.json
-.10x-cli.json
-.agents/
-.claude/
-.ai/
+```
+npm audit --json
 ```
 
-Then add the files back:
+and remove `GHSA-9wv6-86v2-598j` from the allowlist once `@vercel/routing-utils` resolves
+`path-to-regexp >= 6.3.0`. Never add a second allowlist entry without the same kind of comment.
 
-```bash
-git add -f CLAUDE.md context/
-git commit -m "docs: track agent conventions and foundation context"
-```
+### 2. Coverage threshold is declared but never evaluated
 
-Note that `eslint.config.js` feeds `.gitignore` into ESLint via `includeIgnoreFile()`. Un-ignoring
-`CLAUDE.md` and `context/` brings their `.md` files into ESLint's scope — harmless, since no rule
-targets markdown, but worth knowing if lint output changes shape.
-
-### 3. Install dependencies
-
-**Impact**: `node_modules/` is absent, so `npm run lint`, `npm run test` and `npm run build` all
-fail immediately. An agent's feedback loop is only as good as its ability to run the checks.
-**Severity**: high
-**Effort**: quick (< 5 min)
-**Fix**:
-
-```bash
-npm ci
-npm run test && npm run lint && npm run build
-```
-
-Confirm the Jest ESM arrangement actually runs before treating it as a verification loop — the
-configuration is unconventional enough that it is worth proving once.
-
-### 4. Add a type-check gate
-
-**Impact**: `strict: true` is declared, `src/` has zero `any` annotations, and nothing verifies
-either claim outside the editor. An agent generating the diary module's API routes and service
-layer can introduce type errors that pass lint, pass build, pass tests and merge.
-**Severity**: high
+**Impact**: `jest.config.js` sets an 80% global threshold across branches, functions, lines and
+statements, and nothing enforces it — the `unit-tests` job runs `npm run test`. With 3 test files
+against 110 source files, an agent reading the config reasonably assumes a covered codebase and
+writes fewer tests than the project actually needs.
+**Severity**: medium
 **Effort**: moderate (15–30 min)
-**Fix**:
+**Fix**: decide which of the two is true and make the config say it. Either switch the CI step to
+`npm run test:coverage` and accept a red build until coverage rises, or scope the threshold to the
+directories new code lands in, so the gate measures new work rather than the whole tree.
 
-```bash
-npm i -D @astrojs/check typescript
-npm pkg set scripts.typecheck="astro check"
-npm run typecheck   # expect existing errors — triage before wiring into CI
-```
+### 3. Seven of fifteen API routes declare Zod schemas inline
 
-Then add the step to `code-quality` in `.github/workflows/ci-cd.yml`:
-
-```yaml
-      - name: Sprawdzenie typów
-        run: npm run typecheck
-```
-
-Optionally strengthen the second line of defence by moving `eslint.config.js` from
-`tseslint.configs.strict` to `tseslint.configs.strictTypeChecked` and adding
-`languageOptions: { parserOptions: { projectService: true } }`. That is a larger change with its
-own error backlog — do it after the compiler gate is green.
-
-### 5. Repair the formatting gate in CI
-
-**Impact**: `npm run format -- --check` resolves to `prettier --write . --check`, which writes fixes
-and exits 0 (verified against Prettier 3.5.3). The `code-quality` job reports a passing format check
-that cannot fail. Agent-generated code with inconsistent formatting merges unflagged.
-**Severity**: medium
-**Effort**: quick (< 5 min)
-**Fix**:
-
-```bash
-npm pkg set scripts.format:check="prettier --check ."
-```
-
-Then in `.github/workflows/ci-cd.yml`, replace `run: npm run format -- --check` with:
-
-```yaml
-        run: npm run format:check
-```
-
-### 6. Declare `typescript` and `prettier` explicitly
-
-**Impact**: both are required by `package.json` scripts and config files, and both resolve only as
-hoisted transitives today. A parent-package update can change the compiler or formatter version
-underneath the project, or remove it entirely — breaking `npm run format` and the build with no
-change to this repo.
-**Severity**: medium
-**Effort**: quick (< 5 min)
-**Fix**:
-
-```bash
-npm i -D typescript@5.8.3 prettier@3.5.3
-```
-
-Pin to the versions currently resolved so nothing changes behaviour; bump them deliberately later.
-
-### 7. Align the Jest type definitions with the runtime
-
-**Impact**: `@types/jest` ^29 against Jest ^30, wired into `tsconfig.json` through
-`"types": ["@types/jest"]`. Agent-written tests get signatures from a version the runner is not.
-**Severity**: medium
-**Effort**: quick (< 5 min)
-**Fix**:
-
-```bash
-npm i -D @types/jest@^30
-npm run test
-```
-
-### 8. Wire the existing security script into CI
-
-**Impact**: `npm run test:security` and the `audit-ci` devDependency already exist; nothing calls
-them. Had this been a gate, the 3 CRITICAL and 25 HIGH advisories would have surfaced when they
-appeared rather than at this health check.
-**Severity**: medium
-**Effort**: quick (< 5 min)
-**Fix**:
-
-Add to `code-quality` in `.github/workflows/ci-cd.yml`, after fix 1 has brought the tree to a state
-that can pass:
-
-```yaml
-      - name: Audyt bezpieczeństwa
-        run: npm run test:security
-```
-
-Enable Dependabot or Renovate at the same time so the next eighteen months do not repeat this.
-
-### 9. Plan the major-version upgrades
-
-**Impact**: six direct dependencies are at least one major behind, and the Astro trio is the same
-work as fix 1's remediation. Deferring indefinitely is how a project arrives at 41 advisories.
+**Impact**: `AGENTS.md` states schemas belong in `src/lib/validations/<domain>/<action>.ts`, but only
+the three auth schemas live there. An agent reading the tree finds the inline pattern seven times
+and the documented pattern three times, and pattern-matches on frequency. The routes carrying inline
+schemas — under `api/ai/`, `api/preferences/` and `api/recipes/` — are exactly the ones new work
+will sit beside.
 **Severity**: medium
 **Effort**: significant (> 1 hour)
-**Fix**: sequence them, do not batch.
+**Fix**: move each inline `z.object` into `src/lib/validations/<domain>/<action>.ts`, following
+`src/lib/validations/auth/login.ts`. Keep services receiving validated input without re-parsing, and
+keep every failure exiting through `zodIssues` / `zodMessage`.
 
-1. `astro` + `@astrojs/react` + `@astrojs/vercel` together, E2E suite as the gate. This is the
-   security-driven one.
-2. `marked` 15 → 18 — check the API surface where recipe markdown is rendered.
-3. `lucide-react` 0.487 → 1.x — icon-name churn is the usual break.
-4. `zod` 3 → 4 last, or not at all this cycle. 18 files import it and `CLAUDE.md` documents the
-   Zod 3 boundary convention; migrating mid-feature would put the diary module on two Zod dialects.
+### 4. `/* eslint-env */` in lighthouserc.js will break the ESLint 10 upgrade
 
-Update the pinned versions in `CLAUDE.md` ("Framework versions — read before writing config") in the
-same commit as any of these. A stale version block is worse than none — the agent trusts it.
+**Impact**: lint currently exits 0 but prints a deprecation warning on every run, local and CI. When
+`eslint-plugin-react` and `eslint-plugin-jsx-a11y` gain ESLint 10 support and the upgrade becomes
+available, this line turns the `code-quality` job red for a reason unrelated to the upgrade.
+**Severity**: low
+**Effort**: quick (< 5 min)
+**Fix**: replace the `/* eslint-env */` comment on `lighthouserc.js:1` with a `/* global */` comment,
+or declare the file's globals in `eslint.config.js`.
 
-### 10. Add `.editorconfig`
+### 5. Patch-level updates available on four packages
 
-**Impact**: no cross-editor baseline for indentation and line endings. Minor on its own; on a
-Windows checkout with Prettier in the loop it prevents line-ending churn in diffs.
+**Impact**: minor, but the gap widens quietly and each skipped patch makes the eventual bump a
+bigger diff to review. `@types/node` in particular should track the pinned runtime (24.13.x) rather
+than the registry `latest` (26.x).
 **Severity**: low
 **Effort**: quick (< 5 min)
 **Fix**:
 
-```ini
-root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-indent_style = space
-indent_size = 2
-insert_final_newline = true
-trim_trailing_whitespace = true
 ```
+npm update jest jest-environment-jsdom dotenv @types/node
+npm run typecheck && npm run test
+```
+
+Leave `typescript`, `eslint` and `@eslint/js` where they are — the first is a pipeline-wide move,
+the other two are blocked by plugin peer ranges.
 
 ### Addressed in upcoming lessons (Category B)
 
-### `AGENTS.md` is absent
-
-**Lesson**: [Agent Onboarding: Agents.md, AI Rules i feedback loops (M1L4)](https://platforma.przeprogramowani.pl/external/10xdevs-3/m1-l4)
-**What you'll do there**: build the agent instruction files properly — including how `AGENTS.md` and
-`CLAUDE.md` relate, and how to turn the stack-assessment compensation blocks into feedback loops
-rather than a static wall of rules. `CLAUDE.md` already carries good content; do not generate an
-`AGENTS.md` stub now, the lesson covers what belongs in it. Fix 2 above is the exception worth doing
-immediately — tracking the file in git is a `.gitignore` question, not an authoring question.
-
-### CI hardening and deployment configuration
-
-**Lesson**: [Sprint Zero z Agentem: infrastruktura, walking skeleton i pierwszy deploy (M1L5)](https://platforma.przeprogramowani.pl/external/10xdevs-3/m1-l5)
-**What you'll do there**: the broader infrastructure picture — environment strategy, deploy gates,
-preview environments. This project is ahead here: GitHub Actions already runs lint, build, unit
-tests and E2E against an `integration` environment with cached browsers, and Vercel deployment is
-configured. Fixes 4, 5 and 8 above are narrow repairs to an existing pipeline, not the lesson's
-subject; the lesson is where the pipeline's shape gets revisited.
+None. The gaps that are normally deferred at this stage are already closed here: GitHub Actions runs
+a five-stage pipeline with all five gates wired, `CLAUDE.md` and `AGENTS.md` are both present and
+substantive, and deployment configuration exists through the Vercel adapter with
+`context/foundation/infrastructure.md` alongside it. Every finding above is actionable now.
 
 ## Summary
 
 ```
-Health status: critical-issues
+Health status: needs-attention
 ```
 
-The project's *structure* is genuinely strong — strict TypeScript with zero `any` in `src/`,
-generated Supabase row types, Zod at every API boundary, a domain-partitioned source tree, husky +
-lint-staged at commit time, and a five-job GitHub Actions pipeline with E2E against a real
-integration environment. Most brownfield projects at this stage have less. The verdict is driven by
-three things that all point the same direction: an eighteen-month-stale dependency tree carrying 3
-CRITICAL and 25 HIGH advisories — including a MitM gadget in the `axios` client the diary module's
-AI path depends on, and Astro middleware-bypass CVEs aimed at the exact `PUBLIC_PATHS` mechanism
-that will guard the new routes; a set of quality claims that nothing enforces, since no `tsc` or
-`astro check` runs anywhere and the CI formatting step is a no-op that cannot fail; and a
-`.gitignore` that hides `CLAUDE.md` and `context/` from the repository, so the compensation layer
-this chain produced travels with no one.
+The project is in good operational shape. All five CI gates pass against the current tree — lint
+clean, `astro check` at 0 errors over 110 files, Prettier clean, security audit passing, production
+build green in 8.43s — and the unit suite runs 23/23 while the Playwright harness enumerates without
+complaint. Dependencies are pinned by lockfile and `.nvmrc`. The instruction layer is intact: all 31
+`@`-references in `AGENTS.md` and `CLAUDE.md` resolve, the session-cookie rule reaches a real
+`lessons.md`, and the server-side service exemplar points at `ai.service.ts` rather than at a
+browser fetch wrapper.
 
-None of it argues against the stack or against starting the diary module. It argues for two hours of
-work first. The cheapest fixes are also the highest-leverage: tracking `CLAUDE.md` is one line,
-repairing the format gate is one flag, and `npm i axios@latest` clears twelve HIGH advisories on the
-path the new feature depends on most.
+The verdict stays at `needs-attention` for one reason only, and it is not a task on anyone's list:
+three HIGH advisories remain live in `npm audit`, all three being one `path-to-regexp` backtracking
+issue reached through `@vercel/routing-utils` inside an adapter already at its newest release. There
+is no version to move to. The risk is accepted deliberately, recorded in `audit-ci.jsonc` with its
+reasoning, and the security gate passes because of that allowlist rather than in spite of it. The
+verdict flips to `healthy` the day upstream ships `path-to-regexp >= 6.3.0` — no local work required.
 
-Next step: work Category A fixes 1–5 (they are the ones the diary module actually depends on), then
-proceed to agent onboarding.
+Everything else is a judgement call rather than a defect: an 80% coverage threshold that CI never
+evaluates against a 3-file suite, seven routes declaring Zod schemas inline where the documented
+pattern says otherwise, and two low-severity housekeeping items. None blocks agent-assisted
+development.
+
+Next step: proceed to agent onboarding. Fixes 1 through 5 can be picked up at any point, and fix 1
+is a calendar reminder rather than a change.

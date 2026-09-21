@@ -21,14 +21,17 @@ timeline_budget:
 
 **System purpose (one sentence):** 10x-HealthyFood helps home cooks decide what to cook and keep their own recipe collection, including recipes adapted to their dietary restrictions.
 
-**Key architecture:** a single web application with no custom backend tier — the frontend talks to a Backend-as-a-Service platform through its SDK for data and authentication, and to a model-routing service for AI features.
+**Key architecture:** a server-rendered web application with a thin server tier of its own. Supabase remains the only backend product, but the browser does not talk to it directly. Every request passes through a single middleware that creates one request-scoped Supabase client and attaches it to the request context; fifteen API routes belonging to the application read that client rather than constructing their own. Session cookies are written only on the way out of that middleware, never by an individual route. The model-routing service for AI features is reached from the same server tier. The diary module plugs into this tier — it is not a browser-to-BaaS addition.
 
 **Tech stack:**
 - Frontend: Astro 7, React 19, TypeScript 5, Tailwind 4, Shadcn/ui
 - Backend: Supabase — PostgreSQL, built-in user authentication, SDK used as Backend-as-a-Service
 - AI integration: OpenRouter.ai (access to OpenAI / Anthropic / Google models)
+- Validation: Zod 4 at every API boundary (v4 API — `z.email()`, failures read from `err.issues`)
+- Runtime & package manager: Node 24.13.0, pinned in `.nvmrc`; npm
 - Testing: Jest, React Testing Library, Playwright
 - CI/CD & hosting: GitHub Actions, Vercel
+- Type gate: `npm run typecheck` (`astro check`, strict mode) runs in CI and must stay at zero errors
 
 **Current user base:** home cooks who (a) don't know what to eat today, (b) want to cook from what they found in the kitchen, (c) want to save and remember a recipe, (d) want to take a recipe from the internet and modify it to fit a restriction (e.g. no eggs). Roughly 3–4 users — very small scale, but real multi-user with registration and login.
 
