@@ -17,8 +17,15 @@ for project conventions — @CLAUDE.md imports it rather than restating it, so e
 - Never hand-edit @src/db/database.types.ts — it is generated. Run `npm run supabase:gen` after any
   schema change.
 - Import the Vercel adapter from `@astrojs/vercel`, never `@astrojs/vercel/serverless` (Astro 4 path).
-- Never construct a Supabase client inside a route. Read the request-scoped client from
+- Never construct a Supabase client inside a route — the auth routes used to, and their client
+  raced the middleware's one over the same refresh token. Read the request-scoped client from
   `context.locals.supabase`, attached in @src/middleware/index.ts.
+- Session cookies leave through `flushCookies` (@src/db/supabase.client.ts), never through
+  `Astro.cookies`. `@supabase/ssr` writes them from an `onAuthStateChange` listener that can
+  resolve after the response was sent, and `Astro.cookies.set` then throws `ResponseSentError`
+  while the rotated token never reaches the browser. Every exit from @src/middleware/index.ts —
+  each `redirect()` and the `next()` result — must pass through `flushCookies`; a write that
+  arrives afterwards is lost and logged. See @context/foundation/lessons.md.
 - Do not re-declare types for third-party packages. A hand-written `declare module "axios"` shim
   used to shadow the real axios types here and silently hid `.get()` and `isAxiosError`; it was
   deleted. Use the types the package ships.

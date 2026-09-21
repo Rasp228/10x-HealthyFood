@@ -29,6 +29,7 @@ function parseCookieHeader(cookieHeader: string): { name: string; value: string 
  */
 export const createSupabaseServerInstance = (context: { headers: Headers }) => {
   const pendingCookies: { name: string; value: string; options: CookieOptions }[] = [];
+  let flushed = false;
 
   const supabase = createServerClient<Database>(import.meta.env.SUPABASE_URL, import.meta.env.SUPABASE_KEY, {
     cookieOptions,
@@ -37,14 +38,24 @@ export const createSupabaseServerInstance = (context: { headers: Headers }) => {
         return parseCookieHeader(context.headers.get("Cookie") ?? "");
       },
       setAll(cookiesToSet) {
+        if (flushed) {
+          // Odpowiedź już poszła - tego zapisu nie da się uratować, ale musi być widoczny:
+          // przeglądarka zostaje ze starym refresh tokenem i kolejne żądanie znów będzie rotować.
+          console.error(
+            "Error setting cookies: zapis po wysłaniu odpowiedzi, ciasteczka przepadły:",
+            cookiesToSet.map(({ name }) => name).join(", ")
+          );
+          return;
+        }
+
         pendingCookies.push(...cookiesToSet);
       },
     },
   });
 
   const flushCookies = <T extends Response>(response: T): T => {
-    // Mapa, nie tablica: jeden request potrafi wygenerowac kilka zapisow tego samego ciasteczka
-    // (np. kilka zdarzen SIGNED_OUT pod rzad). Wygrywa ostatni, tak jak przy Astro.cookies.
+    // Mapa, nie tablica: jeden request potrafi wygenerować kilka zapisów tego samego ciasteczka
+    // (np. kilka zdarzeń SIGNED_OUT pod rząd). Wygrywa ostatni, tak jak przy Astro.cookies.
     const byName = new Map<string, string>();
 
     for (const { name, value, options } of pendingCookies.splice(0)) {
@@ -54,6 +65,8 @@ export const createSupabaseServerInstance = (context: { headers: Headers }) => {
     for (const setCookie of byName.values()) {
       response.headers.append("Set-Cookie", setCookie);
     }
+
+    flushed = true;
 
     return response;
   };
