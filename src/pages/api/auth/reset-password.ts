@@ -1,18 +1,14 @@
 import type { APIRoute } from "astro";
-import { createSupabaseServerInstance } from "../../../db/supabase.client.ts";
 import { requestResetSchema, confirmResetSchema } from "../../../lib/validations/auth/reset-password.ts";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, url }) => {
+export const POST: APIRoute = async ({ request, locals, url }) => {
   try {
     const body = await request.json();
 
-    const supabase = createSupabaseServerInstance({
-      cookies,
-      headers: request.headers,
-    });
+    const supabase = locals.supabase;
 
     // Sprawdzenie czy to żądanie resetu (przez email) czy ustawienie nowego hasła
     if (body.email && !body.token) {

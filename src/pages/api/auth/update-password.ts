@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import { createSupabaseServerInstance } from "../../../db/supabase.client.ts";
 import { z } from "zod";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
 
@@ -20,7 +19,7 @@ const updatePasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
 
@@ -38,10 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { password } = validationResult.data;
 
-    const supabase = createSupabaseServerInstance({
-      cookies,
-      headers: request.headers,
-    });
+    const supabase = locals.supabase;
 
     // Sprawdź czy użytkownik jest zalogowany
     const {

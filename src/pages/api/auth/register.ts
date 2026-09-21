@@ -1,11 +1,10 @@
 import type { APIRoute } from "astro";
-import { createSupabaseServerInstance } from "../../../db/supabase.client.ts";
 import { registerSchema } from "../../../lib/validations/auth/register.ts";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
 
@@ -23,12 +22,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { email, password } = validationResult.data;
 
-    const supabase = createSupabaseServerInstance({
-      cookies,
-      headers: request.headers,
-    });
-
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await locals.supabase.auth.signUp({
       email,
       password,
     });
