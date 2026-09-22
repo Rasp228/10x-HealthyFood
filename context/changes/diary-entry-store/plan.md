@@ -517,16 +517,16 @@ lands.
 
 #### Automated
 
-- [x] 3.1 supabase:gen hardened to write via a temp file and target --linked, verified failure-safe
-- [x] 3.2 Types regenerate without error
-- [x] 3.3 Generated file describes diary_entries and calorie_origin_enum
-- [x] 3.4 Type checking passes with zero errors
-- [x] 3.5 Linting passes
-- [x] 3.6 Formatting check passes
-- [x] 3.7 Unit tests pass
-- [x] 3.8 diary_entries and calorie_origin_enum registered in contract-surfaces.md and AGENTS.md
+- [x] 3.1 supabase:gen hardened to write via a temp file and target --linked, verified failure-safe — 2fc41b4
+- [x] 3.2 Types regenerate without error — 2fc41b4
+- [x] 3.3 Generated file describes diary_entries and calorie_origin_enum — 2fc41b4
+- [x] 3.4 Type checking passes with zero errors — 2fc41b4
+- [x] 3.5 Linting passes — 2fc41b4
+- [x] 3.6 Formatting check passes — 2fc41b4
+- [x] 3.7 Unit tests pass — 2fc41b4
+- [x] 3.8 diary_entries and calorie_origin_enum registered in contract-surfaces.md and AGENTS.md — 2fc41b4
 
 #### Manual
 
-- [x] 3.9 Regenerated types checked by consumer, with no existing column lost
-- [x] 3.10 DiaryEntryDto resolves to the expected shape with the correct nullability
+- [x] 3.9 Regenerated types checked by consumer, with no existing column lost — 2fc41b4
+- [x] 3.10 DiaryEntryDto resolves to the expected shape with the correct nullability — 2fc41b4
