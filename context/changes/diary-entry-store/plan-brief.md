@@ -91,11 +91,19 @@ migration; most of the time is verification, not authoring.
   from regressing these policies. Accepted for a foundation with no behaviour; revisit if a diary
   slice ever ships a second table. The hand check itself must impersonate two subjects — the SQL
   editor's default role bypasses RLS, so a plain cross-user select proves nothing.
-- **The CI E2E project ref is unconfirmed.** `.env` and `.env.test` share one project, but the CI
-  e2e job runs `environment: integration` with `secrets.SUPABASE_URL`
-  (`.github/workflows/ci-cd.yml:108-114`), whose value is not visible from the repo. If it is a
-  different project, phase 2 leaves it without `diary_entries` — harmless while nothing reads the
-  table, breaking for the first slice that does. Phase 2 checks and records it.
+- **The CI E2E project ref is unconfirmed — and stays unconfirmed.** `.env` and `.env.test` share one
+  project (ref `cvuhlsblibxyippkqurn`), but the CI e2e job runs `environment: integration` with
+  `secrets.SUPABASE_URL` (`.github/workflows/ci-cd.yml:108-114`), whose value is not visible from the
+  repo. Phase 2 checked and could not resolve it: GitHub secrets are write-only — no one, including
+  the repo owner, can read a stored value back in the UI — and `gh` is not installed on the dev
+  machine. **Recorded verdict (2026-09-22): not verified.** Phase 2 applied the migration to
+  `cvuhlsblibxyippkqurn` only; if `integration` points elsewhere, that project has no
+  `diary_entries` — harmless while nothing reads the table, breaking for the first slice that does,
+  in CI and nowhere else. Two ways to settle it later: a temporary workflow step running
+  `printf '%s' "$SUPABASE_URL" | sha256sum` and comparing against
+  `979e08ad44936dace2bbbd153cabd0c476008527e8333be5d89541f62e4e478c` (sha256 of the local value), or
+  overwriting the secret with the known value. A hash mismatch would not by itself prove a different
+  project — a trailing slash or stray quote changes it too.
 - **The push is not revertible by git.** Undoing it means a second migration dropping the table and
   the enum. Since nothing reads the table until `S-01`, leaving a wrong shape in place is usually
   cheaper than dropping it.

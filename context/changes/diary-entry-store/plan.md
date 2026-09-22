@@ -484,34 +484,34 @@ lands.
 
 #### Automated
 
-- [x] 1.1 Migration file exists and matches the CLI naming convention
-- [x] 1.2 Verification script exists at supabase/checks/diary-entries-rls.sql
-- [x] 1.3 Migration declares all eight policies
-- [x] 1.4 Migration enables RLS, pins the four enum values and carries both check constraints
-- [x] 1.5 Linting passes
-- [x] 1.6 Formatting check passes
+- [x] 1.1 Migration file exists and matches the CLI naming convention — ca3623f
+- [x] 1.2 Verification script exists at supabase/checks/diary-entries-rls.sql — ca3623f
+- [x] 1.3 Migration declares all eight policies — ca3623f
+- [x] 1.4 Migration enables RLS, pins the four enum values and carries both check constraints — ca3623f
+- [x] 1.5 Linting passes — ca3623f
+- [x] 1.6 Formatting check passes — ca3623f
 
 #### Manual
 
-- [x] 1.7 SQL reviewed against the existing schema migration for style, policy count and auth.uid() placement
-- [x] 1.8 Enum values confirmed to cover all four cascade steps with no fifth state needed
-- [x] 1.9 Confirmed the migration touches no existing table, column, policy or enum
+- [x] 1.7 SQL reviewed against the existing schema migration for style, policy count and auth.uid() placement — ca3623f
+- [x] 1.8 Enum values confirmed to cover all four cascade steps with no fifth state needed — ca3623f
+- [x] 1.9 Confirmed the migration touches no existing table, column, policy or enum — ca3623f
 
 ### Phase 2: Apply to the linked project and prove RLS
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly via npm run supabase:push
-- [ ] 2.2 No pending migrations remain in the migration list
+- [x] 2.1 Migration applies cleanly via npm run supabase:push
+- [x] 2.2 No pending migrations remain in the migration list
 
 #### Manual
 
-- [ ] 2.3 Throwaway auth user created and one diary_entries row inserted for each of the two users
-- [ ] 2.4 Verification script lists exactly eight policies for diary_entries
-- [ ] 2.5 Each impersonated subject sees only its own row, and the assertion is confirmed capable of failing
-- [ ] 2.6 preferences, recipes and logs confirmed unchanged after the push
-- [ ] 2.7 Existing application still loads and recipe browsing works
-- [ ] 2.8 Integration environment SUPABASE_URL secret checked against this project ref and the answer recorded
+- [x] 2.3 Throwaway auth user created and one diary_entries row inserted for each of the two users
+- [x] 2.4 Verification script lists exactly eight policies for diary_entries
+- [x] 2.5 Each impersonated subject sees only its own row, and the assertion is confirmed capable of failing
+- [x] 2.6 preferences, recipes and logs confirmed unchanged after the push
+- [x] 2.7 Existing application still loads and recipe browsing works
+- [x] 2.8 Integration environment SUPABASE_URL secret checked against this project ref and the answer recorded
 
 ### Phase 3: Regenerate types and add domain types
 
