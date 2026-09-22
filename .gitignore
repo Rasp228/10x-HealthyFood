@@ -47,3 +47,6 @@ skills-lock.json
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# failed type generation leaves this behind
+src/db/database.types.ts.tmp

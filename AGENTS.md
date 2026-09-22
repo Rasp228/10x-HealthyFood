@@ -57,7 +57,8 @@ the code does not yet follow the conventions below.
   misplaced in `ui/` are listed in @docs/reference/known-drift.md — do not add to that set.
 - Every new table needs RLS and per-user policies, matching
   @supabase/migrations/20250427130913_healthymeal_schema.sql. Existing tables: `preferences`,
-  `recipes`, `logs`. Start a migration with `npm run supabase:new-migration <name>`.
+  `recipes`, `logs`, `diary_entries`. Start a migration with
+  `npm run supabase:new-migration <name>`.
 - A new route not listed in `PUBLIC_PATHS` (@src/middleware/index.ts) requires a session.
 - Recurring pitfalls that already cost a fix once are recorded in @context/foundation/lessons.md —
   read it before touching middleware, session cookies or the dev-server/test harness. Add to it with

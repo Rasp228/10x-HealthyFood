@@ -13,6 +13,9 @@ export type RecipeDto = Tables<"recipes">;
 // Typ logu z bazy danych
 export type LogDto = Tables<"logs">;
 
+// Typ wpisu dziennika z bazy danych
+export type DiaryEntryDto = Tables<"diary_entries">;
+
 /**
  * Parametry sortowania
  */
@@ -38,6 +41,9 @@ export type PreferencesDto = ResponseDto<PreferenceDto>;
 
 // Odpowiedź z listą przepisów
 export type RecipesDto = ResponseDto<RecipeDto>;
+
+// Odpowiedź z listą wpisów dziennika
+export type DiaryEntriesDto = ResponseDto<DiaryEntryDto>;
 
 /**
  * AI Integration DTO i Command Models
@@ -90,6 +96,9 @@ export type ActionTypeEnum = Database["public"]["Enums"]["action_type_enum"];
 
 // Typ dla kategorii preferencji
 export type PreferenceCategoryEnum = Database["public"]["Enums"]["preference_category_enum"];
+
+// Typ dla pochodzenia wartości kalorycznej wpisu dziennika
+export type CalorieOriginEnum = Database["public"]["Enums"]["calorie_origin_enum"];
 
 /**
  * Command Models do tworzenia i aktualizacji danych

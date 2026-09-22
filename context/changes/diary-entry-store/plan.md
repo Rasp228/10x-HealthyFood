@@ -501,32 +501,32 @@ lands.
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly via npm run supabase:push
-- [x] 2.2 No pending migrations remain in the migration list
+- [x] 2.1 Migration applies cleanly via npm run supabase:push — 9627ff3
+- [x] 2.2 No pending migrations remain in the migration list — 9627ff3
 
 #### Manual
 
-- [x] 2.3 Throwaway auth user created and one diary_entries row inserted for each of the two users
-- [x] 2.4 Verification script lists exactly eight policies for diary_entries
-- [x] 2.5 Each impersonated subject sees only its own row, and the assertion is confirmed capable of failing
-- [x] 2.6 preferences, recipes and logs confirmed unchanged after the push
-- [x] 2.7 Existing application still loads and recipe browsing works
-- [x] 2.8 Integration environment SUPABASE_URL secret checked against this project ref and the answer recorded
+- [x] 2.3 Throwaway auth user created and one diary_entries row inserted for each of the two users — 9627ff3
+- [x] 2.4 Verification script lists exactly eight policies for diary_entries — 9627ff3
+- [x] 2.5 Each impersonated subject sees only its own row, and the assertion is confirmed capable of failing — 9627ff3
+- [x] 2.6 preferences, recipes and logs confirmed unchanged after the push — 9627ff3
+- [x] 2.7 Existing application still loads and recipe browsing works — 9627ff3
+- [x] 2.8 Integration environment SUPABASE_URL secret checked against this project ref and the answer recorded — 9627ff3
 
 ### Phase 3: Regenerate types and add domain types
 
 #### Automated
 
-- [ ] 3.1 supabase:gen hardened to write via a temp file and target --linked, verified failure-safe
-- [ ] 3.2 Types regenerate without error
-- [ ] 3.3 Generated file describes diary_entries and calorie_origin_enum
-- [ ] 3.4 Type checking passes with zero errors
-- [ ] 3.5 Linting passes
-- [ ] 3.6 Formatting check passes
-- [ ] 3.7 Unit tests pass
-- [ ] 3.8 diary_entries and calorie_origin_enum registered in contract-surfaces.md and AGENTS.md
+- [x] 3.1 supabase:gen hardened to write via a temp file and target --linked, verified failure-safe
+- [x] 3.2 Types regenerate without error
+- [x] 3.3 Generated file describes diary_entries and calorie_origin_enum
+- [x] 3.4 Type checking passes with zero errors
+- [x] 3.5 Linting passes
+- [x] 3.6 Formatting check passes
+- [x] 3.7 Unit tests pass
+- [x] 3.8 diary_entries and calorie_origin_enum registered in contract-surfaces.md and AGENTS.md
 
 #### Manual
 
-- [ ] 3.9 Regenerated types checked by consumer, with no existing column lost
-- [ ] 3.10 DiaryEntryDto resolves to the expected shape with the correct nullability
+- [x] 3.9 Regenerated types checked by consumer, with no existing column lost
+- [x] 3.10 DiaryEntryDto resolves to the expected shape with the correct nullability

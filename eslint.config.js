@@ -69,6 +69,11 @@ const reactConfig = tseslint.config({
 
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
+  {
+    // Generowany przez `npm run supabase:gen` - styl narzuca CLI, a kazda poprawka
+    // znika przy kolejnej regeneracji. Ten sam powod co wpis w .prettierignore.
+    ignores: ["src/db/database.types.ts"],
+  },
   baseConfig,
   commonjsConfig,
   jsxA11yConfig,
