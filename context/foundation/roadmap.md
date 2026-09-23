@@ -3,7 +3,7 @@ project: 10x-HealthyFood
 version: 1
 status: draft
 created: 2026-09-21
-updated: 2026-09-22
+updated: 2026-09-23
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -46,7 +46,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 | ID | Change ID | Outcome (użytkownik może …) | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
 | F-01 | `diary-entry-store` | (fundament) istnieje prywatny magazyn wpisów dziennika z polem na wartość, jej pochodzenie i status wyliczenia | — | FR-001, FR-002, FR-015, Access Control Changes | done |
-| S-01 | `manual-diary-entry` | otworzyć panel dziennika, zapisać wpis na wybrany dzień z ręcznie wpisaną liczbą kalorii i zobaczyć sumę dnia | F-01 | US-01, FR-001, FR-002, FR-004, FR-011, FR-016 | proposed |
+| S-01 | `manual-diary-entry` | otworzyć panel dziennika, zapisać wpis na wybrany dzień z ręcznie wpisaną liczbą kalorii i zobaczyć sumę dnia | F-01 | US-01, FR-001, FR-002, FR-004, FR-011, FR-016 | planning |
 | S-02 | `ai-estimate-for-free-text` | poprosić o wyliczenie kalorii dla opisowego wpisu i dostać wartość bez czekania na zapis | S-01 | US-01, FR-003, FR-004, FR-011 | proposed |
 | S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | proposed |
 | S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | proposed |
@@ -104,7 +104,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** to jest podłoga całego modułu — gwarancja z PRD mówi wprost, że dziennik ma być w pełni używalny bez działającej estymacji, a ręcznie wpisana liczba jest jedynym źródłem, które nigdy nie zawodzi. Postawiony przed ścieżką AI, żeby moduł miał wartość nawet wtedy, gdy okno trzech tygodni się skurczy. Nowa trasa dziedziczy istniejącą bramkę sesji; lista ścieżek publicznych w middleware nie jest ruszana, więc rejestracja i logowanie działają jak dotąd (FR-016).
-- **Status:** proposed
+- **Status:** planning
 
 ### S-02: Wycena opisowego wpisu przez AI
 
