@@ -5,244 +5,230 @@
 - **Scope**: Full plan (3 of 3 phases)
 - **Reviewed phases**: 1, 2, 3
 - **Date**: 2026-09-23
-- **Verdict**: NEEDS ATTENTION (triaged 2026-09-23 — 7 fixed, 1 recorded, 1 skipped)
-- **Findings**: 0 critical, 6 warnings, 3 observations
+- **Verdict**: NEEDS ATTENTION (triaged 2026-09-23 — 5 fixed, 1 recorded as a rule)
+- **Findings**: 0 critical, 3 warnings, 3 observations
+- **Post-triage gates**: `eslint` 0 errors · `astro check` 0 errors · `prettier --check` clean · `jest` 23/23
+- **Outstanding action**: re-run `supabase/checks/diary-entries-rls.sql` against the linked project and re-stamp Progress 2.4/2.5 (see F2's residual)
+
+> Second review of this change. The first (same date, verdict NEEDS ATTENTION, 9 findings) was
+> triaged and its fixes landed in `dee2aa6`; that report is superseded by this file and remains
+> retrievable at `git show dee2aa6:context/changes/diary-entry-store/reviews/impl-review.md`.
+> Every one of its nine decisions was re-verified here — see "Prior review: fixes re-verified".
 
 ## Verdicts
 
 | Dimension | Verdict |
 |-----------|---------|
-| Plan Adherence | WARNING |
+| Plan Adherence | PASS |
 | Scope Discipline | WARNING |
 | Safety & Quality | WARNING |
 | Architecture | PASS |
 | Pattern Consistency | WARNING |
-| Success Criteria | PASS |
+| Success Criteria | WARNING |
 
 ## Verification performed
 
-Every automated criterion in the plan was re-run against the working tree:
+Every automated criterion in the plan was re-run against the working tree at `dee2aa6`:
 
 | Check | Result |
 |---|---|
-| `eslint .` | 0 errors |
-| `astro check` | 0 errors, 110 files |
+| `eslint .` | 0 errors, 0 warnings |
+| `astro check` | 110 files, 0 errors, 0 warnings, 29 hints |
 | `prettier --check .` | clean |
 | `jest` | 2 suites, 23 tests passed |
 | `supabase migration list --linked` | `20260922140906` applied remotely; nothing pending |
 | Fresh `supabase gen types typescript --linked` vs. committed `src/db/database.types.ts` | **byte-identical** |
-| Migration greps (8 policies, RLS on, 4 enum values, both check constraints) | all pass |
+| Migration greps (8 policies, RLS on, 4 enum values, `diary_entries_value_has_origin`) | all pass |
+| `grep diary_entries` in contract-surfaces.md / AGENTS.md | present in both |
 
-The byte-identical regeneration is the strongest evidence in this review: it independently confirms
-phase 2 actually landed on the linked project, that the committed types were not hand-edited, and
-that phase 3's manual "no column lost" check holds.
+The byte-identical regeneration is again the strongest single piece of evidence: it independently
+confirms phase 2 landed on the linked project, that the committed types are genuine CLI output and
+were not hand-edited, and that phase 3's manual "no column lost" check holds.
 
-RLS was audited directly and is **correct**: all eight policies pin `to anon` / `to authenticated`,
-`insert` uses `with check`, and `update` carries both `using` and `with check` — so the
-owner-reassignment hole is not present.
+**Plan adherence is clean.** Every pinned DDL line, every type export, both npm scripts, the
+`.gitignore` entry, the ESLint ignore and both registry entries match the plan's stated contract
+column-for-column. **Scope discipline against "What We're NOT Doing" is clean** in code: no service,
+no Zod schema, no route, no page, no component, no `tests/integration/`, no macronutrient column, no
+change to `recipes` / `preferences` / `logs`.
+
+**RLS was audited independently of the prior review and is correct.** All eight policies pin a role
+(`to anon` x4, `to authenticated` x4); `insert` uses `with check` only; both `update` policies carry
+**both** `using` and `with check`, so the `user_id`-reassignment hole is not present; `auth.uid()` is
+on the correct side throughout.
 
 ## Findings
 
-### F1 — `npm run supabase:gen` cannot run on the project's primary platform
+### F1 — Cleanup `delete` bypasses RLS and is not scoped to the two seeded users
+
+- **Severity**: WARNING
+- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
+- **Dimension**: Safety & Quality
+- **Location**: supabase/checks/diary-entries-rls.sql:98 (and the header at :19-20)
+- **Detail**: The prior review's F2 fix added `delete from diary_entries where content like 'rls
+  check - %';` after `rollback;`. The migration uses `enable row level security`, **not** `force row
+  level security` (`20260922140906_create_diary_entries.sql:69`), so the table-owning role the
+  Supabase SQL editor runs as is exempt from every policy. The statement therefore reaches **every
+  user's rows**, not only the two it seeded. The pattern is prefix-anchored (no leading `%`), which
+  limits it, but `content` is free user text and nothing narrows by `user_id` or `entry_date`. The
+  prior review named this exact risk as Fix B's blind spot and then shipped it unmitigated.
+  Compounding it, the file header at :19-20 still asserts "Skrypt nie wstawia, nie zmienia ani nie
+  **usuwa** niczego poza tabelą diary_entries, a **wszystkie zapisy dzieją się w transakcji
+  zakończonej rollbackiem**" — now false, since :98 is an unconditional committed `delete` outside
+  any transaction. That is the same overclaiming-comment defect class F3 was raised for, reintroduced
+  by its sibling fix in the same commit.
+- **Fix**: Scope the delete to the seeded subjects and make its blast radius visible —
+  `delete from diary_entries where user_id in ('<uuid-a>'::uuid, '<uuid-b>'::uuid) and content like 'rls check - %' returning id, user_id, content;`
+  — and amend the header at :19-20 to say the file ends with a committed cleanup delete.
+  - Strength: Removes the cross-user reach entirely and the `returning` gives the operator proof that a full run deleted 0 rows; one statement plus two comment lines, no behavioural change to the assertions.
+  - Tradeoff: None material — the placeholders are already substituted by hand at run time, so the uuids are in scope.
+  - Confidence: HIGH — `enable` vs `force` RLS verified in the migration; the delete's text verified in place.
+  - Blind spot: None significant.
+- **Decision**: FIXED — delete scoped to `user_id in ('<uuid-a>','<uuid-b>')` with `returning id, user_id, content` and an inline note on `enable` vs `force` RLS; header rewritten to state that section 3 is a committed delete outside the transaction.
+
+### F2 — The committed check script has never been run; phase 2's RLS evidence predates it
 
 - **Severity**: WARNING
 - **Impact**: MEDIUM — real tradeoff; pause to reason through it
+- **Dimension**: Success Criteria
+- **Location**: supabase/checks/diary-entries-rls.sql
+- **Detail**: Progress items 2.4 and 2.5 ("Verification script lists exactly eight policies" / "Each
+  impersonated subject sees only its own row, and the assertion is confirmed capable of failing") are
+  stamped `9627ff3`, committed 2026-09-22. The script was then rewritten by `dee2aa6` on 2026-09-23
+  10:28 — the F2 and F4 fixes changed the seed rows, the assertion shape and added the cleanup
+  statement. So the artifact that satisfied the criteria is not the artifact in the tree, and the
+  committed one has never been executed against a database.
+  There is a concrete reason to think it will not behave as written: the Supabase SQL editor renders
+  the result of the **last** statement in a multi-statement run, and the script's value lives in six
+  separate result-producing statements (`:31` policy listing, `:37` rowsecurity, `:65` role guard,
+  `:69-73` and `:77-81` isolation counters). On a whole-file run the last statement is the `delete` at
+  `:98`, so the self-describing assertions F4 was written to add are likely invisible — which pushes
+  the operator toward running selected fragments, the exact behaviour F2's cleanup exists to guard
+  against. The two applied fixes work against each other. (This last part is inferred from the
+  multi-statement contract, not observed against the hosted editor.)
+- **Fix A ⭐ Recommended**: Re-run the committed script once against the linked project, substituting the two uuids, and re-stamp 2.4/2.5 with what was actually observed — including whether the assertions display.
+  - Strength: Settles the output-visibility question by observation rather than inference, and restores the criteria to describing the artifact that ships. It is the cheapest way to learn whether F4's fix actually delivers anything.
+  - Tradeoff: Runs a script containing an unscoped `delete` against the shared dev/E2E database — so F1 should be applied first.
+  - Confidence: HIGH — the staleness is established from git history; the run is the only thing that can confirm the rest.
+  - Blind spot: Requires a live session against the hosted project, which this review cannot perform.
+- **Fix B**: Restructure the output so one run shows everything — fold the assertions into a single `union all` result set, or wrap them in `do $$ … raise notice … end $$;` (the Fix A the prior review declined).
+  - Strength: Makes a whole-file run the natural way to use the script, which closes F2's original partial-paste hazard at the source instead of mitigating it.
+  - Tradeoff: A second rewrite of a script that has now been rewritten once without being re-run; `raise notice` visibility in the Supabase editor is itself unverified.
+  - Confidence: MEDIUM — the restructuring is straightforward, but it would again ship an unexecuted script unless Fix A follows it.
+  - Blind spot: Have not confirmed how the Supabase editor surfaces `raise notice` output.
+- **Decision**: FIXED via Fix B — the whole isolation assertion is now a single atomic `do` block ending in `raise exception using message = format(...)`, which prints a `[PASS]`/`[FAIL]` line plus every measured value beside its required value. An exception is always rendered by the editor (unlike `raise notice`, the unverified blind spot above) and forces an unconditional rollback of the seeded rows; a `do` block also cannot be half-pasted, which closes the original partial-run hazard at its source rather than mitigating it. The policy-name and `relrowsecurity` checks were folded into the same block so one run reports everything. The scoped cleanup `delete` from F1 moved ahead of the block, so it sweeps leftovers from any earlier aborted run while the assertion output stays last. Section 1's raw `pg_policies` listing remains as read-only detail — the only fragment now worth running alone, and it writes nothing.
+  **Residual, deliberately left open**: Fix A was not taken, so the script still has not been executed. Its syntax and `format()` arity were checked by reading, not by running — there is no local Postgres in this project. Progress items 2.4/2.5 therefore still describe an artifact older than the one in the tree. Re-running it against the linked project is the outstanding action.
+
+### F3 — `supabase:gen` promotes an empty file if the CLI exits 0 with no output
+
+- **Severity**: WARNING
+- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Safety & Quality
 - **Location**: package.json:26
-- **Detail**: The hardened script ends in `&& mv src/db/database.types.ts.tmp src/db/database.types.ts`.
-  `mv` is not a `cmd.exe` builtin, there is no `.npmrc`, and `npm config get script-shell` returns
-  `null` — so npm runs scripts through `cmd.exe` on this Windows-primary project. Verified against
-  the machine's *persisted* PATH (`[Environment]::GetEnvironmentVariable('Path','Machine'/'User')`):
-  only `C:\Program Files\Git\cmd` is present, which ships `git.exe` but **not** `mv.exe` (that lives
-  in `C:\Program Files\Git\usr\bin`, which is not on PATH). `where mv` under that PATH exits 1, so
-  the script writes the `.tmp` file and dies. The previous script (`... > src/db/database.types.ts`)
-  was a pure redirect and worked in `cmd.exe`, so this change introduced the regression, and
-  AGENTS.md carries a hard rule pointing at the command ("Run `npm run supabase:gen` after any
-  schema change"). Two mitigating facts: the failure is loud and leaves the committed types file
-  **intact** — the data-safety goal of the hardening still holds — and it works from Git Bash, which
-  is almost certainly how the committed regeneration was produced. Plan criterion 3.2 ("Types
-  regenerate without error") is therefore true only outside the project's default shell.
-- **Fix A ⭐ Recommended**: Replace `mv` with a portable Node rename inside the same script.
-  - Strength: No new dependency and no shell assumption, and it keeps the exit-0 gate the plan designed; `node` is already required to run npm at all.
-  - Tradeoff: The script line grows noticeably longer and less readable.
-  - Confidence: HIGH — both the failure and the fix were verified on this machine.
-  - Blind spot: Does not harden against the CLI exiting 0 with truncated output; only a size or shape sanity check would.
-- **Fix B**: Add `.npmrc` with `script-shell=bash` so every script runs under a POSIX shell.
-  - Strength: Fixes this and any future POSIX-ism in one place; the repo already leans POSIX.
-  - Tradeoff: Makes `bash` a hard prerequisite for every contributor and for CI — a global change to satisfy one script.
-  - Confidence: MEDIUM — depends on bash being present on every dev machine, which is not guaranteed.
-  - Blind spot: Have not checked whether any existing script relies on `cmd.exe` semantics.
-- **Decision**: SKIPPED — conscious decision; the script fails loudly and leaves the committed types file intact, and Git Bash works.
+- **Detail**: `supabase gen types typescript --linked > src/db/database.types.ts.tmp && mv
+  src/db/database.types.ts.tmp src/db/database.types.ts`. The `&&` guard covers a non-zero exit only.
+  If the CLI exits 0 having written nothing or a truncated stream, the empty `.tmp` is promoted over
+  the committed types and the file is destroyed with no error — the failure then surfaces as `astro
+  check` reporting hundreds of errors far from the cause, against a file the project forbids
+  hand-editing. The plan's stated purpose for hardening this script was "stop a failed generation
+  from destroying the committed types file" (plan.md:365), so this is that hardening being half-done
+  rather than a new idea. The prior review named it as F1 Fix A's blind spot, but F1 was skipped in
+  full, so it was never addressed. The `.gitignore` entry for the `.tmp` file is correct and does its
+  job.
+- **Fix**: Gate the promotion on a shape check — insert `grep -q "export type Database" src/db/database.types.ts.tmp &&` between the two halves of the script.
+  - Strength: Closes the only failure mode the `&&` misses, using a check the regenerated file provably satisfies (the byte-identical output verified in this review contains `export type Database = {`).
+  - Tradeoff: Adds a third POSIX-ism to a script that already carries `mv`, so it compounds the skipped F1 rather than fixing it.
+  - Confidence: HIGH — both the gap and the sentinel string were verified against the actual generated output.
+  - Blind spot: Does not detect output that is well-formed but describes the wrong project.
+- **Decision**: FIXED — `supabase:gen` now reads `… > …tmp && grep -q 'export type Database' …tmp && mv …tmp …ts`. Verified both halves of the gate: the sentinel is present in the committed types, and empty input fails the grep. Note this adds a third POSIX-ism to the script, so it compounds the consciously skipped F1 (`mv` is unavailable under `cmd.exe` on this machine) — the script remains Git-Bash-only.
 
-### F2 — RLS check script can commit rows to the shared database on a partial run
-
-- **Severity**: WARNING
-- **Impact**: MEDIUM — real tradeoff; pause to reason through it
-- **Dimension**: Safety & Quality
-- **Location**: supabase/checks/diary-entries-rls.sql:52-76
-- **Detail**: The writes are correctly bracketed by `begin;` (:52) and `rollback;` (:76), and
-  `set local` is transaction-scoped, so a *complete* run leaves nothing behind. But the file header
-  (:5) instructs the reader to paste the script into the Supabase SQL editor, which executes the
-  highlighted selection. Selecting only the `insert into diary_entries ... values ('<uuid-a>'...),
-  ('<uuid-b>'...)` block (:56-59) commits two rows. Verified that `.env` and `.env.test` carry an
-  identical `SUPABASE_URL` (sha256 of the line matches), so this is the same database that
-  development *and* E2E run against.
-- **Fix A ⭐ Recommended**: Wrap the whole assertion in a `do $$ ... raise exception ... end $$;` block.
-  - Strength: An exception rolls back unconditionally, so the rows become unreachable even under a partial paste — which is exactly the failure mode.
-  - Tradeoff: Per-statement `select` output is no longer displayed by the editor; results must be surfaced via `raise notice`.
-  - Confidence: MEDIUM — correct Postgres semantics, but it changes how the operator reads the output, which is the script's whole point.
-  - Blind spot: Have not run it in the Supabase editor to confirm `raise notice` output is visible there.
-- **Fix B**: Tag the seed rows with a marker and end the file with an unconditional `delete from diary_entries where content like 'rls check - %';`.
-  - Strength: Keeps the readable per-statement output; the cleanup is one line and is itself re-runnable.
-  - Tradeoff: Still relies on the operator reaching the last statement — it narrows the window rather than closing it.
-  - Confidence: HIGH — trivially correct, no behavioural change to the assertions.
-  - Blind spot: A `delete` in a file pasted against a shared database is itself a new risk surface if the `like` pattern is ever loosened.
-- **Decision**: FIXED via Fix B — marker rows plus an unconditional `delete from diary_entries where content like 'rls check - %';` after `rollback;`.
-
-### F3 — Migration comment promises a database guarantee the constraint does not make
-
-- **Severity**: WARNING
-- **Impact**: MEDIUM — real tradeoff; pause to reason through it
-- **Dimension**: Safety & Quality
-- **Location**: supabase/migrations/20260922140906_create_diary_entries.sql:49-53
-- **Detail**: The comment directly above the constraint reads "Każda ścieżka zerująca `calories`
-  musi w tej samej instrukcji wyzerować także `estimation_requested_at`". The constraint it
-  annotates is `check ((calories is null) = (calorie_origin is null))` — it says nothing about
-  `estimation_requested_at`. A row with `calories is null` and `estimation_requested_at` set is
-  accepted by the database, which is precisely the state the comment warns about. The overclaim has
-  already propagated: `docs/reference/contract-surfaces.md` now states the constraint means "a write
-  that sets one without the other is rejected by the database, not by the route". `S-01` and `S-05`
-  will read one of these two documents and assume the database is the backstop for the whole rule.
-- **Fix A ⭐ Recommended**: Reword the comment, and the contract-surfaces sentence, to state plainly which half the database enforces and which half is a route-level convention.
-  - Strength: Documentation-only — no migration and no risk to the applied schema. It fixes the actual defect, which is a false statement rather than a missing guard.
-  - Tradeoff: The invariant stays unenforced, so a future write path can still get it wrong.
-  - Confidence: HIGH — both files are plain markdown or SQL comments, Prettier-ignored, zero blast radius.
-  - Blind spot: None significant.
-- **Fix B**: Extend the constraint in a follow-up migration, e.g. `check (calories is not null or estimation_requested_at is null)`.
-  - Strength: Makes the documented invariant actually true, and the table is still empty so there is nothing to backfill.
-  - Tradeoff: A second migration against the shared hosted database for a foundation already closed out — and as written it forbids the legitimate "estimate requested, not yet arrived" state, which is the exact state the column exists to represent. This predicate is probably wrong.
-  - Confidence: LOW — the predicate contradicts the column's stated purpose; getting it right needs the state machine from `S-02`, which does not exist yet.
-  - Blind spot: The full set of legal `(calories, calorie_origin, estimation_requested_at)` triples is not enumerated anywhere.
-- **Decision**: FIXED via Fix A — migration comment and contract-surfaces entry now state which half the database enforces.
-
-### F4 — RLS isolation assertions print a bare count with no expected value
-
-- **Severity**: WARNING
-- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: Safety & Quality
-- **Location**: supabase/checks/diary-entries-rls.sql:65,69
-- **Detail**: `select count(*) as widoczne_dla_a from diary_entries;` with the comment "oczekiwane:
-  tylko wiersze A". No number is written down, so the operator cannot tell a passing result from a
-  failing one without already knowing each user's row count in a shared database. The script's own
-  preamble (:45-50) argues correctly that a check which can pass for the wrong reason proves
-  nothing — this assertion has that shape. Compounding it: if `set local role authenticated` (:61)
-  is ever run outside a transaction, Postgres emits only `WARNING: SET LOCAL can be used only in
-  transaction blocks` and the counts then run as the RLS-bypassing superuser, printing a
-  meaningless number that still looks like a result.
-- **Fix**: Replace the bare counts with zero-valued assertions, e.g. `select count(*) filter (where user_id <> '<uuid-a>'::uuid) as musi_byc_zero from diary_entries;`, and precede them with `select current_user, (auth.uid())::text;` as a role guard.
-- **Decision**: FIXED — self-describing assertions (`musi_byc_zero`, `musi_byc_uuid_a`, `wiersze_a_min_1`) plus a `current_user` role guard.
-
-### F5 — Roadmap still shows F-01 as in-progress after the change closed out
-
-- **Severity**: WARNING
-- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: Plan Adherence
-- **Location**: context/foundation/roadmap.md:48,92,175
-- **Detail**: Commit `2c88ee4` (17:36) flipped F-01 `ready` → `in-progress` one minute *after* the
-  epilogue commit `9893770` (17:35) set `change.md` to `status: implemented`. The roadmap now
-  contradicts the change record in three places: the At-a-glance table (:48), the Foundations detail
-  (:92), and the Backlog Handoff row (:175), which still reads "Ready for `/10x-plan`: yes — Uruchom
-  `/10x-plan diary-entry-store`". `S-01` is the next slice and is gated on F-01; whoever picks it up
-  reads this table first.
-- **Fix**: Set F-01 status to done at :48 and :92, and update the Backlog Handoff row at :175 to point at `S-01` as the next runnable item.
-- **Decision**: FIXED — F-01 set to `done` at :48 and :93; Backlog Handoff now hands off to S-01.
-
-### F6 — ESLint gate narrowed by an unplanned config change
-
-- **Severity**: WARNING
-- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
-- **Dimension**: Scope Discipline
-- **Location**: eslint.config.js:72-76
-- **Detail**: Commit `2fc41b4` added `{ ignores: ["src/db/database.types.ts"] }`. The plan names
-  `package.json`, `.gitignore`, `src/db/database.types.ts`, `src/types.ts`,
-  `docs/reference/contract-surfaces.md` and `AGENTS.md` as phase 3's files — `eslint.config.js` is
-  not among them, and no Progress row records it. It was **forced, not chosen**: verified that
-  `npx eslint --no-ignore src/db/database.types.ts` reports 8 errors against the genuine CLI output
-  (1× `consistent-type-definitions`, 7× `consistent-indexed-object-style`), because the new
-  generator emits `export type Database = {` and `[_ in never]: never`. The previously committed
-  file said `export interface Database` with semicolons — i.e. it had been hand-normalized at some
-  point, against AGENTS.md's "never hand-edit". So the ignore is the correct repair and it mirrors
-  the pre-existing `.prettierignore` entry. What is unrecorded is that satisfying the plan's
-  "linting passes" gate required *narrowing that gate's scope*; a side effect is that any future
-  hand-edit of `database.types.ts` is now unlinted as well as unformatted.
-- **Fix**: Record the change in the plan — an addendum or a Progress row under phase 3 — noting why the ignore is mandatory: regenerating `database.types.ts` produces output that violates two `typescript-eslint` stylistic rules.
-- **Decision**: FIXED — recorded as phase 3 item 5 (addendum) in plan.md, with the 8 eslint errors as evidence.
-
-### F7 — `source_recipe_id` foreign key can reference another user's recipe
+### F4 — No index on `source_recipe_id`; deleting a recipe scans all of `diary_entries`
 
 - **Severity**: OBSERVATION
 - **Impact**: MEDIUM — real tradeoff; pause to reason through it
-- **Dimension**: Safety & Quality
-- **Location**: supabase/migrations/20260922140906_create_diary_entries.sql:38
-- **Detail**: `source_recipe_id integer references recipes(id) on delete set null`. Foreign-key
-  validation runs as a system operation and bypasses RLS, so an authenticated user can insert a
-  diary entry pointing at a recipe owned by someone else: the insert succeeds for an id that exists
-  and fails with an FK violation for one that does not. That is a cross-user reference stored in the
-  row, plus a global existence oracle over `recipes.id`. Low exploitability — the ids are a dense
-  serial sequence and the recipe *content* stays unreadable through `recipes`' own RLS — but the
-  reference itself is real, and `S-03` is the slice that will start writing this column.
-- **Fix A ⭐ Recommended**: Have `S-03`'s route verify the recipe belongs to `auth.uid()` before writing, and record the requirement now.
-  - Strength: No migration against the shared database, and it puts the check where the validated input already lives — matching how this project handles ownership everywhere else.
-  - Tradeoff: Enforced by convention rather than by the schema, so a second write path could skip it.
-  - Confidence: HIGH — no write path exists yet, so the requirement can be stated before any code depends on it.
-  - Blind spot: Nothing in the repo currently reminds an implementer of this; it would need to land in `S-03`'s plan or in lessons.md.
-- **Fix B**: Enforce it in the schema — `unique (id, user_id)` on `recipes`, then a composite FK `(source_recipe_id, user_id) references recipes(id, user_id) on delete set null`.
-  - Strength: The database becomes the backstop, so no route can get it wrong.
-  - Tradeoff: Requires altering `recipes`, which this change's own "What We're NOT Doing" list forbids ("no change to `recipes` — no column, no policy, no data"), and means a second migration on the shared hosted database.
-  - Confidence: MEDIUM — the pattern is standard, but it breaks a scope guardrail the plan set deliberately.
-  - Blind spot: Have not checked whether a unique index on `recipes(id, user_id)` conflicts with anything in the existing schema.
-- **Decision**: FIXED via Fix A — recorded in plan.md Critical Implementation Details as binding on S-03.
+- **Dimension**: Architecture
+- **Location**: supabase/migrations/20260922140906_create_diary_entries.sql:38,63
+- **Detail**: `source_recipe_id integer references recipes(id) on delete set null`, with
+  `idx_diary_entries_user_date on diary_entries(user_id, entry_date)` as the table's only index.
+  Postgres does not auto-index the referencing side of a foreign key, so every `delete from recipes`
+  — an existing, user-reachable operation via `RecipeService.deleteRecipe` — must scan all of
+  `diary_entries` to null the column out, holding a row lock while it does. Harmless at 3–4 users,
+  real as the diary grows, and cheapest to add while the table is still empty. The exemplar schema
+  has no cross-table foreign key, so it offers no precedent either way; the plan's Performance
+  Considerations section reasoned only about the module's own read shape and did not consider the
+  inbound delete path.
+- **Fix A ⭐ Recommended**: Record it as binding on the first slice that needs it, the way F7 and F8 were recorded, and leave the schema alone.
+  - Strength: Respects this change's deliberate "one migration, applied once" shape and its closed-out status; the cost is provably zero at current volume, and an index is additive whenever it is added.
+  - Tradeoff: The cheapest moment to add it (empty table, migration not yet followed by others) passes unused.
+  - Confidence: HIGH — the volume argument is solid and the plan already uses "record as binding on a later slice" as its idiom for exactly this.
+  - Blind spot: Nothing forces a later slice to act on a Critical Implementation Details note.
+- **Fix B**: Add `create index idx_diary_entries_source_recipe on diary_entries(source_recipe_id);` in a follow-up migration now.
+  - Strength: Settles it while the table is empty, so the index builds instantly and no future delete path can be surprised.
+  - Tradeoff: A second migration against the shared hosted database for a change already closed out — and the plan's Migration Notes treat a second migration as the recovery path, not routine.
+  - Confidence: HIGH — standard, additive, and safe on an empty table.
+  - Blind spot: Not checked whether S-03 will want a different index shape once it queries this column.
+- **Decision**: FIXED via Fix A — recorded in plan.md Critical Implementation Details as binding on S-03, with the suggested `create index idx_diary_entries_source_recipe` and explicit licence for S-03 to choose a partial index instead. Schema left untouched; no second migration.
 
-### F8 — Nothing ties a recipe-derived origin to a recipe or a portion count
-
-- **Severity**: OBSERVATION
-- **Impact**: MEDIUM — real tradeoff; pause to reason through it
-- **Dimension**: Safety & Quality
-- **Location**: supabase/migrations/20260922140906_create_diary_entries.sql:38-40
-- **Detail**: `diary_entries_value_has_origin` couples `calories` and `calorie_origin`, which is the
-  coupling the plan specified. But `calorie_origin = 'recipe_nutrition'` — described in the enum
-  comment (:15) as "przeskalowane przez liczbę porcji" — is not tied to `source_recipe_id is not
-  null` or `portions is not null`, and `'ai_from_recipe'` (:16) is not tied to `source_recipe_id`.
-  A row can therefore claim recipe-derived provenance with neither a recipe nor a portion count, and
-  its number can never be re-derived or audited afterwards. The contract-surfaces entry now states
-  that a row's provenance "can be read back", which this permits to be false.
-- **Fix**: Consider `check (calorie_origin not in ('recipe_nutrition','ai_from_recipe') or source_recipe_id is not null)` in a follow-up migration — cheapest now, while the table is empty and no write path exists.
-- **Decision**: RECORDED — noted in plan.md Critical Implementation Details as binding on S-03 and S-04; migration deferred.
-
-### F9 — `supabase/checks/` is a new directory convention with no precedent and no registration
+### F5 — AGENTS.md promises per-table RLS proofs that exist for one table out of four
 
 - **Severity**: OBSERVATION
 - **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Pattern Consistency
-- **Location**: supabase/checks/diary-entries-rls.sql
-- **Detail**: The plan created this directory deliberately ("new directory") and the script inside it
-  is good. But AGENTS.md documents only `supabase/migrations/` and `npm run supabase:new-migration`,
-  so nothing tells the next author that repeatable RLS proofs live here or that they should be re-run
-  after a migration touching the table. The script is also not runnable as committed — `<uuid-a>` and
-  `<uuid-b>` are placeholders needing manual substitution (documented at :14-17) — so nothing
-  verifies it still passes, and it will quietly rot.
-- **Fix**: Add one line to AGENTS.md under the migration rule saying where repeatable RLS proofs live and when to re-run them.
-- **Decision**: FIXED — AGENTS.md now registers `supabase/checks/<table>-rls.sql` and when to re-run it.
+- **Location**: AGENTS.md:61-65
+- **Detail**: The F9 fix added "Re-runnable proofs that those policies actually isolate users live in
+  `supabase/checks/<table>-rls.sql` — **run the one for a table after any migration touching it**."
+  `supabase/checks/` contains exactly one file, `diary-entries-rls.sql`; there is no
+  `preferences-rls.sql`, `recipes-rls.sql` or `logs-rls.sql`. The instruction is therefore
+  unfollowable for three of the four tables AGENTS.md lists two lines earlier, and an agent told to
+  run "the one for a table" will go looking for a file that was never written.
+- **Fix**: Reword to name the gap and the obligation — "…live in `supabase/checks/<table>-rls.sql` (so far only `diary-entries-rls.sql`); write one alongside any new table and re-run it after a migration touching that table."
+- **Decision**: FIXED — AGENTS.md now names the gap ("so far only `diary-entries-rls.sql`") and the obligation to write one alongside any new table. The same bullet was also brought into line with F2's rewrite: it now tells the reader to run the whole file and read the verdict from the deliberate `[PASS]`/`[FAIL]` exception.
+
+### F6 — Toolkit marker-block syncs keep riding along inside change commits
+
+- **Severity**: OBSERVATION
+- **Impact**: LOW — quick decision; fix is obvious and narrowly scoped
+- **Dimension**: Scope Discipline
+- **Location**: CLAUDE.md (commit dee2aa6); also commit 2c88ee4
+- **Detail**: `dee2aa6`, titled `fix(diary-entry-store): apply implementation review findings`, also
+  carries 60 lines of `CLAUDE.md` change, entirely inside the `<!-- BEGIN @przeprogramowani/10x-cli -->`
+  marker block — a toolkit sync from "Module 2, Lesson 2" to "Module 2, Lesson 3". The content is
+  benign and the project-owned section below the markers is untouched, but it has no relationship to
+  the diary store. This is the second occurrence: `2c88ee4`, message `"doc"`, did the Lesson 1 →
+  Lesson 2 sync **and** flipped the roadmap's F-01 status in one commit, with a message that also
+  violates AGENTS.md's Conventional-Commits-with-a-scope rule. Two in a row makes it a pattern rather
+  than an accident, and it means a reviewer reading `git log` for this change sees toolkit churn
+  mixed into the change's own history.
+- **Fix**: Give toolkit marker-block syncs their own commit (e.g. `chore(toolkit): sync 10x-cli block`) and keep change commits to the change — recorded as a recurring rule via `/10x-lesson` rather than as a one-off note.
+- **Decision**: ACCEPTED-AS-RULE: "Toolkit marker-block syncs belong in their own commit" — appended to `context/foundation/lessons.md`. The finding itself stays unfixed by choice: splitting `dee2aa6` would mean rewriting published history on master, and the rule governs future commits either way.
+
+## Prior review: fixes re-verified
+
+All nine decisions from the first review were checked against the tree, not taken on trust.
+
+| # | Decision | Holds? |
+|---|---|---|
+| F1 `supabase:gen` / `mv` under `cmd.exe` | SKIPPED | Script unchanged, consistent with the decision. The separate zero-exit gap is raised fresh as F3 above. |
+| F2 check script could commit rows | FIXED via Fix B | Marker rows and cleanup present — but introduces F1 and F2 above. |
+| F3 comment overclaimed a DB guarantee | FIXED via Fix A | **Correct.** Migration :49-53 and contract-surfaces :71-75 both now state exactly what the constraint does and which half is route-level. |
+| F4 bare counts with no expected value | FIXED | **Correct**, and slightly better than prescribed — `current_user` guard split out, `auth.uid()` folded into each assertion row. Visibility caveat is F2 above. |
+| F5 roadmap contradicted change.md | FIXED | **Correct.** F-01 `done` at :48 and :93; Backlog Handoff hands off to S-01. All three contradictions closed. |
+| F6 unrecorded ESLint gate narrowing | FIXED | Recorded as plan.md phase 3 item 5 with the 8-error evidence. Entry is a standalone `{ ignores: [...] }` placed after `includeIgnoreFile` — the correct flat-config shape. |
+| F7 `source_recipe_id` cross-user reference | FIXED via Fix A | **Correct.** plan.md Critical Implementation Details records it as binding on S-03. |
+| F8 recipe-derived origin untied | RECORDED | **Correct.** plan.md records it as binding on S-03 and S-04. |
+| F9 `supabase/checks/` unregistered | FIXED | Registered in AGENTS.md — but the wording now overclaims; see F5 above. |
 
 ## Consciously accepted, not raised as findings
 
-- **CI `integration` project ref unresolved.** Phase 2 criterion 2.8 was checked and honestly
-  recorded as "not verified" in `plan-brief.md` — GitHub secrets are write-only and `gh` is not
-  installed. If `integration` points at a different project it has no `diary_entries`, which breaks
-  the first slice that reads it, in CI only. Already documented with two ways to settle it.
-- **`updated_at` has no trigger.** Recorded in the plan's Critical Implementation Details as
-  inherited drift from `recipes`; every diary update path must set it by hand.
-- **No `tests/integration/` RLS test.** Declined explicitly in "What We're NOT Doing" with reasoning.
-- **`entry_date` is unbounded**, and `amount_text varchar(100)` omits the doubled `char_length`
-  check that `preferences.value` carries. The exemplar is itself inconsistent on the latter
-  (`recipes.title varchar(255)` has no doubled check) and `varchar(100)` already enforces the bound.
+- **`docs/reference/contract-surfaces.md:85-86`, "a row's provenance can no longer be read back."**
+  Re-read in context, this clause is scoped to the consequence of *renaming or reordering an enum
+  value*, not an unconditional guarantee about every row — a weaker overclaim than it looks, and F8
+  was consciously deferred with the substance recorded in plan.md. Not worth re-litigating.
+- **No Progress row for the phase 3 ESLint addendum.** F6's accepted fix text offered "an addendum
+  **or** a Progress row"; the addendum landed. Settled.
+- **CI `integration` project ref unresolved.** Criterion 2.8 was checked and honestly recorded as
+  "not verified" in plan-brief.md, with two ways to settle it later. Not rubber-stamping.
+- **`updated_at` has no trigger**; **no `tests/integration/` RLS test**; **`entry_date` unbounded**;
+  **`amount_text` without a doubled `char_length` check**. All accepted in the prior review with
+  reasoning that still holds.
+- **`context/foundation/roadmap.md` frontmatter still reads `updated: 2026-09-22`** although the F5
+  fix landed 2026-09-23. Cosmetic.

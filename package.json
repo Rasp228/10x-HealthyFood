@@ -23,7 +23,7 @@
     "test:performance": "lhci autorun",
     "test:all": "npm run test:coverage && npm run test:e2e && npm run test:security",
     "supabase:init": "supabase init",
-    "supabase:gen": "supabase gen types typescript --linked > src/db/database.types.ts.tmp && mv src/db/database.types.ts.tmp src/db/database.types.ts",
+    "supabase:gen": "supabase gen types typescript --linked > src/db/database.types.ts.tmp && grep -q 'export type Database' src/db/database.types.ts.tmp && mv src/db/database.types.ts.tmp src/db/database.types.ts",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link",
     "supabase:push": "supabase db push --linked",

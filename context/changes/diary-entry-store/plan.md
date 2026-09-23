@@ -145,6 +145,19 @@ in the same statement as the origin. If a database-level guard is wanted instead
 `check (calorie_origin not in ('recipe_nutrition','ai_from_recipe') or source_recipe_id is not null)`
 — cheapest to add while the table is still empty.
 
+**`source_recipe_id` is unindexed, and the cost lands on recipe deletion** (recorded 2026-09-23
+during the second `/10x-impl-review`). `idx_diary_entries_user_date` is the table's only index, and
+Postgres does not auto-index the referencing side of a foreign key. So every `delete from recipes` —
+already reachable by a user through `RecipeService.deleteRecipe` — must scan all of `diary_entries`
+to apply `on delete set null`, taking a row lock while it does. The Performance Considerations
+section below reasoned only about the module's own read shape ("entries for a chosen day") and
+missed this inbound path. At 3–4 users the cost is zero, so no migration is added here. **Binds the
+first slice that makes recipe-linked entries routine — `S-03`** — which should add
+`create index idx_diary_entries_source_recipe on diary_entries(source_recipe_id);` alongside its own
+migration, and is free to pick a different shape (e.g. a partial index `where source_recipe_id is
+not null`) once it knows its query pattern. An index is additive whenever it lands; the only thing
+lost by waiting is that it no longer builds against an empty table.
+
 **Regenerating types replaces the whole file — expect a rewrite, not a diff.** The committed
 `src/db/database.types.ts` is not CLI output at all; it is a hand-written approximation. It carries
 no `export type Json` (the identifier appears nowhere in the repository), no `__InternalSupabase`

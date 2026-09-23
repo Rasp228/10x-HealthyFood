@@ -59,10 +59,13 @@ the code does not yet follow the conventions below.
   @supabase/migrations/20250427130913_healthymeal_schema.sql. Existing tables: `preferences`,
   `recipes`, `logs`, `diary_entries`. Start a migration with
   `npm run supabase:new-migration <name>`. Re-runnable proofs that those policies actually isolate
-  users live in `supabase/checks/<table>-rls.sql` — run the one for a table after any migration
-  touching it. They impersonate two subjects with `set local request.jwt.claims`, because the
-  Supabase SQL editor's own role bypasses RLS and a plain cross-user `select` would pass against a
-  table with RLS switched off. Substitute the `<uuid-a>` / `<uuid-b>` placeholders before running.
+  users live in `supabase/checks/<table>-rls.sql` — so far only `diary-entries-rls.sql`, so write
+  one alongside any new table and re-run it after any migration touching that table. They
+  impersonate two subjects via `request.jwt.claims`, because the Supabase SQL editor's own role
+  bypasses RLS and a plain cross-user `select` would pass against a table with RLS switched off.
+  Substitute the `<uuid-a>` / `<uuid-b>` placeholders, run the whole file, and read the verdict from
+  the deliberate `[PASS]`/`[FAIL]` exception the assertion block raises — the exception is what both
+  reports the result and forces the test rows back out.
 - A new route not listed in `PUBLIC_PATHS` (@src/middleware/index.ts) requires a session.
 - Recurring pitfalls that already cost a fix once are recorded in @context/foundation/lessons.md —
   read it before touching middleware, session cookies or the dev-server/test harness. Add to it with
