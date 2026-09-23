@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { LoginPage } from "./LoginPage";
 import { HomePage } from "./HomePage";
 import { RecipeFormPage } from "./RecipeFormPage";
+import { DiaryPage } from "./DiaryPage";
 import { CleanupService } from "../services/cleanup.service";
 
 export class Application {
@@ -9,6 +10,7 @@ export class Application {
   readonly loginPage: LoginPage;
   readonly homePage: HomePage;
   readonly recipeFormPage: RecipeFormPage;
+  readonly diaryPage: DiaryPage;
   private cleanupService?: CleanupService;
 
   constructor(page: Page) {
@@ -16,6 +18,7 @@ export class Application {
     this.loginPage = new LoginPage(page);
     this.homePage = new HomePage(page);
     this.recipeFormPage = new RecipeFormPage(page);
+    this.diaryPage = new DiaryPage(page);
   }
 
   // Inicjalizuje serwis czyszczenia po zalogowaniu

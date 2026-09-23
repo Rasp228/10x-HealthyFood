@@ -723,34 +723,34 @@ stay valid, since they use only columns F-01 established.
 
 #### Automated
 
-- [x] 2.1 Type checking passes with zero errors: `npm run typecheck`
-- [x] 2.2 Linting passes, including the react-hooks rules: `npm run lint`
-- [x] 2.3 Formatting is clean: `npm run format:check`
-- [x] 2.4 Production build succeeds: `npm run build`
+- [x] 2.1 Type checking passes with zero errors: `npm run typecheck` — 9ab80b8
+- [x] 2.2 Linting passes, including the react-hooks rules: `npm run lint` — 9ab80b8
+- [x] 2.3 Formatting is clean: `npm run format:check` — 9ab80b8
+- [x] 2.4 Production build succeeds: `npm run build` — 9ab80b8
 
 #### Manual
 
-- [x] 2.5 Navigation item opens the panel on today
-- [x] 2.6 Entry with a value appears at once and counts into the total
-- [x] 2.7 Entry without a value is marked not calculated and the summary reports it
-- [x] 2.8 Arrows, date field and Dziś track the address bar; reload and back button behave
-- [x] 2.9 Date field refuses a day later than today
-- [x] 2.10 Field errors and request failures surface where expected
-- [x] 2.11 Existing screens are unchanged
-- [x] 2.12 A future day in the URL lands on today and the address bar is corrected
+- [x] 2.5 Navigation item opens the panel on today — 9ab80b8
+- [x] 2.6 Entry with a value appears at once and counts into the total — 9ab80b8
+- [x] 2.7 Entry without a value is marked not calculated and the summary reports it — 9ab80b8
+- [x] 2.8 Arrows, date field and Dziś track the address bar; reload and back button behave — 9ab80b8
+- [x] 2.9 Date field refuses a day later than today — 9ab80b8
+- [x] 2.10 Field errors and request failures surface where expected — 9ab80b8
+- [x] 2.11 Existing screens are unchanged — 9ab80b8
+- [x] 2.12 A future day in the URL lands on today and the address bar is corrected — 9ab80b8
 
 ### Phase 3: Tests and closing the gate
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass: `npm run test`
-- [ ] 3.2 E2E suite passes: `npm run test:e2e`
-- [ ] 3.3 Type checking passes with zero errors: `npm run typecheck`
-- [ ] 3.4 Linting passes: `npm run lint`
-- [ ] 3.5 Formatting is clean: `npm run format:check`
-- [ ] 3.6 Dependency audit passes: `npm run test:security`
+- [x] 3.1 Unit tests pass: `npm run test`
+- [x] 3.2 E2E suite passes: `npm run test:e2e`
+- [x] 3.3 Type checking passes with zero errors: `npm run typecheck`
+- [x] 3.4 Linting passes: `npm run lint`
+- [x] 3.5 Formatting is clean: `npm run format:check`
+- [x] 3.6 Dependency audit passes: `npm run test:security`
 
 #### Manual
 
-- [ ] 3.7 E2E rows live only under the signature date
-- [ ] 3.8 Two accounts confirm entries stay private
+- [x] 3.7 E2E rows live only under the signature date
+- [x] 3.8 Two accounts confirm entries stay private
