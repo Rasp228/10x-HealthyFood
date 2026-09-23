@@ -1,7 +1,7 @@
 ---
 change_id: manual-diary-entry
 title: Manual diary entry — day panel, hand-typed calorie value and daily total
-status: plan_reviewed
+status: implementing
 created: 2026-09-23
 updated: 2026-09-23
 archived_at: null

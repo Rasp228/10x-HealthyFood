@@ -707,17 +707,17 @@ stay valid, since they use only columns F-01 established.
 
 #### Automated
 
-- [ ] 1.1 Type checking passes with zero errors: `npm run typecheck`
-- [ ] 1.2 Linting passes: `npm run lint`
-- [ ] 1.3 Formatting is clean: `npm run format:check`
+- [x] 1.1 Type checking passes with zero errors: `npm run typecheck`
+- [x] 1.2 Linting passes: `npm run lint`
+- [x] 1.3 Formatting is clean: `npm run format:check`
 
 #### Manual
 
-- [ ] 1.4 GET for a fresh day returns an empty list
-- [ ] 1.5 POST with and without a calorie number writes the correct value/origin pairing
-- [ ] 1.6 Malformed or non-existent date returns 400 with ValidationIssue details
-- [ ] 1.7 Request without a session is redirected instead of reaching the handler
-- [ ] 1.8 Entries of one account are absent from another account's response
+- [x] 1.4 GET for a fresh day returns an empty list
+- [x] 1.5 POST with and without a calorie number writes the correct value/origin pairing
+- [x] 1.6 Malformed or non-existent date returns 400 with ValidationIssue details
+- [x] 1.7 Request without a session is redirected instead of reaching the handler
+- [x] 1.8 Entries of one account are absent from another account's response
 
 ### Phase 2: Diary surface
 

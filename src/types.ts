@@ -117,6 +117,16 @@ export type UpdatePreferenceCommand = CreatePreferenceCommand;
 export type CreateRecipeCommand = RecipeBasicDto;
 export type UpdateRecipeCommand = RecipeBasicDto;
 
+// Command do tworzenia wpisu dziennika.
+// Bez `calorie_origin` - pochodzenie wartości rozstrzyga serwer, nie klient.
+// Bez `user_id` - tożsamość podróżuje osobnym argumentem serwisu.
+export interface CreateDiaryEntryCommand {
+  entry_date: string;
+  content: string;
+  amount_text: string | null;
+  calories: number | null;
+}
+
 /**
  * Typy dla API błędów i statystyk
  */
