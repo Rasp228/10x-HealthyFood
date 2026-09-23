@@ -46,9 +46,11 @@ create table diary_entries (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  -- Wartość kaloryczna i jej pochodzenie występują wyłącznie razem. Każda ścieżka zerująca
-  -- calories musi w tej samej instrukcji wyzerować także estimation_requested_at, inaczej
-  -- wiersz czyta się jako oszacowanie, które nigdy nie dotarło.
+  -- Baza pilnuje wyłącznie tego, że wartość kaloryczna i jej pochodzenie występują razem.
+  -- Osobna, NIEEGZEKWOWANA przez bazę reguła: każda ścieżka zerująca calories musi w tej samej
+  -- instrukcji wyzerować także estimation_requested_at, inaczej wiersz czyta się jako
+  -- oszacowanie, które nigdy nie dotarło. Wiersz z calories is null i ustawionym
+  -- estimation_requested_at przejdzie ten check - tej połowy pilnuje route, nie baza.
   constraint diary_entries_value_has_origin
     check ((calories is null) = (calorie_origin is null))
 );

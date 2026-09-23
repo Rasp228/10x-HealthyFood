@@ -70,7 +70,9 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
   `astro check` passes against a database that no longer matches. Every table needs RLS and
   per-user policies. `diary_entries` is the store every diary slice reads and writes; its
   `diary_entries_value_has_origin` constraint ties `calories` and `calorie_origin` together, so a
-  write that sets one without the other is rejected by the database, not by the route.
+  write that sets one without the other is rejected by the database, not by the route. It ties
+  nothing else: clearing `calories` must also clear `estimation_requested_at`, and that half is a
+  route-level convention the database does not enforce.
 
 ### Enums — `action_type_enum`, `preference_category_enum`, `calorie_origin_enum`
 

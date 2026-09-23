@@ -60,13 +60,25 @@ values
 
 set local role authenticated;
 
+-- Straż: jeśli to nie wypisze authenticated, SET LOCAL poszedł poza transakcją i poniższe
+-- liczniki lecą jako superużytkownik omijający RLS - wynik byłby bez znaczenia.
+select current_user as musi_byc_authenticated;
+
 -- Użytkownik A widzi wyłącznie własne wiersze
 set local request.jwt.claims = '{"sub":"<uuid-a>","role":"authenticated"}';
-select count(*) as widoczne_dla_a from diary_entries;   -- oczekiwane: tylko wiersze A
+select
+  (auth.uid())::text                                    as musi_byc_uuid_a,
+  count(*) filter (where user_id <> '<uuid-a>'::uuid)   as musi_byc_zero,
+  count(*) filter (where user_id =  '<uuid-a>'::uuid)   as wiersze_a_min_1
+from diary_entries;
 
 -- Użytkownik B widzi wyłącznie własne wiersze
 set local request.jwt.claims = '{"sub":"<uuid-b>","role":"authenticated"}';
-select count(*) as widoczne_dla_b from diary_entries;   -- oczekiwane: tylko wiersze B
+select
+  (auth.uid())::text                                    as musi_byc_uuid_b,
+  count(*) filter (where user_id <> '<uuid-b>'::uuid)   as musi_byc_zero,
+  count(*) filter (where user_id =  '<uuid-b>'::uuid)   as wiersze_b_min_1
+from diary_entries;
 
 -- Opcjonalnie: użytkownik B nie może podszyć się pod A przy zapisie. Instrukcja powinna
 -- skończyć się naruszeniem polityki RLS, ale przerywa transakcję, więc domyślnie jest wyłączona.
@@ -74,6 +86,16 @@ select count(*) as widoczne_dla_b from diary_entries;   -- oczekiwane: tylko wie
 -- values ('<uuid-a>'::uuid, current_date, 'rls check - B podszywa się pod A');
 
 rollback;
+
+-- -----------------------------------------------------------------------------
+-- 3. Siatka bezpieczeństwa
+-- -----------------------------------------------------------------------------
+
+-- Rollback powyżej usuwa wiersze tylko wtedy, gdy skrypt wykonano w całości. Edytor SQL
+-- Supabase uruchamia zaznaczony fragment, więc wykonanie samego bloku insert zatwierdziłoby
+-- wiersze na stałe - a to ta sama baza, na której pracuje dev i E2E (.env i .env.test mają
+-- identyczny SUPABASE_URL). Poniższe czyści je bezwarunkowo; po pełnym przebiegu usuwa 0 wierszy.
+delete from diary_entries where content like 'rls check - %';
 
 -- -----------------------------------------------------------------------------
 -- Koniec skryptu weryfikacyjnego

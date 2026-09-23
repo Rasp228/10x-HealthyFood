@@ -45,7 +45,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 
 | ID | Change ID | Outcome (użytkownik może …) | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | `diary-entry-store` | (fundament) istnieje prywatny magazyn wpisów dziennika z polem na wartość, jej pochodzenie i status wyliczenia | — | FR-001, FR-002, FR-015, Access Control Changes | in-progress |
+| F-01 | `diary-entry-store` | (fundament) istnieje prywatny magazyn wpisów dziennika z polem na wartość, jej pochodzenie i status wyliczenia | — | FR-001, FR-002, FR-015, Access Control Changes | done |
 | S-01 | `manual-diary-entry` | otworzyć panel dziennika, zapisać wpis na wybrany dzień z ręcznie wpisaną liczbą kalorii i zobaczyć sumę dnia | F-01 | US-01, FR-001, FR-002, FR-004, FR-011, FR-016 | proposed |
 | S-02 | `ai-estimate-for-free-text` | poprosić o wyliczenie kalorii dla opisowego wpisu i dostać wartość bez czekania na zapis | S-01 | US-01, FR-003, FR-004, FR-011 | proposed |
 | S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | proposed |
@@ -90,7 +90,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** to jedyna pozycja, której późna zmiana wymusza migrację w tygodniu buforowym — a zbiór dopuszczalnych wartości „pochodzenie" dyktują FR-009 i FR-010, których `S-01` w ogóle nie dotyka, więc musi być kompletny od razu, nie po fakcie. Zakres ograniczony do jednej nowej tabeli: zero zapisu do `recipes` i `preferences` (FR-015), zero zmian w istniejących migracjach. Po wdrożeniu `S-01` nadal integruje tę warstwę przez realną zdolność użytkownika — fundament sam z siebie niczego nie pokazuje.
-- **Status:** in-progress
+- **Status:** done
 
 ## Slices
 
@@ -172,8 +172,8 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 
 | Roadmap ID | Change ID | Suggested issue title | Ready for `/10x-plan` | Notes |
 | --- | --- | --- | --- | --- |
-| F-01 | `diary-entry-store` | Magazyn wpisów dziennika z RLS i polem pochodzenia wartości | yes | Uruchom `/10x-plan diary-entry-store` |
-| S-01 | `manual-diary-entry` | Panel dziennika: ręczny wpis i suma dnia | no | Czeka na F-01 |
+| F-01 | `diary-entry-store` | Magazyn wpisów dziennika z RLS i polem pochodzenia wartości | — | Zrobione (2026-09-22): migracja zaaplikowana, RLS zweryfikowane, typy zregenerowane |
+| S-01 | `manual-diary-entry` | Panel dziennika: ręczny wpis i suma dnia | yes | Uruchom `/10x-plan manual-diary-entry` |
 | S-02 | `ai-estimate-for-free-text` | Wycena opisowego wpisu przez AI, bez czekania na zapis | no | Gwiazda przewodnia. Czeka na S-01 |
 | S-03 | `recipe-entry-with-portions` | Wpis z własnego przepisu z liczbą porcji | no | Czeka na S-01. Równolegle z S-02 |
 | S-04 | `ai-estimate-from-recipe` | Oszacowanie kalorii z treści przepisu | no | Czeka na S-02 i S-03 |

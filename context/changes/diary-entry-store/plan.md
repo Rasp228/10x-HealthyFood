@@ -121,6 +121,30 @@ otherwise stick forever.
 trigger exists anywhere in this schema. `S-01`'s update path must set it explicitly, the way
 `src/pages/api/recipes/[id].ts:116` does. Recorded here so the next slice does not assume otherwise.
 
+**`source_recipe_id` is not constrained to the writer's own recipes** (recorded 2026-09-23 during
+`/10x-impl-review`). Foreign-key validation runs as a system operation and bypasses RLS, so
+`references recipes(id)` proves only that the id *exists* — not that it belongs to `auth.uid()`. An
+authenticated user can therefore store a reference to another user's recipe, and the
+exists-vs-FK-violation difference is a global existence oracle over `recipes.id`. Exploitability is
+low: the ids are a dense serial sequence and the recipe's content stays unreadable through
+`recipes`' own RLS. **Binds `S-03`**, the first slice to write this column: its route must verify
+the recipe belongs to `auth.uid()` before the insert, since the database will not. Enforcing it in
+the schema instead would need `unique (id, user_id)` on `recipes` plus a composite foreign key —
+rejected here because altering `recipes` is on this change's "What We're NOT Doing" list.
+
+**A recipe-derived origin is not tied to a recipe or a portion count** (recorded 2026-09-23 during
+`/10x-impl-review`). `diary_entries_value_has_origin` couples `calories` to `calorie_origin` and
+nothing else. `calorie_origin = 'recipe_nutrition'` — the FR-009 path, which the enum comment
+describes as scaled by the number of portions — is not tied to `source_recipe_id is not null` or
+`portions is not null`, and `'ai_from_recipe'` is not tied to `source_recipe_id`. A row can
+therefore claim recipe-derived provenance while carrying neither a recipe nor a portion count, and
+its number can then never be re-derived or audited — which is at odds with the provenance guarantee
+`docs/reference/contract-surfaces.md` now states. **Binds `S-03` and `S-04`**, the slices that write
+these two origins: they must set `source_recipe_id` (and, for `recipe_nutrition`, `portions`)
+in the same statement as the origin. If a database-level guard is wanted instead, the migration is
+`check (calorie_origin not in ('recipe_nutrition','ai_from_recipe') or source_recipe_id is not null)`
+— cheapest to add while the table is still empty.
+
 **Regenerating types replaces the whole file — expect a rewrite, not a diff.** The committed
 `src/db/database.types.ts` is not CLI output at all; it is a hand-written approximation. It carries
 no `export type Json` (the identifier appears nowhere in the repository), no `__InternalSupabase`
@@ -399,6 +423,30 @@ its four values are the vocabulary FR-009, FR-010, FR-003 and FR-004 map onto, s
 one desynchronizes the cascade from rows already stored. `AGENTS.md`'s "Existing tables:
 `preferences`, `recipes`, `logs`" line gains `diary_entries`. Both files are Prettier-ignored
 (`context/`, `CLAUDE.md`) or plain markdown, so neither affects `format:check`.
+
+#### 5. ESLint ignore for the generated types file (addendum, recorded 2026-09-23 during `/10x-impl-review`)
+
+**File**: `eslint.config.js`
+
+**Intent**: Not anticipated when this plan was written, but mandatory for the "Linting passes" gate
+below. Recorded here because it narrows a CI gate's scope, which is not something an implementation
+phase should do silently.
+
+**Contract**: A standalone global-ignore entry `{ ignores: ["src/db/database.types.ts"] }`, placed
+after `includeIgnoreFile(gitignorePath)`.
+
+**Why it is forced, not chosen**: the regenerated file is genuine CLI output — it emits
+`export type Database = {` and `[_ in never]: never`, with no semicolons. Run against it,
+`npx eslint --no-ignore src/db/database.types.ts` reports 8 errors: 1×
+`@typescript-eslint/consistent-type-definitions` and 7× `@typescript-eslint/consistent-indexed-object-style`.
+The previously committed file said `export interface Database` with semicolons, i.e. it had been
+hand-normalized at some point against AGENTS.md's "never hand-edit `database.types.ts`" rule; the
+regeneration removed that normalization and exposed the conflict. The ignore mirrors the
+pre-existing `.prettierignore` entry for the same file and for the same reason.
+
+**Side effect to keep in mind**: `src/db/database.types.ts` is now excluded from ESLint as well as
+from Prettier, so a future hand-edit of it is caught by neither gate. `astro check` still type-checks
+it.
 
 ### Success Criteria:
 
