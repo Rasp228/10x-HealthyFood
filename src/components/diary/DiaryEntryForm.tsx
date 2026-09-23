@@ -17,6 +17,13 @@ interface DiaryFormValues {
   calories: string;
 }
 
+/**
+ * Pola, które mają własne miejsce na komunikat przy inpucie. Schemat waliduje też `entry_date`,
+ * którego formularz nie pokazuje - bez tej listy jego błąd trafiałby do stanu i nigdzie się nie
+ * rysował, a przycisk po prostu przestawałby działać bez słowa wyjaśnienia.
+ */
+const FIELD_KEYS = ["content", "amount_text", "calories"];
+
 const EMPTY_FORM: DiaryFormValues = {
   content: "",
   amount_text: "",
@@ -27,11 +34,25 @@ const EMPTY_FORM: DiaryFormValues = {
  * Buduje dane wejściowe dla schematu z Fazy 1. Formularz zna tylko napisy, a schemat oczekuje
  * liczby albo `null` - puste pole kalorii to brak wartości, nie zero.
  */
+/**
+ * Puste pole to brak wartości, nie zero. Poza tym `Number` czyta więcej form liczby, niż to pole
+ * kiedykolwiek miało przyjmować: "1e3" cicho robi się 1000 kcal, a "0x1f" - 31, i jedno i drugie
+ * przechodzi potem każdą kontrolę schematu. Cyfry i tylko cyfry; wszystko inne zwracamy jako NaN,
+ * żeby schemat odrzucił to tym samym komunikatem co "abc".
+ */
+const parseCalories = (raw: string): number | null => {
+  const trimmed = raw.trim();
+
+  if (trimmed === "") return null;
+
+  return /^[0-9]{1,5}$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+};
+
 const toPayload = (values: DiaryFormValues, day: string) => ({
   entry_date: day,
   content: values.content,
   amount_text: values.amount_text,
-  calories: values.calories.trim() === "" ? null : Number(values.calories),
+  calories: parseCalories(values.calories),
 });
 
 /**
@@ -140,6 +161,8 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
     }
   };
 
+  const formErrors = Object.entries(errors).filter(([key]) => !FIELD_KEYS.includes(key));
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -163,10 +186,17 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
             maxLength={500}
             placeholder="Np. owsianka z bananem"
             disabled={isSubmitting}
+            aria-invalid={!!errors.content}
+            aria-describedby={errors.content ? "diary-content-error" : undefined}
             data-testid="diary-content-input"
           />
           {errors.content && (
-            <p className="text-xs text-destructive" data-testid="diary-content-error">
+            <p
+              id="diary-content-error"
+              role="alert"
+              className="text-xs text-destructive"
+              data-testid="diary-content-error"
+            >
               {errors.content}
             </p>
           )}
@@ -189,10 +219,17 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
             maxLength={100}
             placeholder="Np. 1 talerz"
             disabled={isSubmitting}
+            aria-invalid={!!errors.amount_text}
+            aria-describedby={errors.amount_text ? "diary-amount-error" : undefined}
             data-testid="diary-amount-input"
           />
           {errors.amount_text && (
-            <p className="text-xs text-destructive" data-testid="diary-amount-error">
+            <p
+              id="diary-amount-error"
+              role="alert"
+              className="text-xs text-destructive"
+              data-testid="diary-amount-error"
+            >
               {errors.amount_text}
             </p>
           )}
@@ -214,15 +251,34 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
             }`}
             placeholder="kcal"
             disabled={isSubmitting}
+            aria-invalid={!!errors.calories}
+            aria-describedby={errors.calories ? "diary-calories-error" : undefined}
             data-testid="diary-calories-input"
           />
           {errors.calories && (
-            <p className="text-xs text-destructive" data-testid="diary-calories-error">
+            <p
+              id="diary-calories-error"
+              role="alert"
+              className="text-xs text-destructive"
+              data-testid="diary-calories-error"
+            >
               {errors.calories}
             </p>
           )}
         </div>
       </div>
+
+      {formErrors.length > 0 && (
+        <div
+          role="alert"
+          className="mt-4 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-xs text-destructive"
+          data-testid="diary-form-error"
+        >
+          {formErrors.map(([key, message]) => (
+            <p key={key}>{message}</p>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between gap-4">
         <p className="text-xs text-muted-foreground">Kalorie możesz zostawić puste - wpis zapisze się bez wartości.</p>

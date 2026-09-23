@@ -609,11 +609,22 @@ spec.
 
 **Intent**: Make the page objects possible; the convention is `getByTestId` only.
 
-**Contract**: `data-testid` in the repository's kebab-case `<domena>-<element>-<typ>` form:
-`diary-page`, `diary-day-input`, `diary-prev-day-button`, `diary-next-day-button`,
-`diary-today-button`, `diary-content-input`, `diary-amount-input`, `diary-calories-input`,
-`diary-submit-button`, `diary-entries-list`, `diary-entry-${id}`, `diary-empty-state`,
-`diary-total-calories`, `diary-missing-values`, and one `*-error` per validated field.
+**Contract**: `data-testid` in the repository's kebab-case `<domena>-<element>-<typ>` form.
+Panel and page: `diary-page`, `diary-entry-form`, `diary-entry-list`, `diary-entry-${id}`,
+`diary-empty-state`, `diary-error-state`, `diary-retry-button`. Form: `diary-content-input`,
+`diary-amount-input`, `diary-calories-input`, `diary-submit-button`, one `*-error` per validated
+field, and `diary-form-error` for a schema error with no field of its own. Entry row: `diary-entry-content`, `diary-entry-amount`, `diary-entry-calories`,
+`diary-entry-calories-missing`. Summary: `diary-day-summary`, `diary-day-total`,
+`diary-day-missing`, `diary-day-count`. Day navigator: `day-navigator`, `day-date-input`,
+`day-previous-button`, `day-next-button`, `day-today-button`.
+
+**Amended at implementation review (2026-09-23, finding F3)**: seven names shipped differently from
+the list this section first carried — `diary-day-input`, `diary-prev-day-button`,
+`diary-next-day-button`, `diary-today-button`, `diary-entries-list`, `diary-total-calories`
+and `diary-missing-values`. The list above is the shipped vocabulary, which the page object and
+`diary-entry.spec.ts` already use. The navigator ids are deliberately scoped to the `day-` widget
+rather than the `diary-` domain; S-06 adds a second day-stepping surface and must not reuse them
+without a prefix.
 
 ### Success Criteria:
 
@@ -743,14 +754,14 @@ stay valid, since they use only columns F-01 established.
 
 #### Automated
 
-- [x] 3.1 Unit tests pass: `npm run test`
-- [x] 3.2 E2E suite passes: `npm run test:e2e`
-- [x] 3.3 Type checking passes with zero errors: `npm run typecheck`
-- [x] 3.4 Linting passes: `npm run lint`
-- [x] 3.5 Formatting is clean: `npm run format:check`
-- [x] 3.6 Dependency audit passes: `npm run test:security`
+- [x] 3.1 Unit tests pass: `npm run test` — f1c78f7
+- [x] 3.2 E2E suite passes: `npm run test:e2e` — f1c78f7
+- [x] 3.3 Type checking passes with zero errors: `npm run typecheck` — f1c78f7
+- [x] 3.4 Linting passes: `npm run lint` — f1c78f7
+- [x] 3.5 Formatting is clean: `npm run format:check` — f1c78f7
+- [x] 3.6 Dependency audit passes: `npm run test:security` — f1c78f7
 
 #### Manual
 
-- [x] 3.7 E2E rows live only under the signature date
-- [x] 3.8 Two accounts confirm entries stay private
+- [x] 3.7 E2E rows live only under the signature date — f1c78f7
+- [x] 3.8 Two accounts confirm entries stay private — f1c78f7

@@ -73,8 +73,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Pobierz i zwaliduj dane wejściowe
-    const rawData = await request.json();
+    // Pobierz i zwaliduj dane wejściowe. Body, które nie jest JSON-em, to błąd wejścia, a nie
+    // awaria serwera: bez tego `catch` wyjątek z `request.json()` trafiłby do zewnętrznego
+    // catcha i wróciłby jako 500. `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const rawData = await request.json().catch(() => null);
     const validationResult = createDiaryEntrySchema.safeParse(rawData);
 
     if (!validationResult.success) {

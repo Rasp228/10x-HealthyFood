@@ -90,6 +90,18 @@ describe("addDays", () => {
     });
   });
 
+  // Powód, dla którego `addDays` liczy w UTC, a nie lokalnym kalendarzem: w te dwie noce doba
+  // trwa 23 albo 25 godzin i przesunięcie liczone lokalnie gubi lub dubluje dzień.
+  describe("na granicy zmiany czasu", () => {
+    it("przechodzi przez noc, w której zegar idzie do przodu", () => {
+      expect(addDays("2026-03-28", 1)).toBe("2026-03-29");
+    });
+
+    it("przechodzi przez noc, w której zegar idzie do tyłu", () => {
+      expect(addDays("2026-10-24", 1)).toBe("2026-10-25");
+    });
+  });
+
   describe("na granicy roku", () => {
     it("przechodzi z sylwestra na nowy rok", () => {
       expect(addDays("2025-12-31", 1)).toBe("2026-01-01");
