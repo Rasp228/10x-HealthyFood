@@ -206,3 +206,5 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 ## Done
 
 (Pusta przy pierwszym wygenerowaniu. `/10x-archive` dopisuje tu pozycję i przestawia jej `Status` na `done`, gdy archiwizowana zmiana ma pasujący `Change ID`.)
+
+- **S-01: użytkownik otwiera panel dziennika, wybiera dzień, tworzy wpis z opisem zjedzonego i ilością jako tekstem, wpisuje liczbę kalorii ręcznie i natychmiast widzi wpis na liście dnia oraz sumę dnia.** — Archived 2026-09-23 → `context/archive/2026-09-23-manual-diary-entry/`. Lesson: —.
