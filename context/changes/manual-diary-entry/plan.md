@@ -707,37 +707,37 @@ stay valid, since they use only columns F-01 established.
 
 #### Automated
 
-- [x] 1.1 Type checking passes with zero errors: `npm run typecheck`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Formatting is clean: `npm run format:check`
+- [x] 1.1 Type checking passes with zero errors: `npm run typecheck` — 053dd72
+- [x] 1.2 Linting passes: `npm run lint` — 053dd72
+- [x] 1.3 Formatting is clean: `npm run format:check` — 053dd72
 
 #### Manual
 
-- [x] 1.4 GET for a fresh day returns an empty list
-- [x] 1.5 POST with and without a calorie number writes the correct value/origin pairing
-- [x] 1.6 Malformed or non-existent date returns 400 with ValidationIssue details
-- [x] 1.7 Request without a session is redirected instead of reaching the handler
-- [x] 1.8 Entries of one account are absent from another account's response
+- [x] 1.4 GET for a fresh day returns an empty list — 053dd72
+- [x] 1.5 POST with and without a calorie number writes the correct value/origin pairing — 053dd72
+- [x] 1.6 Malformed or non-existent date returns 400 with ValidationIssue details — 053dd72
+- [x] 1.7 Request without a session is redirected instead of reaching the handler — 053dd72
+- [x] 1.8 Entries of one account are absent from another account's response — 053dd72
 
 ### Phase 2: Diary surface
 
 #### Automated
 
-- [ ] 2.1 Type checking passes with zero errors: `npm run typecheck`
-- [ ] 2.2 Linting passes, including the react-hooks rules: `npm run lint`
-- [ ] 2.3 Formatting is clean: `npm run format:check`
-- [ ] 2.4 Production build succeeds: `npm run build`
+- [x] 2.1 Type checking passes with zero errors: `npm run typecheck`
+- [x] 2.2 Linting passes, including the react-hooks rules: `npm run lint`
+- [x] 2.3 Formatting is clean: `npm run format:check`
+- [x] 2.4 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 2.5 Navigation item opens the panel on today
-- [ ] 2.6 Entry with a value appears at once and counts into the total
-- [ ] 2.7 Entry without a value is marked not calculated and the summary reports it
-- [ ] 2.8 Arrows, date field and Dziś track the address bar; reload and back button behave
-- [ ] 2.9 Date field refuses a day later than today
-- [ ] 2.10 Field errors and request failures surface where expected
-- [ ] 2.11 Existing screens are unchanged
-- [ ] 2.12 A future day in the URL lands on today and the address bar is corrected
+- [x] 2.5 Navigation item opens the panel on today
+- [x] 2.6 Entry with a value appears at once and counts into the total
+- [x] 2.7 Entry without a value is marked not calculated and the summary reports it
+- [x] 2.8 Arrows, date field and Dziś track the address bar; reload and back button behave
+- [x] 2.9 Date field refuses a day later than today
+- [x] 2.10 Field errors and request failures surface where expected
+- [x] 2.11 Existing screens are unchanged
+- [x] 2.12 A future day in the URL lands on today and the address bar is corrected
 
 ### Phase 3: Tests and closing the gate
 

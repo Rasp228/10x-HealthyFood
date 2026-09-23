@@ -53,7 +53,7 @@ the code does not yet follow the conventions below.
   are listed in @docs/reference/known-drift.md. Services receive validated input and do not re-parse
   it.
 - `src/components/ui/` is shadcn primitives only. Application components go in
-  `src/components/{ai,auth,common,feedback,layout,pages,profile,recipe}/`; the ones currently
+  `src/components/{ai,auth,common,diary,feedback,layout,pages,profile,recipe}/`; the ones currently
   misplaced in `ui/` are listed in @docs/reference/known-drift.md — do not add to that set.
 - Every new table needs RLS and per-user policies, matching
   @supabase/migrations/20250427130913_healthymeal_schema.sql. Existing tables: `preferences`,
