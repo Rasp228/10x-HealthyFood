@@ -1,9 +1,10 @@
 ---
 change_id: ai-estimate-for-free-text
 title: Wycena kalorii przez AI dla opisowego wpisu dziennika
-status: impl_reviewed
+status: archived
 created: 2026-09-23
 updated: 2026-09-24
+archived_at: 2026-09-24T14:22:15Z
 ---
 
 ## Notes
