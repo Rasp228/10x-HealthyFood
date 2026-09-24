@@ -8,10 +8,10 @@
 - **Verdict**: NEEDS ATTENTION
 - **Findings**: 0 critical, 7 warnings, 3 observations
 
-> Uwaga o pokryciu: Faza 1 ma jeden niezaznaczony punkt ręczny (1.11 — `maxDuration: 60` przyjęty
-> przez platformę na deployu podglądowym). Przeglądam ją mimo to, bo kontrakt serwerowy dziedziczą
-> S-04 i S-05, a przegląd Faz 2–3 bez niego byłby pusty. Sam punkt 1.11 jest raportowany jako
-> niedomknięty (F6).
+> Uwaga o pokryciu: w chwili przeglądu Faza 1 miała jeden niezaznaczony punkt ręczny (1.11 —
+> `maxDuration: 60` przyjęty przez platformę na deployu podglądowym). Przejrzałem ją mimo to, bo
+> kontrakt serwerowy dziedziczą S-04 i S-05, a przegląd Faz 2–3 bez niego byłby pusty. Punkt 1.11
+> został domknięty po triage'u, 2026-09-24 — patrz decyzja przy F6.
 
 ## Verdicts
 
@@ -198,7 +198,7 @@ te same.
   - Tradeoff: Wymaga dostępu do deployu podglądowego Vercela.
   - Confidence: HIGH — stan checkboxa jest jednoznaczny.
   - Blind spot: Nie wiadomo, jaki plan Vercela obowiązuje na tym koncie.
-- **Decision**: ACCEPTED — użytkownik weryfikuje 1.11 sam na deployu podglądowym; otwarty punkt odnotowany w change.md.
+- **Decision**: RESOLVED — użytkownik przeszedł 1.11 na deployu podglądowym 2026-09-24; platforma przyjęła `maxDuration: 60`. Checkbox zaznaczony w planie (— 4d57a38), nota w change.md zaktualizowana. Łańcuch budżetów jest potwierdzony.
 
 ### F7 — Handler 500 zwraca surowy komunikat błędu wewnętrznego do przeglądarki
 

@@ -16,11 +16,13 @@ oraz sposób pokazywania pochodzenia wartości dziedziczy po tej zmianie S-04
 
 ## Po przeglądzie wdrożenia (2026-09-24)
 
-Raport: `reviews/impl-review.md`. Trzy rzeczy zostają otwarte i przechodzą dalej:
+Raport: `reviews/impl-review.md`. Punkt 1.11 został domknięty 2026-09-24: platforma przyjęła
+`maxDuration: 60` na deployu podglądowym, więc cały łańcuch budżetów czasu (60 s platformy > 55 s
+klienta < 65 s abortu przeglądarki) jest potwierdzony, a nie założony. Wszystkie kryteria planu są
+zaznaczone.
 
-- **Punkt 1.11 planu jest niedomknięty.** `maxDuration: 60` czeka na weryfikację na deployu
-  podglądowym. Dopóki nie przejdzie, cały łańcuch budżetów czasu (60 s platformy > 55 s klienta
-  < 65 s abortu przeglądarki) jest założeniem, nie faktem.
+Dwie rzeczy przechodzą do kolejnych kawałków roadmapy:
+
 - **Dla S-05**: reguła wartości kalorycznej mieszka teraz w jednym eksportowanym symbolu —
   `caloriesValueSchema` w `src/lib/validations/diary/create-entry.ts`. Konsumują ją obie ścieżki:
   tworzenie wpisu i `setEntryCaloriesSchema`. Poszerzenie jej pod edycję dotknie więc również

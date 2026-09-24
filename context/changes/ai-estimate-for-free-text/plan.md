@@ -417,8 +417,8 @@ z kryterium akceptacji US-01 — i wtedy jest to decyzja produktowa, nie technic
 > `AI_UNAVAILABLE`, które trasa umie zbudować, nie miało jak powstać — przeglądarka dostawała
 > stronę błędu Vercela, a `useCalorieEstimation` połykała ją jako zwykłe „nie policzono".
 > Obowiązujący łańcuch: **60 s platformy > 55 s klienta < 65 s abortu przeglądarki**. Pięć sekund
-> zapasu pokrywa narzut trasy przed wywołaniem modelu. Punkt 1.11 nadal weryfikuje `maxDuration`
-> na deployu podglądowym i nadal jest otwarty.
+> zapasu pokrywa narzut trasy przed wywołaniem modelu. Punkt 1.11 potwierdził `maxDuration: 60`
+> na deployu podglądowym, więc szczyt tego łańcucha jest już faktem, a nie założeniem.
 
 ### Success Criteria:
 
@@ -855,7 +855,7 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 - [x] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details` — 9b06dce
 - [x] 1.9 `POST` i `PATCH` na wpis należący do innego użytkownika zwracają 404 — 9b06dce
 - [x] 1.10 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` kończy się 502, a wiersz zostaje bez wartości — 9b06dce
-- [ ] 1.11 Limit `maxDuration: 60` jest przyjęty przez platformę na deployu podglądowym, a wywołanie trwające ~40 s nie zostaje ucięte
+- [x] 1.11 Limit `maxDuration: 60` jest przyjęty przez platformę na deployu podglądowym, a wywołanie trwające ~40 s nie zostaje ucięte — 4d57a38
 - [x] 1.12 Pod `astro dev` obie nowe trasy odpowiadają — `[id].ts` i katalog `[id]/estimate.ts` nie kolidują ze sobą w routingu — 9b06dce
 
 ### Phase 2: Powierzchnia dziennika
