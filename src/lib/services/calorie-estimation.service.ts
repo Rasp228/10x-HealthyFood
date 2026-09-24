@@ -31,7 +31,23 @@ Zasady:
 function createEstimationClient(): OpenRouterService {
   try {
     return new OpenRouterService({
-      apiKey: import.meta.env.OPENROUTER_API_KEY,
+      // Pusty napis, a nie `import.meta.env.OPENROUTER_API_KEY`, i to jest szew, nie niedbalstwo.
+      //
+      // `OpenRouterService` czyta tę zmienną sam: `config.apiKey || import.meta.env.OPENROUTER_API_KEY`
+      // (`openrouter.service.ts:43`), a przy pustym wyniku rzuca z konstruktora (tamże, :45-48).
+      // Podawanie klucza tutaj było więc redundantne - pusty napis jest falsy i schodzi dokładnie
+      // na tę samą ścieżkę, łącznie z rzutem, który niżej zamieniamy na `OpenRouterError`.
+      //
+      // Czemu w takim razie nie zostawić go dla czytelności: samo wystąpienie `import.meta` w TYM
+      // pliku czyni go niemożliwym do zaimportowania w teście jednostkowym. ts-jest kompiluje
+      // moduły do CommonJS, a TypeScript zostawia wtedy `import.meta` w wyjściu (TS1343), co Node
+      // odrzuca błędem składni - test przewracał się na samym `import`, zanim wykonał choć jedną
+      // asercję. Bez tej linii jedynym nosicielem `import.meta` w grafie pozostaje
+      // `openrouter.service.ts`, którego test w ogóle nie ładuje, bo go mockuje.
+      //
+      // Nie "sprzątaj" tego z powrotem na `import.meta.env.OPENROUTER_API_KEY`: zachowanie się nie
+      // zmieni, ale `tests/unit/calorie-estimation.service.test.ts` przestanie się uruchamiać.
+      apiKey: "",
       timeout: 60_000, // pełna minuta, tyle co domyślnie; zejście niżej zbiera znacznie więcej nieudanych oszacowań
       // Dokładnie jedna próba i ani jednego powtórzenia. `retries` w tym kliencie liczy PRÓBY
       // (`while (attempt < this.retries)`, openrouter.service.ts:170), a `0` nie przechodzi przez

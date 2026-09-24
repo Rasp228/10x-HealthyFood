@@ -837,7 +837,7 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Manual
 
-- [ ] 1.5 `POST /api/diary-entries/<id>/estimate` na wpisie bez wartości zwraca 200, a wiersz ma liczbę i `calorie_origin` równe `ai_from_description`
+- [x] 1.5 `POST /api/diary-entries/<id>/estimate` na wpisie bez wartości zwraca 200, a wiersz ma liczbę i `calorie_origin` równe `ai_from_description` — 950a653
 - [x] 1.6 Ten sam `POST` na wpisie, który ma już wartość ręczną, zwraca 200 i nie zmienia ani liczby, ani pochodzenia — 9b06dce
 - [x] 1.7 `estimation_requested_at` jest ustawione w bazie w trakcie liczenia, zanim odpowiedź wróci — 9b06dce
 - [x] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details` — 9b06dce
@@ -850,39 +850,39 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Automated
 
-- [x] 2.1 Kontrola typów przechodzi: `npm run typecheck`
-- [x] 2.2 Linter czysty, w tym reguły React Compiler: `npm run lint`
-- [x] 2.3 Aplikacja się buduje: `npm run build`
-- [x] 2.4 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 Kontrola typów przechodzi: `npm run typecheck` — 950a653
+- [x] 2.2 Linter czysty, w tym reguły React Compiler: `npm run lint` — 950a653
+- [x] 2.3 Aplikacja się buduje: `npm run build` — 950a653
+- [x] 2.4 Formatowanie zgodne: `npm run format:check` — 950a653
 
 #### Manual
 
-- [x] 2.5 Wpis zapisany przyciskiem „Zapisz i policz kalorie" pojawia się na liście natychmiast, bez czekania na wartość
-- [x] 2.6 W trakcie liczenia wpis pokazuje „Liczę…", a pole na ręczną liczbę przy tym wpisie jest nieaktywne
-- [x] 2.7 „Anuluj" przerywa liczenie i natychmiast odblokowuje pole na liczbę
-- [x] 2.8 Po dojściu wartości wpis pokazuje liczbę z adnotacją „oszacowane z opisu", a suma dnia rośnie i przestaje liczyć ten wpis jako brakujący
-- [x] 2.9 Po upływie minuty bez wartości wpis czyta się jako „Nie policzono" z aktywnym polem i przyciskiem „Policz ponownie"
-- [x] 2.10 Przeładowanie strony w trakcie liczenia nie gubi informacji, że oszacowanie zlecono, a „Policz ponownie" jest dostępne od razu
-- [x] 2.11 Wartość wpisana ręcznie w trakcie liczenia zostaje i nie jest nadpisana przez spóźnione oszacowanie
-- [x] 2.12 Zdanie o wysyłce treści do dostawcy modelu jest widoczne przy obu przyciskach zlecających
-- [x] 2.13 Ekrany przepisów, profilu, logowania i rejestracji zachowują się jak dotąd
-- [x] 2.14 Wycena odpadająca w kilka sekund (nieprawidłowy `OPENROUTER_API_KEY`) natychmiast zwalnia pole na liczbę — wpis nie stoi na „Liczę…" do końca minuty
-- [x] 2.15 Liczbę ustaloną przez model da się zastąpić własną: pole przy wpisie z wartością przyjmuje nową liczbę, a adnotacja zmienia się na „wpisane ręcznie"
-- [x] 2.16 Zlecenie wyceny przy drugim wpisie w trakcie pierwszej nie przerywa pierwszej: drugi czeka w kolejce z aktywnym polem na liczbę i rusza dopiero po zakończeniu pierwszego
+- [x] 2.5 Wpis zapisany przyciskiem „Zapisz i policz kalorie" pojawia się na liście natychmiast, bez czekania na wartość — 950a653
+- [x] 2.6 W trakcie liczenia wpis pokazuje „Liczę…", a pole na ręczną liczbę przy tym wpisie jest nieaktywne — 950a653
+- [x] 2.7 „Anuluj" przerywa liczenie i natychmiast odblokowuje pole na liczbę — 950a653
+- [x] 2.8 Po dojściu wartości wpis pokazuje liczbę z adnotacją „oszacowane z opisu", a suma dnia rośnie i przestaje liczyć ten wpis jako brakujący — 950a653
+- [x] 2.9 Po upływie minuty bez wartości wpis czyta się jako „Nie policzono" z aktywnym polem i przyciskiem „Policz ponownie" — 950a653
+- [x] 2.10 Przeładowanie strony w trakcie liczenia nie gubi informacji, że oszacowanie zlecono, a „Policz ponownie" jest dostępne od razu — 950a653
+- [x] 2.11 Wartość wpisana ręcznie w trakcie liczenia zostaje i nie jest nadpisana przez spóźnione oszacowanie — 950a653
+- [x] 2.12 Zdanie o wysyłce treści do dostawcy modelu jest widoczne przy obu przyciskach zlecających — 950a653
+- [x] 2.13 Ekrany przepisów, profilu, logowania i rejestracji zachowują się jak dotąd — 950a653
+- [x] 2.14 Wycena odpadająca w kilka sekund (nieprawidłowy `OPENROUTER_API_KEY`) natychmiast zwalnia pole na liczbę — wpis nie stoi na „Liczę…" do końca minuty — 950a653
+- [x] 2.15 Liczbę ustaloną przez model da się zastąpić własną: pole przy wpisie z wartością przyjmuje nową liczbę, a adnotacja zmienia się na „wpisane ręcznie" — 950a653
+- [x] 2.16 Zlecenie wyceny przy drugim wpisie w trakcie pierwszej nie przerywa pierwszej: drugi czeka w kolejce z aktywnym polem na liczbę i rusza dopiero po zakończeniu pierwszego — 950a653
 
 ### Phase 3: Testy i domknięcie bramki
 
 #### Automated
 
-- [ ] 3.1 Suita jednostkowa przechodzi: `npm run test`
-- [ ] 3.2 Suita E2E przechodzi: `npm run test:e2e`
-- [ ] 3.3 Linter czysty: `npm run lint`
-- [ ] 3.4 Kontrola typów na zero błędów: `npm run typecheck`
-- [ ] 3.5 Formatowanie zgodne: `npm run format:check`
-- [ ] 3.6 Audyt zależności przechodzi: `npm run test:security`
+- [x] 3.1 Suita jednostkowa przechodzi: `npm run test`
+- [x] 3.2 Suita E2E przechodzi: `npm run test:e2e`
+- [x] 3.3 Linter czysty: `npm run lint`
+- [x] 3.4 Kontrola typów na zero błędów: `npm run typecheck`
+- [x] 3.5 Formatowanie zgodne: `npm run format:check`
+- [x] 3.6 Audyt zależności przechodzi: `npm run test:security`
 
 #### Manual
 
-- [ ] 3.7 Suita E2E przechodzi również wtedy, gdy `OPENROUTER_API_KEY` jest nieprawidłowy — żaden test automatyczny nie zależy od dostawcy
-- [ ] 3.8 Pełne przejście ścieżki z żywym modelem wykonane ręcznie w przeglądarce i potwierdzone
-- [ ] 3.9 Żaden test nie zostawia wierszy poza dniem sygnaturowym `2000-01-01`
+- [x] 3.7 Suita E2E przechodzi również wtedy, gdy `OPENROUTER_API_KEY` jest nieprawidłowy — żaden test automatyczny nie zależy od dostawcy
+- [x] 3.8 Pełne przejście ścieżki z żywym modelem wykonane ręcznie w przeglądarce i potwierdzone
+- [x] 3.9 Żaden test nie zostawia wierszy poza dniem sygnaturowym `2000-01-01`

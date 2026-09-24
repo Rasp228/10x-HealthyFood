@@ -6,6 +6,14 @@ export interface DiaryEntryData {
   calories?: string;
 }
 
+/**
+ * Stałe uprzedzenie o wysyłce treści do dostawcy modelu.
+ *
+ * Kopia `AI_NOTICE` z `src/lib/utils/diary-estimation.ts` - suita E2E nie importuje z `src`,
+ * więc zdanie stoi tu dosłownie. Rozjazd wyłapie ta asercja, a nie użytkownik.
+ */
+const AI_NOTICE_TEXT = "Opis posiłku zostanie wysłany do dostawcy modelu.";
+
 export class DiaryPage {
   readonly page: Page;
   readonly diaryPage: Locator;
@@ -22,6 +30,8 @@ export class DiaryPage {
   readonly caloriesInput: Locator;
   readonly caloriesError: Locator;
   readonly submitButton: Locator;
+  readonly submitEstimateButton: Locator;
+  readonly formAiNotice: Locator;
   readonly entryList: Locator;
   readonly entryContents: Locator;
   readonly emptyState: Locator;
@@ -46,6 +56,11 @@ export class DiaryPage {
     this.caloriesInput = page.getByTestId("diary-calories-input");
     this.caloriesError = page.getByTestId("diary-calories-error");
     this.submitButton = page.getByTestId("diary-submit-button");
+    this.submitEstimateButton = page.getByTestId("diary-submit-estimate-button");
+    // `diary-ai-notice` występuje na stronie wiele razy - raz w formularzu i raz przy każdym
+    // wpisie z przyciskiem wyceny. Goły `getByTestId` naruszyłby tryb strict, więc lokator jest
+    // zawężony do formularza; wersję przy wpisie czyta `entryAiNotice`.
+    this.formAiNotice = this.entryForm.getByTestId("diary-ai-notice");
     this.entryList = page.getByTestId("diary-entry-list");
     this.entryContents = page.getByTestId("diary-entry-content");
     this.emptyState = page.getByTestId("diary-empty-state");
@@ -166,5 +181,57 @@ export class DiaryPage {
   async expectCaloriesError(errorText: string) {
     await expect(this.caloriesError).toBeVisible();
     await expect(this.caloriesError).toHaveText(errorText);
+  }
+
+  /**
+   * Wiersz wpisu o podanej treści.
+   *
+   * Wpis ma `data-testid="diary-entry-<id>"`, ale identyfikatora z bazy test nie zna, więc wiersz
+   * wybiera się po treści. Treść musi być unikalna w obrębie dnia - bez route DELETE wpisy
+   * z poprzednich przebiegów zostają pod dniem-sygnaturą i trafiłyby w ten sam lokator.
+   */
+  entryRow(content: string): Locator {
+    return this.entryList.locator("li").filter({ hasText: content });
+  }
+
+  /** Uprzedzenie o wysyłce treści widoczne przy przyciskach formularza. */
+  async expectAiNotice() {
+    await expect(this.formAiNotice).toBeVisible();
+    await expect(this.formAiNotice).toHaveText(AI_NOTICE_TEXT);
+  }
+
+  /** Uprzedzenie o wysyłce treści przy konkretnym wpisie - obok jego przycisku wyceny. */
+  async expectEntryAiNotice(content: string) {
+    const notice = this.entryRow(content).getByTestId("diary-ai-notice");
+
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText(AI_NOTICE_TEXT);
+  }
+
+  /**
+   * Wpis czyta się jako niepoliczony: badge „Nie policzono" i przycisk zlecający wycenę.
+   *
+   * Żaden krok tej metody nie czeka na odpowiedź modelu - przycisk jest tylko oglądany.
+   */
+  async expectNotCalculated(content: string) {
+    const row = this.entryRow(content);
+
+    await expect(row.getByTestId("diary-entry-calories-missing")).toBeVisible({ timeout: 15000 });
+    await expect(row.getByTestId("diary-entry-estimate-button")).toHaveText("Policz kalorie");
+  }
+
+  /** Wpisuje liczbę w polu przy wpisie i zapisuje ją; kończy się na potwierdzonej wartości. */
+  async setCaloriesInline(content: string, calories: number) {
+    const row = this.entryRow(content);
+
+    await row.getByTestId("diary-entry-calories-input").fill(String(calories));
+    await row.getByTestId("diary-entry-calories-save").click();
+
+    await expect(row.getByTestId("diary-entry-calories")).toHaveText(`${calories} kcal`, { timeout: 15000 });
+  }
+
+  /** Adnotacja o pochodzeniu wartości przy wpisie. */
+  async expectEntryOrigin(content: string, originLabel: string) {
+    await expect(this.entryRow(content).getByTestId("diary-entry-origin")).toHaveText(originLabel, { timeout: 15000 });
   }
 }

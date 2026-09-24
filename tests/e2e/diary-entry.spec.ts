@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { Application, type LoginCredentials } from "./page-objects";
 import { getTestCredentials } from "./config/test-data";
 
@@ -70,5 +70,46 @@ test.describe("Diary Entry", () => {
     // 7. Suma liczy tylko wpis z wartością, a panel przyznaje się do jednego braku
     await app.diaryPage.expectTotal(totalBefore + 450);
     await app.diaryPage.expectMissingCount(missingBefore + 1);
+  });
+
+  test("should offer AI estimation and accept a manually typed value instead", async () => {
+    // Scenariusz celowo nie klika w „Policz kalorie": suita ma zostać deterministyczna i nie
+    // płacić za wywołania modelu w CI. Sprawdzamy powierzchnię wyceny i ścieżkę ręczną.
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Ten sam dzień-sygnatura co wyżej - wiersze parkują w dniu, którego nikt nie otwiera
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const totalBefore = await app.diaryPage.readTotal();
+    const missingBefore = await app.diaryPage.readMissingCount();
+
+    const entryToCount = `E2E kanapka z serem ${Date.now()}`;
+
+    // 3. Uprzedzenie o wysyłce treści jest widoczne przy przyciskach formularza
+    await app.diaryPage.expectAiNotice();
+
+    // 4. Wpis bez wartości
+    await app.diaryPage.addEntry({
+      content: entryToCount,
+      amount: "2 kromki",
+    });
+
+    // 5. Wpis czyta się jako niepoliczony i oferuje wycenę, a uprzedzenie stoi też przy nim
+    await app.diaryPage.expectNotCalculated(entryToCount);
+    await app.diaryPage.expectEntryAiNotice(entryToCount);
+    await app.diaryPage.expectMissingCount(missingBefore + 1);
+
+    // 6. Liczba wpisana ręcznie w polu przy wpisie
+    await app.diaryPage.setCaloriesInline(entryToCount, 260);
+    await app.diaryPage.expectEntryOrigin(entryToCount, "wpisane ręcznie");
+
+    // 7. Suma dnia rośnie o wpisaną liczbę, a licznik braków wraca do stanu sprzed wpisu
+    await app.diaryPage.expectTotal(totalBefore + 260);
+    expect(await app.diaryPage.readMissingCount()).toBe(missingBefore);
   });
 });

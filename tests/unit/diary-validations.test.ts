@@ -1,5 +1,6 @@
 import { createDiaryEntrySchema } from "@/lib/validations/diary/create-entry";
 import { listDiaryEntriesSchema } from "@/lib/validations/diary/list-entries";
+import { setEntryCaloriesSchema } from "@/lib/validations/diary/set-calories";
 
 const VALID_ENTRY = {
   entry_date: "2026-09-23",
@@ -190,5 +191,61 @@ describe("listDiaryEntriesSchema", () => {
     if (result.success) throw new Error("Oczekiwano błędu walidacji");
 
     expect(result.error.issues[0].message).toBe("Podana data nie istnieje");
+  });
+});
+
+describe("setEntryCaloriesSchema", () => {
+  /** Komunikat pola `calories` albo `undefined`, gdy walidacja przeszła. */
+  const messageForCalories = (input: unknown): string | undefined => {
+    const result = setEntryCaloriesSchema.safeParse(input);
+
+    if (result.success) return undefined;
+
+    return result.error.issues.find((issue) => issue.path.join(".") === "calories")?.message;
+  };
+
+  /** Wartość po udanej walidacji. Rzuca, bo test, który tu trafił, oczekiwał sukcesu. */
+  const caloriesOf = (input: unknown): number => {
+    const result = setEntryCaloriesSchema.safeParse(input);
+
+    if (!result.success) {
+      throw new Error(
+        `Oczekiwano sukcesu walidacji, otrzymano: ${result.error.issues.map((i) => i.message).join(", ")}`
+      );
+    }
+
+    return result.data.calories;
+  };
+
+  it("przyjmuje zero - wpis o zerowej wartości to nadal wpis policzony", () => {
+    expect(caloriesOf({ calories: 0 })).toBe(0);
+  });
+
+  it("przyjmuje górną granicę 5000", () => {
+    expect(caloriesOf({ calories: 5000 })).toBe(5000);
+  });
+
+  it("odrzuca wartość ujemną tym samym komunikatem co tworzenie wpisu", () => {
+    expect(messageForCalories({ calories: -1 })).toBe("Kalorie nie mogą być ujemne");
+  });
+
+  it("odrzuca wartość powyżej sufitu", () => {
+    expect(messageForCalories({ calories: 5001 })).toBe("Kalorie nie mogą przekraczać 5000 kcal");
+  });
+
+  it("odrzuca ułamek", () => {
+    expect(messageForCalories({ calories: 450.5 })).toBe("Kalorie muszą być liczbą całkowitą");
+  });
+
+  it("odrzuca liczbę podaną jako napis", () => {
+    expect(messageForCalories({ calories: "450" })).toBe("Kalorie muszą być liczbą");
+  });
+
+  it("odrzuca brak pola - ta trasa nie ma innego ładunku niż liczba", () => {
+    expect(messageForCalories({})).toBe("Kalorie muszą być liczbą");
+  });
+
+  it("odrzuca jawne null - zerowanie wartości pociągałoby za sobą zerowanie znacznika", () => {
+    expect(messageForCalories({ calories: null })).toBe("Kalorie muszą być liczbą");
   });
 });

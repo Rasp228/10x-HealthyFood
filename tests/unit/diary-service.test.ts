@@ -12,9 +12,12 @@ interface QueryResponse {
 interface QueryBuilderStub extends PromiseLike<QueryResponse> {
   select: jest.Mock;
   insert: jest.Mock;
+  update: jest.Mock;
   eq: jest.Mock;
+  is: jest.Mock;
   order: jest.Mock;
   single: jest.Mock;
+  maybeSingle: jest.Mock;
 }
 
 interface SupabaseStub {
@@ -30,17 +33,29 @@ interface SupabaseStub {
  * Jedna różnica wobec wspólnego mocka jest konieczna: `getEntriesForDay` nie kończy łańcucha
  * `.single()`, tylko awaituje wynik `.order()`. Dlatego builder jest „thenable” - bez tego
  * `await` na łańcuchu nigdy by się nie rozwiązał.
+ *
+ * Odpowiedzi podaje się listą, bo warunkowy zapis to **dwa** zapytania na jedno wywołanie:
+ * nietrafiony `UPDATE`, a po nim `SELECT` rozstrzygający, czy wpis w ogóle istnieje. Kolejne
+ * zakończenia łańcucha zdejmują kolejne odpowiedzi; ostatnia zostaje i powtarza się w nieskończoność,
+ * więc wywołanie z jedną odpowiedzią zachowuje się dokładnie jak przedtem.
  */
-function createSupabaseStub(response: QueryResponse): SupabaseStub {
+function createSupabaseStub(...responses: QueryResponse[]): SupabaseStub {
+  const queue = [...responses];
+  const nextResponse = (): QueryResponse => (queue.length > 1 ? (queue.shift() as QueryResponse) : queue[0]);
+
   // Adnotacja jest konieczna, nie ozdobna: pola literału odwołują się do `builder`, więc bez
   // niej TypeScript zgłosiłby cykliczne wnioskowanie typu.
   const builder: QueryBuilderStub = {
     select: jest.fn(() => builder),
     insert: jest.fn(() => builder),
+    update: jest.fn(() => builder),
     eq: jest.fn(() => builder),
+    is: jest.fn(() => builder),
     order: jest.fn(() => builder),
-    single: jest.fn(() => Promise.resolve(response)),
-    then: (onfulfilled?: ((value: QueryResponse) => unknown) | null) => Promise.resolve(response).then(onfulfilled),
+    single: jest.fn(() => Promise.resolve(nextResponse())),
+    maybeSingle: jest.fn(() => Promise.resolve(nextResponse())),
+    then: (onfulfilled?: ((value: QueryResponse) => unknown) | null) =>
+      Promise.resolve(nextResponse()).then(onfulfilled),
   } as unknown as QueryBuilderStub;
 
   const from = jest.fn(() => builder);
@@ -78,6 +93,13 @@ const BASE_COMMAND: CreateDiaryEntryCommand = {
 /** Ładunek przekazany do `insert`, odczytany z atrapy. */
 const insertPayload = (stub: SupabaseStub): Record<string, unknown> =>
   stub.builder.insert.mock.calls[0][0] as Record<string, unknown>;
+
+/** Ładunek przekazany do `update`, odczytany z atrapy. */
+const updatePayload = (stub: SupabaseStub): Record<string, unknown> =>
+  stub.builder.update.mock.calls[0][0] as Record<string, unknown>;
+
+/** Błąd, którym supabase-js zgłasza „`.single()` nie trafiło w żaden wiersz". */
+const NO_ROWS_ERROR = { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" };
 
 describe("DiaryService", () => {
   describe("createEntry", () => {
@@ -221,6 +243,204 @@ describe("DiaryService", () => {
 
       await expect(new DiaryService(stub.client).getEntriesForDay("user-1", "2026-09-23")).rejects.toThrow(
         "RLS odrzuciło zapytanie"
+      );
+    });
+  });
+
+  describe("markEstimationRequested", () => {
+    const stamped = storedEntry({ estimation_requested_at: "2026-09-23T08:00:00.000Z" });
+
+    it("stempluje znacznik i zwraca ostemplowany wiersz", async () => {
+      const stub = createSupabaseStub({ data: stamped, error: null });
+
+      const result = await new DiaryService(stub.client).markEstimationRequested("user-1", 1);
+
+      expect(stub.from).toHaveBeenCalledWith("diary_entries");
+      expect(updatePayload(stub).estimation_requested_at).toEqual(expect.any(String));
+      expect(result).toEqual(stamped);
+    });
+
+    it("zapisuje warunkowo - znacznik należy się wyłącznie wpisowi bez wartości", async () => {
+      const stub = createSupabaseStub({ data: stamped, error: null });
+
+      await new DiaryService(stub.client).markEstimationRequested("user-1", 1);
+
+      expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
+    });
+
+    it("filtruje po id i po user_id, niezależnie od RLS", async () => {
+      const stub = createSupabaseStub({ data: stamped, error: null });
+
+      await new DiaryService(stub.client).markEstimationRequested("user-1", 1);
+
+      expect(stub.builder.eq).toHaveBeenCalledWith("id", 1);
+      expect(stub.builder.eq).toHaveBeenCalledWith("user_id", "user-1");
+    });
+
+    it("kończy warunkowy UPDATE przez maybeSingle, nigdy przez single", async () => {
+      const stub = createSupabaseStub({ data: stamped, error: null });
+
+      await new DiaryService(stub.client).markEstimationRequested("user-1", 1);
+
+      expect(stub.builder.maybeSingle).toHaveBeenCalled();
+      expect(stub.builder.single).not.toHaveBeenCalled();
+    });
+
+    it("nie rzuca, gdy UPDATE nie trafia w żaden wiersz - to nie jest błąd", async () => {
+      // Zero trafionych wierszy przychodzi jako `data: null, error: null`. To ten sam warunek,
+      // co „wartość ręczna zdążyła wcześniej", i nie wolno mu kończyć się wyjątkiem.
+      const valued = storedEntry({ calories: 450, calorie_origin: "manual" });
+      const stub = createSupabaseStub({ data: null, error: null }, { data: valued, error: null });
+
+      await expect(new DiaryService(stub.client).markEstimationRequested("user-1", 1)).resolves.toEqual(valued);
+    });
+
+    it("po nietrafionym zapisie dopytuje o wiersz osobnym odczytem", async () => {
+      const valued = storedEntry({ calories: 450, calorie_origin: "manual" });
+      const stub = createSupabaseStub({ data: null, error: null }, { data: valued, error: null });
+
+      await new DiaryService(stub.client).markEstimationRequested("user-1", 1);
+
+      expect(stub.builder.maybeSingle).toHaveBeenCalledTimes(2);
+    });
+
+    it("zwraca null dla cudzego albo nieistniejącego wpisu", async () => {
+      const stub = createSupabaseStub({ data: null, error: null }, { data: null, error: null });
+
+      const result = await new DiaryService(stub.client).markEstimationRequested("user-1", 999);
+
+      expect(result).toBeNull();
+    });
+
+    it("przepuszcza błąd bazy", async () => {
+      const stub = createSupabaseStub({ data: null, error: new Error("RLS odrzuciło zapis") });
+
+      await expect(new DiaryService(stub.client).markEstimationRequested("user-1", 1)).rejects.toThrow(
+        "RLS odrzuciło zapis"
+      );
+    });
+  });
+
+  describe("applyEstimate", () => {
+    const estimated = storedEntry({ calories: 320, calorie_origin: "ai_from_description" });
+
+    it("ustawia calorie_origin 'ai_from_description' razem z liczbą", async () => {
+      const stub = createSupabaseStub({ data: estimated, error: null });
+
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+
+      expect(updatePayload(stub)).toMatchObject({
+        calories: 320,
+        calorie_origin: "ai_from_description",
+      });
+    });
+
+    it("zapisuje warunkowo, więc spóźnione oszacowanie nie nadpisze liczby wpisanej ręcznie", async () => {
+      const stub = createSupabaseStub({ data: estimated, error: null });
+
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+
+      expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
+      expect(stub.builder.maybeSingle).toHaveBeenCalled();
+      expect(stub.builder.single).not.toHaveBeenCalled();
+    });
+
+    it("nie dotyka estimation_requested_at", async () => {
+      const stub = createSupabaseStub({ data: estimated, error: null });
+
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+
+      expect(updatePayload(stub)).not.toHaveProperty("estimation_requested_at");
+    });
+
+    it("filtruje po id i po user_id", async () => {
+      const stub = createSupabaseStub({ data: estimated, error: null });
+
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+
+      expect(stub.builder.eq).toHaveBeenCalledWith("id", 1);
+      expect(stub.builder.eq).toHaveBeenCalledWith("user_id", "user-1");
+    });
+
+    it("gdy wartość już jest, zwraca stan faktyczny wiersza zamiast rzucać", async () => {
+      const manual = storedEntry({ calories: 450, calorie_origin: "manual" });
+      const stub = createSupabaseStub({ data: null, error: null }, { data: manual, error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+
+      expect(result).toEqual(manual);
+    });
+
+    it("zwraca null dla cudzego albo nieistniejącego wpisu", async () => {
+      const stub = createSupabaseStub({ data: null, error: null }, { data: null, error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 999, 320);
+
+      expect(result).toBeNull();
+    });
+
+    it("przepuszcza błąd bazy", async () => {
+      const stub = createSupabaseStub({ data: null, error: new Error("naruszenie ograniczenia") });
+
+      await expect(new DiaryService(stub.client).applyEstimate("user-1", 1, 320)).rejects.toThrow(
+        "naruszenie ograniczenia"
+      );
+    });
+  });
+
+  describe("setCaloriesManually", () => {
+    const manual = storedEntry({ calories: 450, calorie_origin: "manual" });
+
+    it("ustawia calorie_origin 'manual' razem z liczbą", async () => {
+      const stub = createSupabaseStub({ data: manual, error: null });
+
+      const result = await new DiaryService(stub.client).setCaloriesManually("user-1", 1, 450);
+
+      expect(updatePayload(stub)).toMatchObject({
+        calories: 450,
+        calorie_origin: "manual",
+      });
+      expect(result).toEqual(manual);
+    });
+
+    it("zapisuje bezwarunkowo - człowiek nadpisuje oszacowanie", async () => {
+      const stub = createSupabaseStub({ data: manual, error: null });
+
+      await new DiaryService(stub.client).setCaloriesManually("user-1", 1, 450);
+
+      expect(stub.builder.is).not.toHaveBeenCalled();
+    });
+
+    it("nie dotyka estimation_requested_at - wpisanie liczby nie unieważnia faktu zlecenia", async () => {
+      const stub = createSupabaseStub({ data: manual, error: null });
+
+      await new DiaryService(stub.client).setCaloriesManually("user-1", 1, 450);
+
+      expect(updatePayload(stub)).not.toHaveProperty("estimation_requested_at");
+    });
+
+    it("filtruje po id i po user_id", async () => {
+      const stub = createSupabaseStub({ data: manual, error: null });
+
+      await new DiaryService(stub.client).setCaloriesManually("user-1", 1, 450);
+
+      expect(stub.builder.eq).toHaveBeenCalledWith("id", 1);
+      expect(stub.builder.eq).toHaveBeenCalledWith("user_id", "user-1");
+    });
+
+    it("zwraca null dla cudzego wpisu - brak wiersza znaczy tu dokładnie jedno", async () => {
+      const stub = createSupabaseStub({ data: null, error: NO_ROWS_ERROR });
+
+      const result = await new DiaryService(stub.client).setCaloriesManually("user-1", 999, 450);
+
+      expect(result).toBeNull();
+    });
+
+    it("przepuszcza błąd bazy inny niż brak wiersza", async () => {
+      const stub = createSupabaseStub({ data: null, error: new Error("naruszenie ograniczenia") });
+
+      await expect(new DiaryService(stub.client).setCaloriesManually("user-1", 1, 450)).rejects.toThrow(
+        "naruszenie ograniczenia"
       );
     });
   });
