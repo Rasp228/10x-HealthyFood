@@ -48,7 +48,12 @@ function createEstimationClient(): OpenRouterService {
       // Nie "sprzątaj" tego z powrotem na `import.meta.env.OPENROUTER_API_KEY`: zachowanie się nie
       // zmieni, ale `tests/unit/calorie-estimation.service.test.ts` przestanie się uruchamiać.
       apiKey: "",
-      timeout: 60_000, // pełna minuta, tyle co domyślnie; zejście niżej zbiera znacznie więcej nieudanych oszacowań
+      // Pięć sekund pod `maxDuration: 60` z `astro.config.mjs`, i ta nierówność jest tu całą rzeczą.
+      // Przy 60 = 60 ten timeout był martwy: trasa zużywa czas na `getUser()` i na UPDATE ze
+      // znacznikiem ZANIM zawoła model, więc platforma ubijała funkcję, zanim klient zdążył się
+      // poddać - a wtedy przeglądarka dostaje stronę błędu Vercela zamiast 502 `AI_UNAVAILABLE`,
+      // które trasa umie zbudować (`estimate.ts:71-88`). Zapas musi pokryć ten narzut, stąd 55 s.
+      timeout: 55_000,
       // Dokładnie jedna próba i ani jednego powtórzenia. `retries` w tym kliencie liczy PRÓBY
       // (`while (attempt < this.retries)`, openrouter.service.ts:170), a `0` nie przechodzi przez
       // `config.retries || 2` w konstruktorze (:62) - cicho wróciłoby do dwóch prób i ~120 s.

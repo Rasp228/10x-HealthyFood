@@ -121,11 +121,18 @@ export function useCalorieEstimation(onSettled: () => void): UseCalorieEstimatio
           abortRef.current = null;
           inFlightRef.current = null;
 
-          setInFlightId(null);
-          // Nowy zbiór, nie `add` na poprzednim: stan Reacta porównuje się przez tożsamość.
-          setSettledIds((prev) => new Set(prev).add(entryId));
+          // Sprzątanie przy odmontowaniu przerywa żądanie, więc `finally` biegnie także wtedy -
+          // i bez tego strażnika wywoływałoby `refetch` dla drzewa, którego już nie ma, czyli
+          // posyłało zbędny GET po wyjściu ze strony. Sprawdzenie przy `while` (wyżej) jest
+          // o jedną instrukcję za późno: przerwana iteracja dociera tu zawsze. Warunek, a nie
+          // `return`: `return` w `finally` połyka wszystko, co akurat leci w górę (`no-unsafe-finally`).
+          if (!disposedRef.current) {
+            setInFlightId(null);
+            // Nowy zbiór, nie `add` na poprzednim: stan Reacta porównuje się przez tożsamość.
+            setSettledIds((prev) => new Set(prev).add(entryId));
 
-          onSettledRef.current();
+            onSettledRef.current();
+          }
         }
       }
     } finally {

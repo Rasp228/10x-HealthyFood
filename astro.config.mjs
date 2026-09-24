@@ -26,10 +26,13 @@ export default defineConfig({
   },
   adapter: vercel({
     webAnalytics: { enabled: true },
-    // Szczyt łańcucha budżetów czasu: pod tą liczbą stoi `timeout: 60_000` klienta OpenRoutera
-    // (calorie-estimation.service.ts). Bez jawnej deklaracji obowiązuje domyślny limit konta,
-    // a jeśli jest niższy niż minuta, platforma utnie funkcję w połowie wywołania modelu -
-    // i zobaczymy to dopiero na produkcji.
+    // Szczyt łańcucha budżetów czasu, i łańcuch ten musi opadać ostro, a nie po równo:
+    // 60 s platformy > 55 s klienta OpenRoutera (calorie-estimation.service.ts) < 65 s abortu
+    // przeglądarki (`ESTIMATION_ABORT_MS`). Zapas na dole bierze się stąd, że trasa zużywa czas na
+    // `getUser()` i UPDATE ze znacznikiem, zanim w ogóle zawoła model - przy 60 = 60 platforma
+    // ubijała funkcję przed timeoutem klienta i 502 `AI_UNAVAILABLE` nie miało jak powstać.
+    // Bez jawnej deklaracji obowiązuje domyślny limit konta, a jeśli jest niższy niż minuta,
+    // platforma utnie funkcję w połowie wywołania modelu - i zobaczymy to dopiero na produkcji.
     maxDuration: 60,
   }),
   // Włączamy prefetch dla lepszego doświadczenia użytkownika

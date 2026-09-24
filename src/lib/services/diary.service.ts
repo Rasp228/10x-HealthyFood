@@ -105,7 +105,7 @@ export class DiaryService {
 
     // Brak trafienia zlewa trzy sytuacje: wpisu nie ma, należy do kogoś innego, albo ma już
     // wartość. Rozstrzyga je dopiero ten odczyt.
-    return this.findEntry(userId, entryId);
+    return this.getEntry(userId, entryId);
   }
 
   /**
@@ -142,7 +142,7 @@ export class DiaryService {
       return updated;
     }
 
-    return this.findEntry(userId, entryId);
+    return this.getEntry(userId, entryId);
   }
 
   /**
@@ -184,11 +184,17 @@ export class DiaryService {
   }
 
   /**
-   * Odczytuje wpis użytkownika po nieudanym zapisie warunkowym.
+   * Odczytuje pojedynczy wpis użytkownika. `null` oznacza "nie ma takiego wpisu u tego
+   * użytkownika" i zamienia się w trasie na 404.
+   *
+   * Publiczna, bo woła ją nie tylko zapis warunkowy: trasa wyceny potrzebuje jej, żeby po
+   * powrocie modelu bez liczby oddać wiersz w stanie FAKTYCZNYM, a nie kopię sprzed wywołania.
+   * Między stemplem a odpowiedzią mija do 55 s i użytkownik mógł w tym czasie zapisać wartość
+   * ręcznie - kopia sprzed wywołania raportowałaby wtedy `calories: null` wbrew bazie.
    *
    * Filtr po `user_id` mimo RLS: serwis nie zakłada, jaką rolą łączy się klient.
    */
-  private async findEntry(userId: string, entryId: number): Promise<DiaryEntryDto | null> {
+  async getEntry(userId: string, entryId: number): Promise<DiaryEntryDto | null> {
     const { data, error } = await this.supabase
       .from("diary_entries")
       .select("*")

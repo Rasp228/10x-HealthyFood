@@ -44,3 +44,20 @@ Only `login`, `register` and `reset-password` have been extracted so far.
 `ActionButtons.tsx`, `BaseModal.tsx`, `IconButton.tsx`, `LoadingSpinner.tsx` and `RecipeContent.tsx`
 are application components. Do not add to that set; new application components go in
 `src/components/{ai,auth,common,feedback,layout,pages,profile,recipe}/`.
+
+## Trasy AI
+
+### Wywołania modelu bez limitu częstości i bez deduplikacji po stronie serwera
+
+`src/pages/api/diary-entries/[id]/estimate.ts` oraz trzy trasy `src/pages/api/ai/` wołają dostawcę
+modelu bez żadnego ograniczenia liczby żądań na użytkownika. W trasie wyceny kalorii jedyną bramką
+jest `entry.calories !== null`: `markEstimationRequested` zapisuje `estimation_requested_at`, ale
+nic po stronie serwera tej kolumny nie czyta, więc dwie otwarte karty albo pętla w `curl` doprowadzą
+do modelu tyle wywołań, ile wyślą — wygrywa pierwszy `applyEstimate`, reszta jest opłacona
+i wyrzucona. Kolejka FIFO w `src/hooks/diary/useCalorieEstimation.ts` dyscyplinuje uczciwą
+przeglądarkę, nie endpoint.
+
+Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustalenie F2): model jest
+darmowy, użytkowników jest kilku, a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej
+w trasie wyceny to warunek świeżości znacznika w `markEstimationRequested` — kolumna już istnieje
+i czeka na czytelnika. Do przemyślenia razem z S-04, która dziedziczy ten kontrakt.

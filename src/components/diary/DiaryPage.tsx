@@ -37,7 +37,8 @@ const TICK_MS = 5_000;
  */
 function createTickSubscriber(deadline: number) {
   return (onStoreChange: () => void) => {
-    if (!Number.isFinite(deadline)) return () => undefined;
+    // Termin już minął albo nie ma go wcale - nie ma po co budzić Reacta ani na jeden tick.
+    if (!Number.isFinite(deadline) || Date.now() >= deadline) return () => undefined;
 
     const intervalId = setInterval(() => {
       onStoreChange();
@@ -87,7 +88,15 @@ export default function DiaryPage() {
     if (entry.calories !== null || entry.estimation_requested_at === null) return latest;
     if (phaseFor(entry.id) !== "none") return latest;
 
-    return Math.max(latest, Date.parse(entry.estimation_requested_at) + ESTIMATION_TIMEOUT_MS);
+    // Nieparsowalny znacznik pomijamy, zamiast wpuszczać `NaN` do `Math.max` - stamtąd zatruwałby
+    // całą redukcję i zegar nie ruszyłby dla ŻADNEGO wpisu tego dnia. `resolveEstimationState`
+    // ten sam przypadek obsługuje i schodzi na `stale`; tutaj musi być tak samo, inaczej jej
+    // obsługa jest pozorna.
+    const requestedAt = Date.parse(entry.estimation_requested_at);
+
+    if (!Number.isFinite(requestedAt)) return latest;
+
+    return Math.max(latest, requestedAt + ESTIMATION_TIMEOUT_MS);
   }, Number.NEGATIVE_INFINITY);
 
   const subscribeToTick = useMemo(() => createTickSubscriber(tickDeadline), [tickDeadline]);

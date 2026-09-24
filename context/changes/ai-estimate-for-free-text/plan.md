@@ -237,6 +237,7 @@ sedno tego pliku:
 new OpenRouterService({
   apiKey: import.meta.env.OPENROUTER_API_KEY,
   timeout: 60_000, // pełna minuta, tyle co domyślnie; zejście niżej zbiera znacznie więcej nieudanych oszacowań
+  // ^ zmienione na 55_000 w przeglądzie wdrożenia (ustalenie F1) — patrz aktualizacja przy punkcie 7
   // Dokładnie jedna próba i ani jednego powtórzenia. `retries` w tym kliencie liczy PRÓBY
   // (`while (attempt < this.retries)`, openrouter.service.ts:170), a `0` nie przechodzi przez
   // `config.retries || 2` w konstruktorze (:62) - cicho wróciłoby do dwóch prób i ~120 s.
@@ -408,6 +409,16 @@ narusza granic z „What We're NOT Doing". Ta liczba jest **szczytem łańcucha 
 stoją `timeout: 60_000` klienta i `ESTIMATION_ABORT_MS = 65_000` w przeglądarce. Gdyby plan konta
 nie pozwalał na 60 s, cały łańcuch schodzi razem z nią, łącznie z granicą minuty czytaną
 z kryterium akceptacji US-01 — i wtedy jest to decyzja produktowa, nie techniczna.
+
+> **Aktualizacja 2026-09-24 (przegląd wdrożenia, ustalenie F1): klient schodzi na `timeout: 55_000`.**
+> Łańcuch zapisany wyżej nie opadał, tylko stał po równo: `maxDuration: 60` równało się
+> `timeout: 60_000`, a trasa zużywa czas na `getUser()` i na `UPDATE` ze znacznikiem **zanim**
+> zawoła model. Platforma ubijała więc funkcję, zanim timeout klienta zdążył zadziałać, a 502
+> `AI_UNAVAILABLE`, które trasa umie zbudować, nie miało jak powstać — przeglądarka dostawała
+> stronę błędu Vercela, a `useCalorieEstimation` połykała ją jako zwykłe „nie policzono".
+> Obowiązujący łańcuch: **60 s platformy > 55 s klienta < 65 s abortu przeglądarki**. Pięć sekund
+> zapasu pokrywa narzut trasy przed wywołaniem modelu. Punkt 1.11 nadal weryfikuje `maxDuration`
+> na deployu podglądowym i nadal jest otwarty.
 
 ### Success Criteria:
 
@@ -791,7 +802,8 @@ pełni ręczna weryfikacja `curl`-em z Fazy 1.
 
 Wymaganie „wpis widoczny poniżej sekundy" spełnia niezmieniona ścieżka `POST /api/diary-entries` —
 wycena nie leży na niej. Oszacowanie kosztuje dwa dodatkowe `UPDATE` na wpis; przy 3–4
-użytkownikach i indeksie `(user_id, entry_date)` to bez znaczenia. Serwer dostaje pełną minutę i
+użytkownikach i indeksie `(user_id, entry_date)` to bez znaczenia. Serwer dostaje 55 s (po
+ustaleniu F1 przeglądu wdrożenia — patrz aktualizacja przy Fazie 1 punkt 7) i
 zero ponowień, a przeglądarka przerywa własnym abortem po 65 s — świadome, lekkie wyjście poza
 granicę minuty z US-01 jako koszt niezbędny: skrócenie tego budżetu wywraca znacznie więcej oszacowań,
 niż zyskuje się na czasie. Interfejs i tak pokazuje wpis jako niepoliczony po minucie od znacznika,
@@ -874,15 +886,15 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Automated
 
-- [x] 3.1 Suita jednostkowa przechodzi: `npm run test`
-- [x] 3.2 Suita E2E przechodzi: `npm run test:e2e`
-- [x] 3.3 Linter czysty: `npm run lint`
-- [x] 3.4 Kontrola typów na zero błędów: `npm run typecheck`
-- [x] 3.5 Formatowanie zgodne: `npm run format:check`
-- [x] 3.6 Audyt zależności przechodzi: `npm run test:security`
+- [x] 3.1 Suita jednostkowa przechodzi: `npm run test` — 44c350e
+- [x] 3.2 Suita E2E przechodzi: `npm run test:e2e` — 44c350e
+- [x] 3.3 Linter czysty: `npm run lint` — 44c350e
+- [x] 3.4 Kontrola typów na zero błędów: `npm run typecheck` — 44c350e
+- [x] 3.5 Formatowanie zgodne: `npm run format:check` — 44c350e
+- [x] 3.6 Audyt zależności przechodzi: `npm run test:security` — 44c350e
 
 #### Manual
 
-- [x] 3.7 Suita E2E przechodzi również wtedy, gdy `OPENROUTER_API_KEY` jest nieprawidłowy — żaden test automatyczny nie zależy od dostawcy
-- [x] 3.8 Pełne przejście ścieżki z żywym modelem wykonane ręcznie w przeglądarce i potwierdzone
-- [x] 3.9 Żaden test nie zostawia wierszy poza dniem sygnaturowym `2000-01-01`
+- [x] 3.7 Suita E2E przechodzi również wtedy, gdy `OPENROUTER_API_KEY` jest nieprawidłowy — żaden test automatyczny nie zależy od dostawcy — 44c350e
+- [x] 3.8 Pełne przejście ścieżki z żywym modelem wykonane ręcznie w przeglądarce i potwierdzone — 44c350e
+- [x] 3.9 Żaden test nie zostawia wierszy poza dniem sygnaturowym `2000-01-01` — 44c350e

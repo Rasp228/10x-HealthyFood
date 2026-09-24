@@ -70,15 +70,13 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
     return new Response(JSON.stringify(entry), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+    // Komunikat zostaje na serwerze. Awaria PostgREST niesie w treści nazwy kolumn, nazwy
+    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała, do logu pełny błąd.
+    console.error("Błąd podczas ustawiania wartości kalorycznej wpisu:", error);
 
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

@@ -62,10 +62,13 @@ describe("CalorieEstimationService", () => {
       expect(clientConfig().retries).toBe(1);
     });
 
-    it("zostawia wywołaniu pełną minutę", () => {
+    // Nie "pełna minuta": budżet klienta musi zostać ŚCIŚLE pod `maxDuration: 60` z astro.config.mjs,
+    // inaczej platforma ubija funkcję przed timeoutem i trasa nie ma z czego zbudować 502.
+    it("zostawia wywołaniu budżet ściśle mniejszy niż limit funkcji na platformie", () => {
       new CalorieEstimationService();
 
-      expect(clientConfig().timeout).toBe(60_000);
+      expect(clientConfig().timeout).toBe(55_000);
+      expect(clientConfig().timeout).toBeLessThan(60_000);
     });
 
     it("buduje własną instancję klienta, nie współdzieli jej z AIService", () => {

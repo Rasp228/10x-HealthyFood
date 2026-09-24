@@ -88,8 +88,22 @@ export const POST: APIRoute = async ({ params, locals }) => {
     }
 
     // Odpowiedź bezużyteczna to nie awaria: oddajemy wiersz ze znacznikiem i bez wartości.
+    //
+    // Odczyt, a nie `entry` z kroku stemplowania: od tamtej chwili minęło do 55 s, a użytkownik
+    // mógł w tym czasie zapisać liczbę ręcznie przez `PATCH`. Kopia sprzed wywołania modelu
+    // raportowałaby wtedy `calories: null` wbrew bazie - przeglądarka i tak robi re-GET, ale to
+    // ciało odpowiedzi jest kontraktem, który dziedziczą S-04 i S-05.
     if (estimate === null) {
-      return new Response(JSON.stringify(entry), { status: 200, headers: { "Content-Type": "application/json" } });
+      const current = await diaryService.getEntry(user.id, entryId);
+
+      if (!current) {
+        return new Response(JSON.stringify({ error: "Wpis nie został znaleziony" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify(current), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
     const updated = await diaryService.applyEstimate(user.id, entryId, estimate);
@@ -103,15 +117,13 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
     return new Response(JSON.stringify(updated), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+    // Komunikat zostaje na serwerze. Awaria PostgREST niesie w treści nazwy kolumn, nazwy
+    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała, do logu pełny błąd.
+    console.error("Błąd podczas zlecania wyceny kalorii:", error);
 
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
