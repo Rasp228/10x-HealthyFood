@@ -127,6 +127,13 @@ export interface CreateDiaryEntryCommand {
   calories: number | null;
 }
 
+// Command do ręcznego ustawienia wartości kalorycznej istniejącego wpisu dziennika.
+// Bez `calorie_origin` - pochodzenie rozstrzyga serwer (tutaj zawsze `manual`).
+// Bez `user_id` - tożsamość podróżuje osobnym argumentem serwisu.
+export interface SetEntryCaloriesCommand {
+  calories: number;
+}
+
 /**
  * Typy dla API błędów i statystyk
  */

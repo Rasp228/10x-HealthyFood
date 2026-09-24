@@ -26,6 +26,11 @@ export default defineConfig({
   },
   adapter: vercel({
     webAnalytics: { enabled: true },
+    // Szczyt łańcucha budżetów czasu: pod tą liczbą stoi `timeout: 60_000` klienta OpenRoutera
+    // (calorie-estimation.service.ts). Bez jawnej deklaracji obowiązuje domyślny limit konta,
+    // a jeśli jest niższy niż minuta, platforma utnie funkcję w połowie wywołania modelu -
+    // i zobaczymy to dopiero na produkcji.
+    maxDuration: 60,
   }),
   // Włączamy prefetch dla lepszego doświadczenia użytkownika
   prefetch: true,

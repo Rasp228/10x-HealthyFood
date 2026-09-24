@@ -25,6 +25,20 @@ export const entryDateSchema = z
   .refine(isExistingDate, "Podana data nie istnieje");
 
 /**
+ * Reguła wartości kalorycznej - wspólna dla tworzenia wpisu i dla ręcznego ustawienia liczby
+ * w istniejącym wpisie (`set-calories.ts`). Jedna reguła na obie ścieżki: granice i komunikaty
+ * rozjeżdżałyby się przy pierwszej zmianie, gdyby każda trasa miała własną kopię.
+ *
+ * Górne ograniczenie to decyzja produktowa, nie techniczna: pojedynczy wpis powyżej 5000 kcal
+ * jest raczej pomyłką niż posiłkiem. Dolne odwzorowuje check z migracji (`calories >= 0`).
+ */
+export const caloriesValueSchema = z
+  .number("Kalorie muszą być liczbą")
+  .int("Kalorie muszą być liczbą całkowitą")
+  .min(0, "Kalorie nie mogą być ujemne")
+  .max(5000, "Kalorie nie mogą przekraczać 5000 kcal");
+
+/**
  * Schemat tworzenia wpisu dziennika.
  *
  * Bez `calorie_origin`: pochodzenie wartości ustala serwer. Gdyby klient mógł je nazwać,
@@ -45,15 +59,8 @@ export const createDiaryEntrySchema = z.object({
     .transform((value) => (value === "" ? null : value))
     .nullable()
     .optional(),
-  // Górne ograniczenie to decyzja produktowa, nie techniczna: pojedynczy wpis powyżej 5000 kcal
-  // jest raczej pomyłką niż posiłkiem. Dolne odwzorowuje check z migracji (`calories >= 0`).
-  calories: z
-    .number("Kalorie muszą być liczbą")
-    .int("Kalorie muszą być liczbą całkowitą")
-    .min(0, "Kalorie nie mogą być ujemne")
-    .max(5000, "Kalorie nie mogą przekraczać 5000 kcal")
-    .nullable()
-    .optional(),
+  // Przy tworzeniu wpisu liczba jest opcjonalna: brak wartości to wpis jeszcze niepoliczony.
+  calories: caloriesValueSchema.nullable().optional(),
 });
 
 export type CreateDiaryEntrySchema = z.infer<typeof createDiaryEntrySchema>;

@@ -809,21 +809,21 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Automated
 
-- [ ] 1.1 Kontrola typów przechodzi: `npm run typecheck`
-- [ ] 1.2 Linter czysty: `npm run lint`
-- [ ] 1.3 Istniejąca suita jednostkowa przechodzi bez regresji: `npm run test`
-- [ ] 1.4 Aplikacja się buduje: `npm run build`
+- [x] 1.1 Kontrola typów przechodzi: `npm run typecheck`
+- [x] 1.2 Linter czysty: `npm run lint`
+- [x] 1.3 Istniejąca suita jednostkowa przechodzi bez regresji: `npm run test`
+- [x] 1.4 Aplikacja się buduje: `npm run build`
 
 #### Manual
 
 - [ ] 1.5 `POST /api/diary-entries/<id>/estimate` na wpisie bez wartości zwraca 200, a wiersz ma liczbę i `calorie_origin` równe `ai_from_description`
-- [ ] 1.6 Ten sam `POST` na wpisie, który ma już wartość ręczną, zwraca 200 i nie zmienia ani liczby, ani pochodzenia
-- [ ] 1.7 `estimation_requested_at` jest ustawione w bazie w trakcie liczenia, zanim odpowiedź wróci
-- [ ] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details`
-- [ ] 1.9 `POST` i `PATCH` na wpis należący do innego użytkownika zwracają 404
-- [ ] 1.10 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` kończy się 502, a wiersz zostaje bez wartości
+- [x] 1.6 Ten sam `POST` na wpisie, który ma już wartość ręczną, zwraca 200 i nie zmienia ani liczby, ani pochodzenia
+- [x] 1.7 `estimation_requested_at` jest ustawione w bazie w trakcie liczenia, zanim odpowiedź wróci
+- [x] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details`
+- [x] 1.9 `POST` i `PATCH` na wpis należący do innego użytkownika zwracają 404
+- [x] 1.10 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` kończy się 502, a wiersz zostaje bez wartości
 - [ ] 1.11 Limit `maxDuration: 60` jest przyjęty przez platformę na deployu podglądowym, a wywołanie trwające ~40 s nie zostaje ucięte
-- [ ] 1.12 Pod `astro dev` obie nowe trasy odpowiadają — `[id].ts` i katalog `[id]/estimate.ts` nie kolidują ze sobą w routingu
+- [x] 1.12 Pod `astro dev` obie nowe trasy odpowiadają — `[id].ts` i katalog `[id]/estimate.ts` nie kolidują ze sobą w routingu
 
 ### Phase 2: Powierzchnia dziennika
 
