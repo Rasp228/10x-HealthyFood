@@ -1,22 +1,10 @@
 import { OpenRouterService } from "../api/openrouter.service";
 import { OpenRouterError } from "../api/openrouter.types";
-import type { ChatResponse, JSONSchema } from "../api/openrouter.types";
+import type { ChatResponse } from "../api/openrouter.types";
 
 /** Granice akceptowanej wartości - te same, co w `caloriesValueSchema` i w checku migracji. */
 const MIN_CALORIES = 0;
 const MAX_CALORIES = 5000;
-
-/** Schemat odpowiedzi modelu. Ustawiany raz, w konstruktorze - ten serwis pyta tylko o liczbę. */
-const CALORIES_SCHEMA: JSONSchema = {
-  type: "object",
-  properties: {
-    calories: {
-      type: "number",
-      description: "Szacowana wartość energetyczna całej opisanej porcji w kcal",
-    },
-  },
-  required: ["calories"],
-};
 
 const SYSTEM_MESSAGE = `
 Jesteś kalkulatorem wartości energetycznej posiłków. Na podstawie opisu posiłku i podanej ilości
@@ -70,9 +58,21 @@ function createEstimationClient(): OpenRouterService {
 export class CalorieEstimationService {
   private readonly openRouterService: OpenRouterService;
 
+  /**
+   * `setResponseFormat` celowo NIE jest tu wołane.
+   *
+   * Domyślny model (`nvidia/nemotron-3-ultra-550b-a55b:free`) nie deklaruje w OpenRouterze
+   * obsługi `response_format` - w jego `supported_parameters` nie ma ani tej wartości, ani
+   * `structured_outputs`. Parametr nie jest odrzucany, tylko ignorowany, a w pomiarach z
+   * 2026-09-24 jego obecność psuła treść odpowiedzi: na trzy wywołania jedno wróciło
+   * z uszkodzonym kluczem (`{"calories{": 600}`), którego `JSON.parse` nie przyjmuje.
+   * Bez tego parametru trzy na trzy wywołania dały czysty obiekt.
+   *
+   * Kształt odpowiedzi pilnują więc wiadomość systemowa i `extractCalories` - czyli to samo,
+   * co pilnowało go dotąd, bo schematu OpenRouter i tak nigdy nie egzekwował.
+   */
   constructor() {
     this.openRouterService = createEstimationClient();
-    this.openRouterService.setResponseFormat(CALORIES_SCHEMA);
   }
 
   /**

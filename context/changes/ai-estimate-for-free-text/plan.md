@@ -57,9 +57,17 @@ wyczerpana". Jedna próba bez żadnego powtórzenia to w tym API **`retries: 1`*
 że interceptor mapuje błąd (`:258`) zanim zobaczy go `isRetryableError` (`:205`), więc przy
 wartościach większych od 1 ponawiany jest **każdy** błąd, także 401 za nieprawidłowy klucz.
 
-Model jest zaszyty na sztywno: `tngtech/deepseek-r1t-chimera:free`
-(`openrouter.service.ts:52`); zmiennej środowiskowej na model nie ma, jest tylko
-`OPENROUTER_API_KEY` (`src/env.d.ts:18-22`).
+Model jest zaszyty na sztywno (`openrouter.service.ts:52`); zmiennej środowiskowej na model nie
+ma, jest tylko `OPENROUTER_API_KEY` (`src/env.d.ts:18-22`).
+
+> **Aktualizacja 2026-09-24 (po Fazie 1, decyzja użytkownika).** Wartość, którą ta analiza
+> zastała — `tngtech/deepseek-r1t-chimera:free` — przestała istnieć po stronie dostawcy:
+> OpenRouter odpowiadał na nią `404 No endpoints found`, więc 502 wracało zarówno z nowej wyceny
+> kalorii, jak i z istniejących tras `/api/ai/*`. Domyślna wartość w `openrouter.service.ts:52`
+> została podmieniona na `nvidia/nemotron-3-ultra-550b-a55b:free` (darmowy, kontekst 1 mln,
+> rozumujący). Świadome wyjście poza „żadnego naprawiania istniejącego długu": martwy model
+> blokował krok 1.5, a poprawka we własnej konfiguracji serwisu wyceny zostawiłaby przepisy
+> zepsute i rozszczepiła wiedzę o modelu na dwa miejsca.
 
 **Wzorzec „request z timeoutem i abortem" jest w repo dokładnie raz** — `src/hooks/ai/useAI.ts:51-119`
 (AbortController + `setTimeout` + retry z `RETRY_DELAYS`), z anulowaniem na `useAI.ts:166-180`.
@@ -237,13 +245,26 @@ new OpenRouterService({
 });
 ```
 
-Schemat odpowiedzi ustawiany raz w konstruktorze: `{ type: "object", properties: { calories: { type: "number" } }, required: ["calories"] }`.
+~~Schemat odpowiedzi ustawiany raz w konstruktorze: `{ type: "object", properties: { calories: { type: "number" } }, required: ["calories"] }`.~~
 
-**Schemat sam z siebie nie da liczby — wydobycie jej to osobna, jawna praca w tym pliku.**
+> **Aktualizacja 2026-09-24 (po Fazie 1, decyzja użytkownika): schemat odpowiedzi NIE jest
+> ustawiany.** `setResponseFormat` nie jest w tym serwisie wołane, a stała ze schematem nie
+> istnieje. Powód jest empiryczny: model, na który przeszła domyślna konfiguracja
+> (`nvidia/nemotron-3-ultra-550b-a55b:free`), nie deklaruje obsługi `response_format` — w jego
+> `supported_parameters` nie ma ani tej wartości, ani `structured_outputs`. Parametr nie jest
+> odrzucany, tylko ignorowany, a w pomiarach z 2026-09-24 jego obecność psuła treść: na trzy
+> wywołania jedno wróciło z uszkodzonym kluczem (`{"calories{": 600}`), którego `JSON.parse` nie
+> przyjmuje; bez niego trzy na trzy dały czysty obiekt. Ponieważ OpenRouter tego schematu i tak
+> nigdy nie egzekwował (patrz akapit niżej), jego ustawianie nic nie kupowało, a szkodzić mogło.
+> Kształtu odpowiedzi pilnują wiadomość systemowa i `extractCalories`. Kolizja globalnego
+> `responseFormat` z `AIService` — powód, dla którego ten serwis ma własną instancję klienta —
+> pozostaje aktualna i niezależna od tej decyzji.
+
+**Schemat sam z siebie nie dałby liczby — wydobycie jej to osobna, jawna praca w tym pliku.**
 `sendMessage()` zwraca surową kopertę OpenAI, bo `processResponse` (`openrouter.service.ts:269`) to
-goły rzut typu bez walidacji, a `response_format` idzie na wyjściu jako
+goły rzut typu bez walidacji, a `response_format` szedłby na wyjściu jako
 `{ type: "json_object", schema }` (tamże, :136) — kształt, którego OpenRouter nie egzekwuje. Model
-jest przy tym rozumujący (`tngtech/deepseek-r1t-chimera:free`), więc treść bywa poprzedzona
+jest przy tym rozumujący, więc treść bywa poprzedzona
 preambułą i owinięta w ogrodzenia markdown. `AIService` rozwiązuje to trzema warstwami
 (`ai.service.ts:296, 368, 316`), ale wszystkie są `private` i zaszyte pod kształt przepisu — nie ma
 czego zaimportować.
@@ -809,21 +830,21 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Automated
 
-- [x] 1.1 Kontrola typów przechodzi: `npm run typecheck`
-- [x] 1.2 Linter czysty: `npm run lint`
-- [x] 1.3 Istniejąca suita jednostkowa przechodzi bez regresji: `npm run test`
-- [x] 1.4 Aplikacja się buduje: `npm run build`
+- [x] 1.1 Kontrola typów przechodzi: `npm run typecheck` — 9b06dce
+- [x] 1.2 Linter czysty: `npm run lint` — 9b06dce
+- [x] 1.3 Istniejąca suita jednostkowa przechodzi bez regresji: `npm run test` — 9b06dce
+- [x] 1.4 Aplikacja się buduje: `npm run build` — 9b06dce
 
 #### Manual
 
 - [ ] 1.5 `POST /api/diary-entries/<id>/estimate` na wpisie bez wartości zwraca 200, a wiersz ma liczbę i `calorie_origin` równe `ai_from_description`
-- [x] 1.6 Ten sam `POST` na wpisie, który ma już wartość ręczną, zwraca 200 i nie zmienia ani liczby, ani pochodzenia
-- [x] 1.7 `estimation_requested_at` jest ustawione w bazie w trakcie liczenia, zanim odpowiedź wróci
-- [x] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details`
-- [x] 1.9 `POST` i `PATCH` na wpis należący do innego użytkownika zwracają 404
-- [x] 1.10 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` kończy się 502, a wiersz zostaje bez wartości
+- [x] 1.6 Ten sam `POST` na wpisie, który ma już wartość ręczną, zwraca 200 i nie zmienia ani liczby, ani pochodzenia — 9b06dce
+- [x] 1.7 `estimation_requested_at` jest ustawione w bazie w trakcie liczenia, zanim odpowiedź wróci — 9b06dce
+- [x] 1.8 `PATCH /api/diary-entries/<id>` z `calories` poza zakresem 0–5000 zwraca 400 z listą `details` — 9b06dce
+- [x] 1.9 `POST` i `PATCH` na wpis należący do innego użytkownika zwracają 404 — 9b06dce
+- [x] 1.10 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` kończy się 502, a wiersz zostaje bez wartości — 9b06dce
 - [ ] 1.11 Limit `maxDuration: 60` jest przyjęty przez platformę na deployu podglądowym, a wywołanie trwające ~40 s nie zostaje ucięte
-- [x] 1.12 Pod `astro dev` obie nowe trasy odpowiadają — `[id].ts` i katalog `[id]/estimate.ts` nie kolidują ze sobą w routingu
+- [x] 1.12 Pod `astro dev` obie nowe trasy odpowiadają — `[id].ts` i katalog `[id]/estimate.ts` nie kolidują ze sobą w routingu — 9b06dce
 
 ### Phase 2: Powierzchnia dziennika
 

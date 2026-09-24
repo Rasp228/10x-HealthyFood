@@ -115,8 +115,12 @@ oraz `.env.test` z `E2E_USERNAME_ID` / `E2E_USERNAME` / `E2E_PASSWORD` do Fazy 3
   jest odziedziczona po S-01 i celowo trzyma obie ścieżki na jednej regule.
 - **Żaden test automatyczny nie przechodzi przez OpenRouter.** Łańcuch end-to-end z żywym modelem
   zostaje pozycją ręcznej weryfikacji — awaria dostawcy nie zatrzyma CI, ale też go nie ostrzeże.
-- **Model jest zaszyty na sztywno** (`tngtech/deepseek-r1t-chimera:free`) i darmowy, więc jakość
-  oszacowań jest nieznana aż do ręcznego przejścia. Zmiana modelu to jedna linia w nowym serwisie.
+- **Model jest zaszyty na sztywno** (`nvidia/nemotron-3-ultra-550b-a55b:free`, wspólna wartość
+  domyślna w `openrouter.service.ts:52`) i darmowy, więc jakość oszacowań jest nieznana aż do
+  ręcznego przejścia. Zmiana modelu to jedna linia — ale wspólna z trasami `/api/ai/*`, więc
+  dotyka też generowania przepisów. Poprzednia wartość (`tngtech/deepseek-r1t-chimera:free`)
+  przestała istnieć u dostawcy w trakcie Fazy 1; szczegóły i powód podmiany: `plan.md`,
+  Current State Analysis.
 - **`PATCH` to pożyczka z S-05.** Wąska i uzasadniona kryterium akceptacji US-01, ale to S-05
   poszerzy ją o treść, ilość i dzień — łącznie z regułą zerowania `estimation_requested_at`, której
   ta zmiana świadomie nie dotyka.

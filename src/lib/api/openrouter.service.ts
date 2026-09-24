@@ -49,7 +49,8 @@ export class OpenRouterService {
     }
 
     this.apiUrl = config.apiUrl || "https://openrouter.ai/api/v1";
-    this.defaultModel = config.defaultModel || "tngtech/deepseek-r1t-chimera:free";
+    // Tylko darmowy wariant (`:free`)
+    this.defaultModel = config.defaultModel || "nvidia/nemotron-3-ultra-550b-a55b:free";
     this.defaultParameters = {
       temperature: 0.7,
       top_p: 1,
