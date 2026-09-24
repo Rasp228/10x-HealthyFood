@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import DayNavigator from "./DayNavigator";
@@ -6,11 +6,62 @@ import DiaryDaySummary from "./DiaryDaySummary";
 import DiaryEntryForm from "./DiaryEntryForm";
 import DiaryEntryList from "./DiaryEntryList";
 import ToastContainer from "../feedback/ToastContainer";
+import {
+  ESTIMATION_TIMEOUT_MS,
+  resolveEstimationState,
+  type EstimationRequestPhase,
+} from "@/lib/utils/diary-estimation";
+import type { DiaryEntryDto } from "../../types";
+import { useCalorieEstimation } from "../../hooks/diary/useCalorieEstimation";
 import { useDiaryEntries } from "../../hooks/diary/useDiaryEntries";
 import { useSelectedDay } from "../../hooks/diary/useSelectedDay";
+import { useToast } from "../../hooks/common/useToast";
+
+/** Rozdzielczość zegara wyspy. Świadomie zgrubna - patrz komentarz przy `createTickSubscriber`. */
+const TICK_MS = 5_000;
 
 /**
- * Wyspa dziennika: spina wybór dnia z listą wpisów i trzyma powierzchnię toastów.
+ * Store tykającej chwili: jedyne źródło `now` dla `resolveEstimationState`.
+ *
+ * Musiał powstać od zera, bo `useSelectedDay` subskrybuje `focus` i `visibilitychange` - zdarzenia
+ * powrotu do karty. Dla granicy minuty to za mało: w karcie, której nikt nie dotyka, granica nigdy
+ * by nie zapadła i wpis stałby na "Liczę..." bezterminowo.
+ *
+ * Interwał żyje tylko wtedy, gdy jest na co czekać. `deadline` to najpóźniejsza chwila, w której
+ * czyjś znacznik przestaje być świeży; po niej interwał gasi się sam, bo dalsze budzenie Reacta
+ * co pięć sekund nie zmieniłoby już żadnego stanu. Stan `estimating` wynikający z żywego żądania
+ * tej wyspy zegara nie potrzebuje - kończy go odpowiedź, nie upływ czasu.
+ *
+ * Pięć sekund to rozdzielczość celowo zgrubna: granica minuty przesuwa się o najwyżej jeden tick,
+ * a wpis i tak ma wtedy aktywne pole i przycisk "Policz ponownie".
+ */
+function createTickSubscriber(deadline: number) {
+  return (onStoreChange: () => void) => {
+    if (!Number.isFinite(deadline)) return () => undefined;
+
+    const intervalId = setInterval(() => {
+      onStoreChange();
+
+      if (Date.now() >= deadline) clearInterval(intervalId);
+    }, TICK_MS);
+
+    return () => clearInterval(intervalId);
+  };
+}
+
+/**
+ * Migawka **kwantyzowana**. Bez tego każdy odczyt zwracałby inną liczbę, `Object.is` nigdy nie
+ * trafiłoby i `useSyncExternalStore` wpadłby w pętlę renderów. `useSelectedDay` rozwiązuje ten sam
+ * problem tym, że jego migawka to napis dnia, identyczny między tickami; przy liczbie trzeba to
+ * zrobić ręcznie.
+ */
+const getNowTick = () => Math.floor(Date.now() / TICK_MS) * TICK_MS;
+
+/** Serwer nie zna chwili przeglądarki - zero, tak jak `useSelectedDay` oddaje `null`. */
+const getServerNowTick = () => 0;
+
+/**
+ * Wyspa dziennika: spina wybór dnia z listą wpisów, trzyma żądania wyceny i powierzchnię toastów.
  *
  * `<ToastContainer />` renderuje się tutaj, a nie w layoucie - wyspy Astro to osobne drzewa
  * Reacta, więc komponent wołający `showToast` bez kontenera po prostu nie ma czym go narysować.
@@ -18,6 +69,68 @@ import { useSelectedDay } from "../../hooks/diary/useSelectedDay";
 export default function DiaryPage() {
   const { day, today, setDay } = useSelectedDay();
   const { entries, isLoading, error, refetch } = useDiaryEntries(day);
+  const { showToast } = useToast();
+  // Wyspa jest właścicielem żądania w locie, bo to ona trzyma listę: po każdym zakończeniu wycena
+  // każe odświeżyć wiersze i stan wpisu bierze się z danych, a nie z pamięci komponentu.
+  const { estimate, cancel, inFlightId, queuedIds, settledIds } = useCalorieEstimation(refetch);
+
+  /** Co ta wyspa wie o żądaniu dla wpisu. Wpis w kolejce jest dla użytkownika "w toku", stąd `live`. */
+  const phaseFor = (entryId: number): EstimationRequestPhase => {
+    if (inFlightId === entryId || queuedIds.includes(entryId)) return "live";
+
+    return settledIds.has(entryId) ? "settled" : "none";
+  };
+
+  // Najpóźniejsza granica minuty wśród wpisów, których stan rozstrzyga znacznik z bazy - czyli
+  // tych po przeładowaniu strony. Liczona z samych danych, bez czytania zegara w renderze.
+  const tickDeadline = entries.reduce((latest, entry) => {
+    if (entry.calories !== null || entry.estimation_requested_at === null) return latest;
+    if (phaseFor(entry.id) !== "none") return latest;
+
+    return Math.max(latest, Date.parse(entry.estimation_requested_at) + ESTIMATION_TIMEOUT_MS);
+  }, Number.NEGATIVE_INFINITY);
+
+  const subscribeToTick = useMemo(() => createTickSubscriber(tickDeadline), [tickDeadline]);
+  const now = useSyncExternalStore(subscribeToTick, getNowTick, getServerNowTick);
+
+  const entryState = (entry: DiaryEntryDto) => resolveEstimationState(entry, now, phaseFor(entry.id));
+
+  /** Wpis zapisany przyciskiem "Zapisz i policz kalorie" dostaje wycenę od razu. */
+  const handleCreated = (createdEntryId?: number) => {
+    refetch();
+
+    if (createdEntryId !== undefined) {
+      estimate(createdEntryId);
+    }
+  };
+
+  const handleSetCalories = async (entryId: number, calories: number) => {
+    try {
+      const response = await fetch(`/api/diary-entries/${entryId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Ważne dla przesyłania cookies z sesją
+        body: JSON.stringify({ calories }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Wpis ma już liczbę, więc nie ma po co pytać o nią modelu - jeśli czekał w kolejce, wypada
+      // z niej przed wysłaniem. Wartości w locie to nie dotyczy: przy niej pole jest nieaktywne,
+      // a spóźnione oszacowanie i tak nie nadpisze liczby (zapis warunkowy w `applyEstimate`).
+      cancel(entryId);
+      refetch();
+      showToast("Kalorie zostały zapisane", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Wystąpił błąd podczas zapisywania kalorii";
+      showToast(message, "error");
+    }
+  };
 
   // Dzień rozstrzyga przeglądarka, więc do czasu pierwszej migawki klienckiej nie mamy czego
   // pokazać. Policzenie "dzisiaj" na serwerze dałoby dzień serwera i rozjechałoby hydratację.
@@ -32,7 +145,7 @@ export default function DiaryPage() {
         <DayNavigator day={day} today={today} onChange={setDay} />
       </div>
 
-      <DiaryEntryForm day={day} onCreated={refetch} />
+      <DiaryEntryForm day={day} onCreated={handleCreated} />
 
       <div className="mt-6">
         {error ? (
@@ -64,7 +177,15 @@ export default function DiaryPage() {
         ) : (
           <div className="flex flex-col gap-4">
             <DiaryDaySummary entries={entries} />
-            <DiaryEntryList entries={entries} />
+            <DiaryEntryList
+              entries={entries}
+              entryState={entryState}
+              inFlightId={inFlightId}
+              queuedIds={queuedIds}
+              onEstimate={estimate}
+              onCancel={cancel}
+              onSetCalories={handleSetCalories}
+            />
           </div>
         )}
       </div>

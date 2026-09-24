@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { parseCalories } from "@/lib/utils/diary-calories";
+import { AI_NOTICE } from "@/lib/utils/diary-estimation";
 import { createDiaryEntrySchema } from "@/lib/validations/diary/create-entry";
+import type { DiaryEntryDto } from "../../types";
 import { useToast } from "../../hooks/common/useToast";
 
 interface DiaryEntryFormProps {
   day: string;
-  onCreated: () => void;
+  /**
+   * Identyfikator dostaje tylko wpis zapisany przyciskiem "Zapisz i policz kalorie" - dla zwykłego
+   * zapisu nie ma czego zlecać, więc argument zostaje pusty.
+   */
+  onCreated: (createdEntryId?: number) => void;
 }
 
 type DiaryFormField = "content" | "amount_text" | "calories";
@@ -32,22 +39,9 @@ const EMPTY_FORM: DiaryFormValues = {
 
 /**
  * Buduje dane wejściowe dla schematu z Fazy 1. Formularz zna tylko napisy, a schemat oczekuje
- * liczby albo `null` - puste pole kalorii to brak wartości, nie zero.
+ * liczby albo `null` - puste pole kalorii to brak wartości, nie zero. Samą regułę czytania napisu
+ * trzyma `src/lib/utils/diary-calories.ts`, wspólnie z polem przy wpisie na liście.
  */
-/**
- * Puste pole to brak wartości, nie zero. Poza tym `Number` czyta więcej form liczby, niż to pole
- * kiedykolwiek miało przyjmować: "1e3" cicho robi się 1000 kcal, a "0x1f" - 31, i jedno i drugie
- * przechodzi potem każdą kontrolę schematu. Cyfry i tylko cyfry; wszystko inne zwracamy jako NaN,
- * żeby schemat odrzucił to tym samym komunikatem co "abc".
- */
-const parseCalories = (raw: string): number | null => {
-  const trimmed = raw.trim();
-
-  if (trimmed === "") return null;
-
-  return /^[0-9]{1,5}$/.test(trimmed) ? Number(trimmed) : Number.NaN;
-};
-
 const toPayload = (values: DiaryFormValues, day: string) => ({
   entry_date: day,
   content: values.content,
@@ -105,9 +99,14 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  /**
+   * Zapis wpisu, z wyceną albo bez.
+   *
+   * Który przycisk kliknięto, rozstrzyga argument, a nie `event.submitter`: drugi przycisk jest
+   * zwykłym `type="button"`, więc pierwszy zostaje jedynym domyślnym zatwierdzeniem formularza
+   * i Enter w polu opisu nadal zapisuje wpis bez zlecania czegokolwiek modelowi.
+   */
+  const submitEntry = async (withEstimate: boolean) => {
     const result = createDiaryEntrySchema.safeParse(toPayload(values, day));
 
     if (!result.success) {
@@ -148,10 +147,13 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
+      const created: DiaryEntryDto = await response.json();
+
       // Czyścimy pola tutaj, a nie w efekcie reagującym na sukces - `react-hooks/set-state-in-effect`
       // odrzuca ten drugi wariant.
       setValues(EMPTY_FORM);
-      onCreated();
+      // Wpis pojawia się na liście natychmiast; wycena, jeśli zlecona, dolicza się do niego później.
+      onCreated(withEstimate ? created.id : undefined);
       showToast("Wpis został dodany", "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Wystąpił błąd podczas dodawania wpisu";
@@ -159,6 +161,12 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    void submitEntry(false);
   };
 
   const formErrors = Object.entries(errors).filter(([key]) => !FIELD_KEYS.includes(key));
@@ -280,18 +288,38 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-4">
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">Kalorie możesz zostawić puste - wpis zapisze się bez wartości.</p>
-        <Button type="submit" disabled={isSubmitting} className="gap-2" data-testid="diary-submit-button">
-          {isSubmitting ? (
-            <>
-              <LoadingSpinner size="sm" />
-              Dodawanie...
-            </>
-          ) : (
-            "Dodaj wpis"
-          )}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={isSubmitting} className="gap-2" data-testid="diary-submit-button">
+              {isSubmitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Dodawanie...
+                </>
+              ) : (
+                "Dodaj wpis"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              // Wpisana liczba wyklucza wycenę: trasa `/estimate` i tak nie tknęłaby wartości, która
+              // już jest, więc przycisk aktywny przy wypełnionym polu tylko obiecywałby coś,
+              // czego nie zrobi.
+              disabled={isSubmitting || values.calories.trim() !== ""}
+              onClick={() => void submitEntry(true)}
+              className="gap-2"
+              data-testid="diary-submit-estimate-button"
+            >
+              Zapisz i policz kalorie
+            </Button>
+          </div>
+          <p className="text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
+            {AI_NOTICE}
+          </p>
+        </div>
       </div>
     </form>
   );

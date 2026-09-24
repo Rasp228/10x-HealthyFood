@@ -850,25 +850,25 @@ dokładnie jako wpisy, dla których nigdy nie zlecono oszacowania.
 
 #### Automated
 
-- [ ] 2.1 Kontrola typów przechodzi: `npm run typecheck`
-- [ ] 2.2 Linter czysty, w tym reguły React Compiler: `npm run lint`
-- [ ] 2.3 Aplikacja się buduje: `npm run build`
-- [ ] 2.4 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 Kontrola typów przechodzi: `npm run typecheck`
+- [x] 2.2 Linter czysty, w tym reguły React Compiler: `npm run lint`
+- [x] 2.3 Aplikacja się buduje: `npm run build`
+- [x] 2.4 Formatowanie zgodne: `npm run format:check`
 
 #### Manual
 
-- [ ] 2.5 Wpis zapisany przyciskiem „Zapisz i policz kalorie" pojawia się na liście natychmiast, bez czekania na wartość
-- [ ] 2.6 W trakcie liczenia wpis pokazuje „Liczę…", a pole na ręczną liczbę przy tym wpisie jest nieaktywne
-- [ ] 2.7 „Anuluj" przerywa liczenie i natychmiast odblokowuje pole na liczbę
-- [ ] 2.8 Po dojściu wartości wpis pokazuje liczbę z adnotacją „oszacowane z opisu", a suma dnia rośnie i przestaje liczyć ten wpis jako brakujący
-- [ ] 2.9 Po upływie minuty bez wartości wpis czyta się jako „Nie policzono" z aktywnym polem i przyciskiem „Policz ponownie"
-- [ ] 2.10 Przeładowanie strony w trakcie liczenia nie gubi informacji, że oszacowanie zlecono, a „Policz ponownie" jest dostępne od razu
-- [ ] 2.11 Wartość wpisana ręcznie w trakcie liczenia zostaje i nie jest nadpisana przez spóźnione oszacowanie
-- [ ] 2.12 Zdanie o wysyłce treści do dostawcy modelu jest widoczne przy obu przyciskach zlecających
-- [ ] 2.13 Ekrany przepisów, profilu, logowania i rejestracji zachowują się jak dotąd
-- [ ] 2.14 Wycena odpadająca w kilka sekund (nieprawidłowy `OPENROUTER_API_KEY`) natychmiast zwalnia pole na liczbę — wpis nie stoi na „Liczę…" do końca minuty
-- [ ] 2.15 Liczbę ustaloną przez model da się zastąpić własną: pole przy wpisie z wartością przyjmuje nową liczbę, a adnotacja zmienia się na „wpisane ręcznie"
-- [ ] 2.16 Zlecenie wyceny przy drugim wpisie w trakcie pierwszej nie przerywa pierwszej: drugi czeka w kolejce z aktywnym polem na liczbę i rusza dopiero po zakończeniu pierwszego
+- [x] 2.5 Wpis zapisany przyciskiem „Zapisz i policz kalorie" pojawia się na liście natychmiast, bez czekania na wartość
+- [x] 2.6 W trakcie liczenia wpis pokazuje „Liczę…", a pole na ręczną liczbę przy tym wpisie jest nieaktywne
+- [x] 2.7 „Anuluj" przerywa liczenie i natychmiast odblokowuje pole na liczbę
+- [x] 2.8 Po dojściu wartości wpis pokazuje liczbę z adnotacją „oszacowane z opisu", a suma dnia rośnie i przestaje liczyć ten wpis jako brakujący
+- [x] 2.9 Po upływie minuty bez wartości wpis czyta się jako „Nie policzono" z aktywnym polem i przyciskiem „Policz ponownie"
+- [x] 2.10 Przeładowanie strony w trakcie liczenia nie gubi informacji, że oszacowanie zlecono, a „Policz ponownie" jest dostępne od razu
+- [x] 2.11 Wartość wpisana ręcznie w trakcie liczenia zostaje i nie jest nadpisana przez spóźnione oszacowanie
+- [x] 2.12 Zdanie o wysyłce treści do dostawcy modelu jest widoczne przy obu przyciskach zlecających
+- [x] 2.13 Ekrany przepisów, profilu, logowania i rejestracji zachowują się jak dotąd
+- [x] 2.14 Wycena odpadająca w kilka sekund (nieprawidłowy `OPENROUTER_API_KEY`) natychmiast zwalnia pole na liczbę — wpis nie stoi na „Liczę…" do końca minuty
+- [x] 2.15 Liczbę ustaloną przez model da się zastąpić własną: pole przy wpisie z wartością przyjmuje nową liczbę, a adnotacja zmienia się na „wpisane ręcznie"
+- [x] 2.16 Zlecenie wyceny przy drugim wpisie w trakcie pierwszej nie przerywa pierwszej: drugi czeka w kolejce z aktywnym polem na liczbę i rusza dopiero po zakończeniu pierwszego
 
 ### Phase 3: Testy i domknięcie bramki
 

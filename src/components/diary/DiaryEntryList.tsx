@@ -1,15 +1,32 @@
 import React from "react";
+import DiaryEntryCalories from "./DiaryEntryCalories";
+import type { EstimationState } from "@/lib/utils/diary-estimation";
 import type { DiaryEntryDto } from "../../types";
 
 interface DiaryEntryListProps {
   entries: DiaryEntryDto[];
+  /** Stan wartości wpisu liczy wyspa - ona jedna zna zegar i swoje żądania w locie. */
+  entryState: (entry: DiaryEntryDto) => EstimationState;
+  inFlightId: number | null;
+  queuedIds: readonly number[];
+  onEstimate: (entryId: number) => void;
+  onCancel: (entryId: number) => void;
+  onSetCalories: (entryId: number, calories: number) => Promise<void>;
 }
 
 /**
- * Lista wpisów dnia. Wpis bez kalorii dostaje własną, widoczną etykietę - brak wartości jest
- * informacją, nie pustym miejscem.
+ * Lista wpisów dnia. Sama nie rysuje już ani liczby, ani etykiety "Nie policzono" - tę rolę,
+ * razem z polem na ręczną wartość i przyciskami wyceny, przejął `DiaryEntryCalories`.
  */
-export default function DiaryEntryList({ entries }: DiaryEntryListProps) {
+export default function DiaryEntryList({
+  entries,
+  entryState,
+  inFlightId,
+  queuedIds,
+  onEstimate,
+  onCancel,
+  onSetCalories,
+}: DiaryEntryListProps) {
   return (
     <ul className="flex flex-col gap-3" data-testid="diary-entry-list">
       {entries.map((entry) => (
@@ -26,18 +43,15 @@ export default function DiaryEntryList({ entries }: DiaryEntryListProps) {
               )}
             </div>
 
-            {entry.calories === null ? (
-              <span
-                className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"
-                data-testid="diary-entry-calories-missing"
-              >
-                Nie policzono
-              </span>
-            ) : (
-              <span className="shrink-0 text-sm font-semibold" data-testid="diary-entry-calories">
-                {entry.calories} kcal
-              </span>
-            )}
+            <DiaryEntryCalories
+              entry={entry}
+              state={entryState(entry)}
+              isInFlight={inFlightId === entry.id}
+              isQueued={queuedIds.includes(entry.id)}
+              onEstimate={onEstimate}
+              onCancel={onCancel}
+              onSetCalories={onSetCalories}
+            />
           </div>
         </li>
       ))}
