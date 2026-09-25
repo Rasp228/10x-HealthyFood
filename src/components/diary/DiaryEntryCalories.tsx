@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatCalories, parseCalories } from "@/lib/utils/diary-calories";
-import { AI_NOTICE, type EstimationState } from "@/lib/utils/diary-estimation";
+import { AI_NOTICE, AI_NOTICE_RECIPE, type EstimationState } from "@/lib/utils/diary-estimation";
 import { setEntryCaloriesSchema } from "@/lib/validations/diary/set-calories";
 import type { CalorieOriginEnum, DiaryEntryDto } from "../../types";
 
@@ -19,11 +19,13 @@ interface DiaryEntryCaloriesProps {
 }
 
 /**
- * Adnotacja o pochodzeniu wartości. Trzy pochodzenia, bo tyle może dziś wyprodukować ta ścieżka;
- * `ai_from_recipe` dołoży S-04, dopisując tu jeden wiersz i nie ruszając listy.
+ * Adnotacja o pochodzeniu wartości. Cztery pochodzenia i komplet: mapa pokrywa cały
+ * `calorie_origin_enum`, więc piąta wartość enuma nie przejdzie tędy bez etykiety - powie o tym
+ * `astro check`, a nie pusty wiersz na ekranie.
  */
-const ORIGIN_LABELS: Partial<Record<CalorieOriginEnum, string>> = {
+const ORIGIN_LABELS: Record<CalorieOriginEnum, string> = {
   recipe_nutrition: "z przepisu",
+  ai_from_recipe: "oszacowane z przepisu",
   ai_from_description: "oszacowane z opisu",
   manual: "wpisane ręcznie",
 };
@@ -32,7 +34,8 @@ const ORIGIN_LABELS: Partial<Record<CalorieOriginEnum, string>> = {
  * Wartość kaloryczna jednego wpisu we wszystkich swoich stanach.
  *
  * Osobny komponent, bo tych stanów jest cztery i rozsypane po liście przestałyby się zgadzać po
- * pierwszej zmianie. S-04 pokaże tutaj kolejne pochodzenie, nie dotykając `DiaryEntryList`.
+ * pierwszej zmianie. Kolejne pochodzenie (`ai_from_recipe`) weszło tu bez ruszania
+ * `DiaryEntryList` - dokładnie tak, jak ten podział zakładał.
  *
  * **Pole na liczbę jest nieaktywne wyłącznie przy `isInFlight`, nie w całym stanie `estimating`.**
  * Ten stan obejmuje trzy różne sytuacje i tylko jedna uzasadnia blokadę:
@@ -96,6 +99,9 @@ export default function DiaryEntryCalories({
   };
 
   const originLabel = entry.calorie_origin ? ORIGIN_LABELS[entry.calorie_origin] : undefined;
+  // Liczone raz, pokazywane w dwóch gałęziach ("Policz kalorie" i "Policz ponownie") - wybór stoi
+  // tutaj, żeby obie gałęzie nie mogły się rozjechać przy następnej korekcie zdania.
+  const aiNotice = entry.source_recipe_id !== null ? AI_NOTICE_RECIPE : AI_NOTICE;
   const inputId = `diary-entry-${entry.id}-calories`;
   const errorId = `${inputId}-error`;
 
@@ -187,7 +193,7 @@ export default function DiaryEntryCalories({
               Policz kalorie
             </Button>
             <p className="max-w-52 text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
-              {AI_NOTICE}
+              {aiNotice}
             </p>
           </>
         ) : (
@@ -202,7 +208,7 @@ export default function DiaryEntryCalories({
               Policz ponownie
             </Button>
             <p className="max-w-52 text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
-              {AI_NOTICE}
+              {aiNotice}
             </p>
           </>
         ))}

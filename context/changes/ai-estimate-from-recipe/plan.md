@@ -469,31 +469,31 @@ a ich przeliczenie znaczyłoby nadpisanie wartości, których użytkownik mógł
 
 #### Automated
 
-- [x] 1.1 Sprawdzenie typów przechodzi: `npm run typecheck`
-- [x] 1.2 Lint przechodzi: `npm run lint`
-- [x] 1.3 Testy jednostkowe przechodzą: `npm run test`
+- [x] 1.1 Sprawdzenie typów przechodzi: `npm run typecheck` — f8cdfc2
+- [x] 1.2 Lint przechodzi: `npm run lint` — f8cdfc2
+- [x] 1.3 Testy jednostkowe przechodzą: `npm run test` — f8cdfc2
 
 #### Manual
 
-- [x] 1.4 `curl -X POST` na `/api/diary-entries/<id>/estimate` dla wpisu z przepisem bez bloku odżywczego i `portions = 2` zwraca wiersz z `calorie_origin: "ai_from_recipe"` i wartością mniej więcej dwukrotnie większą niż ten sam przepis z `portions = 1`
-- [x] 1.5 Ten sam `curl` na wpisie opisowym zwraca `calorie_origin: "ai_from_description"` i wartość porównywalną z tą sprzed zmiany
-- [x] 1.6 Wpis z `portions` i `source_recipe_id = null` dostaje `ai_from_description`, a trasa nie zwraca 404
-- [x] 1.7 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` nadal kończy się 502 `AI_UNAVAILABLE`, a nie 500
+- [x] 1.4 `curl -X POST` na `/api/diary-entries/<id>/estimate` dla wpisu z przepisem bez bloku odżywczego i `portions = 2` zwraca wiersz z `calorie_origin: "ai_from_recipe"` i wartością mniej więcej dwukrotnie większą niż ten sam przepis z `portions = 1` — f8cdfc2
+- [x] 1.5 Ten sam `curl` na wpisie opisowym zwraca `calorie_origin: "ai_from_description"` i wartość porównywalną z tą sprzed zmiany — f8cdfc2
+- [x] 1.6 Wpis z `portions` i `source_recipe_id = null` dostaje `ai_from_description`, a trasa nie zwraca 404 — f8cdfc2
+- [x] 1.7 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` nadal kończy się 502 `AI_UNAVAILABLE`, a nie 500 — f8cdfc2
 
 ### Phase 2: Powierzchnia dziennika
 
 #### Automated
 
-- [ ] 2.1 Sprawdzenie typów przechodzi: `npm run typecheck`
-- [ ] 2.2 Lint przechodzi: `npm run lint`
-- [ ] 2.3 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 Sprawdzenie typów przechodzi: `npm run typecheck`
+- [x] 2.2 Lint przechodzi: `npm run lint`
+- [x] 2.3 Formatowanie zgodne: `npm run format:check`
 
 #### Manual
 
-- [ ] 2.4 Wpis zapisany z przepisu bez bloku odżywczego po wycenie pokazuje „oszacowane z przepisu"
-- [ ] 2.5 Wpis opisowy po wycenie nadal pokazuje „oszacowane z opisu"
-- [ ] 2.6 Po wybraniu przepisu w formularzu zdanie pod przyciskami mówi o treści przepisu; po „Usuń wybór" wraca zdanie o opisie posiłku
-- [ ] 2.7 Przy wierszu wpisu z przepisu w stanie „Nie policzono" stoi zdanie o treści przepisu, a przy wierszu opisowym — o opisie posiłku
+- [x] 2.4 Wpis zapisany z przepisu bez bloku odżywczego po wycenie pokazuje „oszacowane z przepisu"
+- [x] 2.5 Wpis opisowy po wycenie nadal pokazuje „oszacowane z opisu"
+- [x] 2.6 Po wybraniu przepisu w formularzu zdanie pod przyciskami mówi o treści przepisu; po „Usuń wybór" wraca zdanie o opisie posiłku
+- [x] 2.7 Przy wierszu wpisu z przepisu w stanie „Nie policzono" stoi zdanie o treści przepisu, a przy wierszu opisowym — o opisie posiłku
 
 ### Phase 3: Testy i domknięcie bramki
 

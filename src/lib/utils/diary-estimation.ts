@@ -20,8 +20,15 @@ export const ESTIMATION_ABORT_MS = 65_000;
  * Stałe uprzedzenie pokazywane przy każdym przycisku zlecającym wycenę - i w formularzu, i przy
  * wpisie na liście. Jedno zdanie w jednym miejscu, bo dwie kopie rozjechałyby się przy pierwszej
  * korekcie, a to jest informacja o tym, że treść wpisu opuszcza tę aplikację.
+ *
+ * Zdania są dwa, bo ścieżki wyceny są dwie i wysyłają co innego. Który warunek wybiera które:
+ * - przy wierszu listy - `entry.source_recipe_id !== null` (wpis jest już zapisany),
+ * - w formularzu - `selectedRecipe !== null` (wiersza jeszcze nie ma, więc nie ma czego pytać).
  */
 export const AI_NOTICE = "Opis posiłku zostanie wysłany do dostawcy modelu.";
+
+/** Wariant dla wpisu z własnego przepisu: do dostawcy jedzie cała treść przepisu, nie sam opis. */
+export const AI_NOTICE_RECIPE = "Treść przepisu i Twój opis zostaną wysłane do dostawcy modelu.";
 
 /**
  * Co ta konkretna wyspa wie o żądaniu dla danego wpisu.

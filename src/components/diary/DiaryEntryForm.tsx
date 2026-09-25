@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { parseCalories } from "@/lib/utils/diary-calories";
-import { AI_NOTICE } from "@/lib/utils/diary-estimation";
+import { AI_NOTICE, AI_NOTICE_RECIPE } from "@/lib/utils/diary-estimation";
 import { formatPortions } from "@/lib/utils/diary-portions";
 import { resolveRecipeCalories, type RecipeCalorieResult } from "@/lib/utils/recipe-nutrition";
 import { createDiaryEntrySchema, portionsSchema } from "@/lib/validations/diary/create-entry";
@@ -282,6 +282,9 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
   // Przepis policzył już wartość, więc wycena z opisu nie ma czego dołożyć: trasa `/estimate`
   // odbiłaby się o bramkę `entry.calories !== null` i wróciłaby bez wywołania modelu.
   const recipeAlreadyCounted = preview !== null && preview.total !== null;
+  // Przed zapisem wiersza jeszcze nie ma, więc o tym, co pojedzie do dostawcy modelu, rozstrzyga
+  // wybrany przepis, a nie `source_recipe_id` - ten pojawi się dopiero przy wpisie na liście.
+  const aiNotice = selectedRecipe !== null ? AI_NOTICE_RECIPE : AI_NOTICE;
 
   return (
     <form
@@ -550,7 +553,7 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
             </Button>
           </div>
           <p className="text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
-            {AI_NOTICE}
+            {aiNotice}
           </p>
         </div>
       </div>
