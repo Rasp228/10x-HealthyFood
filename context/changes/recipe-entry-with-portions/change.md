@@ -1,7 +1,7 @@
 ---
 change_id: recipe-entry-with-portions
 title: Wpis dziennika z własnego przepisu z liczbą porcji
-status: implemented
+status: impl_reviewed
 created: 2026-09-25
 updated: 2026-09-25
 ---
@@ -17,6 +17,12 @@ czekają w bazie od F-01.
 
 Otwarte pytanie roadmapy „które warianty nagłówka bloku odżywczego liczą się jako samodeklarujące
 porcję" zostało rozstrzygnięte w tym planie (decyzja D1) i przestaje być otwarte.
+
+Bramka ręczna 1.5 zamknęła się **środkiem 2** z Manual Verification Fazy 1: prompty
+@src/lib/services/ai.service.ts wymagają teraz od modelu bloku `Wartości odżywcze (na porcję):`
+z linią `Kalorie: N kcal`, więc każdy przyszły przepis z AI parsuje się z definicji, a nie
+z heurystyki. Decyzja należała do właściciela zmiany i została podjęta świadomie; parser zostaje,
+bo przepisy pisane ręcznie i te już zapisane nadal przez niego przechodzą.
 
 Kontrakty, które dziedziczy S-04 (`ai-estimate-from-recipe`): moduł
 `src/lib/utils/recipe-nutrition.ts` rozróżnia „brak zadeklarowanego bloku" od „wartość poza

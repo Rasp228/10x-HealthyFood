@@ -292,6 +292,25 @@ describe("DiaryService", () => {
       });
     });
 
+    it("zostawia oba pola puste, gdy wartość dla tylu porcji wypada poza zakresem", async () => {
+      // 250 kcal na porcję razy 99 porcji to 24750 - ponad sufit 5000 z `caloriesValueSchema`.
+      // `resolveRecipeCalories` zwraca wtedy `out_of_range`, a serwis schodzi tą samą ścieżką co
+      // przy braku bloku: wpis ląduje w stanie „Nie policzono" i czeka na liczbę od użytkownika.
+      const stub = createSupabaseStub(recipeRead(RECIPE_WITH_BLOCK), {
+        data: storedEntry({ portions: 99, source_recipe_id: 7 }),
+        error: null,
+      });
+
+      await new DiaryService(stub.client).createEntry("user-1", recipeCommand({ portions: 99 }));
+
+      expect(insertPayload(stub)).toMatchObject({
+        calories: null,
+        calorie_origin: null,
+        source_recipe_id: 7,
+        portions: 99,
+      });
+    });
+
     it("wartość podana ręcznie wygrywa z liczbą z przepisu", async () => {
       const stub = createSupabaseStub(recipeRead(RECIPE_WITH_BLOCK), {
         data: storedEntry({ calories: 450, calorie_origin: "manual", portions: 2, source_recipe_id: 7 }),

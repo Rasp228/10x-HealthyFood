@@ -50,6 +50,9 @@ const CALORIE_LABELS = ["kalorycznosc", "kalorie", "calories", "energia", "energ
  * rozpoznanie tam, gdzie blok już przeszedł najostrzejszą bramkę — nagłówek sam zadeklarował, że
  * opisuje porcję. Jednostka `kcal` jest tu tym, czym gdzie indziej jest etykieta: mówi wprost, co
  * ta liczba znaczy. `kJ` nie może się tędy prześlizgnąć, bo wzorzec żąda dosłownie `kcal`.
+ *
+ * Ta ścieżka jest **drugim przebiegiem** po bloku, nigdy pierwszym: gdyby biegła linia po linii
+ * razem z etykietą, `Tłuszcze: 12 g (108 kcal)` stojące nad `Kalorie: 250 kcal` wygrałoby.
  */
 const KCAL_ANCHORED_NUMBER = /(\d+(?:[.,]\d+)?)\s*kcal/;
 
@@ -192,16 +195,26 @@ export function readPerPortionCalories(content: string): number | null {
 
   if (block === null) return null;
 
-  for (const line of block) {
-    const normalized = normalize(line);
+  const normalizedLines = block.map(normalize);
+
+  // Przebieg pierwszy: linie z etykietą. Etykieta ma pierwszeństwo w CAŁYM bloku, nie tylko
+  // w obrębie jednej linii - linia makroskładnika z kaloriami w nawiasie
+  // (`Tłuszcze: 12 g (108 kcal)`) potrafi stać nad `Kalorie: 250 kcal`, a w jednym przebiegu
+  // wygrywałaby jako pierwsza. Wynik byłby cichy i błędny: wpis dostaje pochodzenie
+  // `recipe_nutrition`, więc ta liczba jest przedstawiana jako autorytatywna.
+  for (const normalized of normalizedLines) {
     const labelEnd = findCalorieLabelEnd(normalized);
 
-    if (labelEnd !== null) {
-      const labelled = readNumberAfter(normalized, labelEnd);
+    if (labelEnd === null) continue;
 
-      if (labelled !== null) return labelled;
-    }
+    const labelled = readNumberAfter(normalized, labelEnd);
 
+    if (labelled !== null) return labelled;
+  }
+
+  // Przebieg drugi: liczba opisana samą jednostką `kcal` - dopiero wtedy, gdy żadna linia bloku
+  // nie nazwała się etykietą.
+  for (const normalized of normalizedLines) {
     const anchored = KCAL_ANCHORED_NUMBER.exec(normalized);
 
     if (anchored !== null) return Number(anchored[1].replace(",", "."));

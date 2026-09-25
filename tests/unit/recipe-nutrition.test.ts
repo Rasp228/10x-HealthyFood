@@ -134,6 +134,15 @@ describe("readPerPortionCalories — liczba opisana jednostką, bez etykiety", (
     expect(readPerPortionCalories(content)).toBe(250);
   });
 
+  it("etykieta ma pierwszeństwo przed jednostką także w linii stojącej NIŻEJ", () => {
+    // Linia makroskładnika z kaloriami w nawiasie stoi nad linią etykiety. Odczyt biegnie dwoma
+    // przebiegami, więc wygrywa `Kalorie`, nie `Tłuszcze` - inaczej wpis dostałby 108 kcal
+    // z pochodzeniem `recipe_nutrition`, czyli cichą, błędną liczbę w sumie dnia.
+    const content = recipe("Wartości odżywcze (na porcję):", "Tłuszcze: 12 g (108 kcal)", "Kalorie: 250 kcal");
+
+    expect(readPerPortionCalories(content)).toBe(250);
+  });
+
   it("blok opisujący 100 g zostaje odrzucony mimo jawnego 'kcal' — nagłówek nie deklaruje porcji", () => {
     // Prawdziwy przepis z aplikacji: gdyby ten blok przeszedł, wartość dla 100 g zostałaby
     // pomnożona przez liczbę porcji. To jest cała treść zawężenia FR-009.
@@ -200,6 +209,15 @@ describe("readPerPortionCalories — zakres bloku", () => {
 
   it("linia z dwukropkiem w środku i liczbą bloku NIE ucina", () => {
     const content = recipe("Wartości odżywcze (porcja):", "Porcja: 1 sztuka", "Kalorie: 250 kcal");
+
+    expect(readPerPortionCalories(content)).toBe(250);
+  });
+
+  it("sama linia `Kalorie: 250 kcal` bloku NIE ucina, mimo dwukropka", () => {
+    // Predykat „wygląda na nagłówek" żąda dwukropka NA KOŃCU i braku cyfry. Gdyby wystarczał sam
+    // dwukropek, linia kalorii ucinałaby blok przed własnym odczytem - a zaraz po niej stojące
+    // makroskładniki i tak zostają w bloku.
+    const content = recipe("Wartości odżywcze (porcja):", "Kalorie: 250 kcal", "Białko: 10 g");
 
     expect(readPerPortionCalories(content)).toBe(250);
   });

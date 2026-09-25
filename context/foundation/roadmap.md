@@ -127,8 +127,9 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Prerequisites:** S-01
 - **Parallel with:** S-02, S-06
 - **Blockers:** —
-- **Unknowns:**
-  - Które warianty nagłówka bloku odżywczego liczą się jako samodeklarujące porcję? PRD podaje jeden przykład i dopisuje „i równoważne", ale listy równoważników nie ma — Owner: user. Block: no. Nierozpoznany nagłówek jest bezpieczny: figury nieoznaczone traktuje się jak nieobecne, więc wpis spada do wyceny ręcznej, a po `S-04` — do oszacowania z treści.
+- **Unknowns:** — (zamknięte decyzją D1 planu `recipe-entry-with-portions`)
+  - Które warianty nagłówka liczą się jako samodeklarujące porcję: linia niosąca jednocześnie znacznik bloku (`wartości odżywcze` / `nutrition`) **oraz** słowo z rodziny porcji (`porcj` / `serving` / `portion`), porównywane po złożeniu do małych liter i zdjęciu diakrytyków. Lista wariantów żyje w `src/lib/utils/recipe-nutrition.ts` (`NUTRITION_MARKERS`, `PORTION_MARKERS`) i jest w całości widoczna w `tests/unit/recipe-nutrition.test.ts` — nie w tym dokumencie. Nierozpoznany nagłówek jest bezpieczny: figury nieoznaczone traktuje się jak nieobecne, więc wpis spada do wyceny ręcznej, a po `S-04` — do oszacowania z treści.
+  - Znany ubytek tej reguły, przyjęty świadomie: nagłówek deklarujący **kilka** porcji (`Wartości odżywcze (całość, 4 porcje):`) też ją przechodzi, więc wartość może wyjść zawyżona krotnie. Szczegóły i proponowana poprawka: ustalenie F2 w `context/changes/recipe-entry-with-portions/reviews/impl-review.md`.
 - **Risk:** PRD zamknął problem interpretacji, zawężając FR-009 do figur samodeklarujących, więc ryzyko przesunęło się z „policzymy kilkakrotnie za dużo" na „nie rozpoznamy bloku i policzymy inaczej" — to drugie jest wielokrotnie tańsze. Przepisy są wyłącznie czytane: nic nie zapisuje się z powrotem do rekordu przepisu ani do jego opisu (FR-014, FR-015).
 - **Status:** in-progress
 

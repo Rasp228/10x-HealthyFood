@@ -274,10 +274,14 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
   const parsedPortions = selectedRecipe === null ? null : parsePortions(values.portions);
   const previewPortions =
     parsedPortions !== null && portionsSchema.safeParse(parsedPortions).success ? parsedPortions : null;
-  const previewText =
+  const preview =
     selectedRecipe !== null && previewPortions !== null
-      ? previewMessage(resolveRecipeCalories(selectedRecipe.content, previewPortions), previewPortions)
+      ? resolveRecipeCalories(selectedRecipe.content, previewPortions)
       : null;
+  const previewText = preview !== null && previewPortions !== null ? previewMessage(preview, previewPortions) : null;
+  // Przepis policzył już wartość, więc wycena z opisu nie ma czego dołożyć: trasa `/estimate`
+  // odbiłaby się o bramkę `entry.calories !== null` i wróciłaby bez wywołania modelu.
+  const recipeAlreadyCounted = preview !== null && preview.total !== null;
 
   return (
     <form
@@ -535,8 +539,9 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
               // już jest, więc przycisk aktywny przy wypełnionym polu tylko obiecywałby coś,
               // czego nie zrobi. Przy wybranym przepisie pole jest puste, więc oba przyciski
               // zostają - wpis z przepisu bez rozpoznanego bloku ma tę samą ścieżkę wyceny co
-              // wpis opisowy.
-              disabled={isSubmitting || values.calories.trim() !== ""}
+              // wpis opisowy. Gdy jednak podgląd już policzył wartość z bloku, wycena jest tak samo
+              // pusta jak przy wpisanej ręcznie liczbie - i przycisk gaśnie z tego samego powodu.
+              disabled={isSubmitting || values.calories.trim() !== "" || recipeAlreadyCounted}
               onClick={() => void submitEntry(true)}
               className="gap-2"
               data-testid="diary-submit-estimate-button"

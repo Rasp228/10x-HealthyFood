@@ -90,3 +90,24 @@ Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustaleni
 darmowy, użytkowników jest kilku, a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej
 w trasie wyceny to warunek świeżości znacznika w `markEstimationRequested` — kolumna już istnieje
 i czeka na czytelnika. Do przemyślenia razem z S-04, która dziedziczy ten kontrakt.
+
+## Wpisy dziennika
+
+### Reguła „porcje tylko razem z przepisem" obowiązuje wyłącznie w chwili zapisu
+
+`createDiaryEntrySchema` (`src/lib/validations/diary/create-entry.ts`) odrzuca w `superRefine` wpis
+z `portions` bez `source_recipe_id`. Baza tej pary nie pilnuje niczym, a klucz obcy ma
+`on delete set null` (`supabase/migrations/20260922140906_create_diary_entries.sql`), więc usunięcie
+przepisu zostawia wiersz z `portions = 2`, `calorie_origin = 'recipe_nutrition'`
+i `source_recipe_id = NULL` — w stanie, którego trasa tworząca nigdy by nie przyjęła. Wiersz jest
+poprawny merytorycznie (użytkownik zjadł dwie porcje, a wartość i suma dnia mają zostać bez zmian —
+to kryterium akceptacji US-02), tylko nieodtwarzalny przez własny schemat.
+
+Nie jest to przypadek brzegowy: `tests/e2e/diary-entry.spec.ts` kasuje po każdym zdanym teście
+wszystkie przepisy konta testowego, a wpisów dziennika nic nie sprząta, bo trasa `DELETE` przychodzi
+dopiero z S-05.
+
+Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F3): domknięcie
+wymagałoby migracji, którą plan tej zmiany wprost wyklucza. **S-05 (`edit-and-delete-entry`) musi to
+przewidzieć** — schemat edycji nie może odrzucać wiersza z `portions` i pustym `source_recipe_id`,
+bo inaczej użytkownik dostanie 400 na wpisie, którego nie tknął.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
 import { zodIssues } from "../../../lib/utils/validation-errors";
+import { listRecipesSchema } from "../../../lib/validations/recipe/list-recipes";
 
 export const prerender = false;
 
@@ -10,19 +11,6 @@ const createRecipeSchema = z.object({
   content: z.string().min(1, "Treść przepisu jest wymagana"),
   additional_params: z.string().nullable().optional(),
   is_ai_generated: z.boolean().optional().default(false),
-});
-
-// Schemat walidacji dla parametrów sortowania
-const listSchema = z.object({
-  sort: z.enum(["created_at", "updated_at", "title"]).optional(),
-  order: z.enum(["asc", "desc"]).optional(),
-  search: z.string().optional(),
-  // Zawężenie wyszukiwania do nazwy przepisu - ścieżka dziennika (FR-007). Jedna wartość
-  // w enumie z rozmysłem: ekran przepisów nie podaje tego parametru i nic dla niego nie zmienia.
-  search_field: z.enum(["title"]).optional(),
-  // Koercja, bo parametry adresu przychodzą jako tekst. Sufit 50 chroni odpowiedź przed
-  // wielkością, której podpowiedzi w dzienniku i tak nie pokażą.
-  limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 // Handler GET - pobieranie listy przepisów
@@ -44,7 +32,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
     // Pobierz i zwaliduj parametry sortowania
     const params = Object.fromEntries(url.searchParams.entries());
-    const validationResult = listSchema.safeParse(params);
+    const validationResult = listRecipesSchema.safeParse(params);
 
     if (!validationResult.success) {
       return new Response(
