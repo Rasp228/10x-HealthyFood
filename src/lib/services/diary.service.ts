@@ -1,6 +1,20 @@
-import type { CreateDiaryEntryCommand, DiaryEntriesDto, DiaryEntryDto } from "../../types";
+import type { CalorieOriginEnum, CreateDiaryEntryCommand, DiaryEntriesDto, DiaryEntryDto } from "../../types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
+import { resolveRecipeCalories } from "../utils/recipe-nutrition";
+
+/**
+ * Wskazany przepis nie istnieje albo należy do kogoś innego.
+ *
+ * Typowana klasa, nie gołe `Error`: trasa musi umieć odróżnić ten jeden przypadek od awarii bazy
+ * i oddać 404 zamiast 500. Idiom jak w `src/lib/api/openrouter.types.ts`.
+ */
+export class RecipeNotFoundError extends Error {
+  constructor(message = "Przepis nie został znaleziony") {
+    super(message);
+    this.name = "RecipeNotFoundError";
+  }
+}
 
 /**
  * Serwis obsługujący wpisy dziennika posiłków.
@@ -45,11 +59,27 @@ export class DiaryService {
    * @param userId - ID użytkownika
    * @param command - Zwalidowane dane wpisu
    * @returns Utworzony wpis
+   * @throws RecipeNotFoundError - gdy wskazany przepis nie istnieje albo należy do kogoś innego
    */
   async createEntry(userId: string, command: CreateDiaryEntryCommand): Promise<DiaryEntryDto> {
+    const recipeContent = await this.readOwnRecipeContent(userId, command.source_recipe_id);
+
     // Pochodzenie wartości ustala serwer: liczba podana ręcznie to zawsze `manual`, a brak
     // liczby to brak pochodzenia. Baza pilnuje tej pary przez `diary_entries_value_has_origin`.
     // `estimation_requested_at` zostaje nietknięte - ten wpis nie zleca żadnego oszacowania.
+    let calories = command.calories;
+    let calorieOrigin: CalorieOriginEnum | null = command.calories === null ? null : "manual";
+
+    // Wartość ręczna wygrywa z przepisem (FR-004) - wtedy treści z kroku wyżej w ogóle nie
+    // czytamy. Dla wpisu z przepisu liczy ją parser: brak rozpoznanego bloku zostawia oba pola
+    // `null`, bo `diary_entries_value_has_origin` nie pozwala zapisać jednego bez drugiego.
+    if (command.calories === null && recipeContent !== null && command.portions !== null) {
+      const { total } = resolveRecipeCalories(recipeContent, command.portions);
+
+      calories = total;
+      calorieOrigin = total === null ? null : "recipe_nutrition";
+    }
+
     const { data, error } = await this.supabase
       .from("diary_entries")
       .insert({
@@ -57,8 +87,10 @@ export class DiaryService {
         entry_date: command.entry_date,
         content: command.content,
         amount_text: command.amount_text,
-        calories: command.calories,
-        calorie_origin: command.calories === null ? null : "manual",
+        calories,
+        calorie_origin: calorieOrigin,
+        source_recipe_id: command.source_recipe_id,
+        portions: command.portions,
       })
       .select()
       .single();
@@ -68,6 +100,39 @@ export class DiaryService {
     }
 
     return data;
+  }
+
+  /**
+   * Treść przepisu należącego do tego użytkownika albo `null`, gdy wpis nie pochodzi z przepisu.
+   *
+   * Odczyt biegnie **przed** rozgałęzieniem kaskady, także dla wpisu z wartością ręczną. Klucz obcy
+   * wskazuje `recipes(id)` bez predykatu właściciela, a RLS na `diary_entries` pilnuje wyłącznie
+   * `user_id`, więc bez tego kroku `POST` z własną liczbą i cudzym `source_recipe_id` zapisałby
+   * wiersz wskazujący przepis, którego autor wpisu nie może przeczytać.
+   *
+   * Filtr po `user_id` mimo RLS - tak samo jak w `getEntry`: serwis nie zakłada roli klienta.
+   */
+  private async readOwnRecipeContent(userId: string, recipeId: number | null): Promise<string | null> {
+    if (recipeId === null) {
+      return null;
+    }
+
+    const { data: recipe, error } = await this.supabase
+      .from("recipes")
+      .select("content")
+      .eq("id", recipeId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!recipe) {
+      throw new RecipeNotFoundError();
+    }
+
+    return recipe.content;
   }
 
   /**

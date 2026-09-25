@@ -19,11 +19,11 @@ interface DiaryEntryCaloriesProps {
 }
 
 /**
- * Adnotacja o pochodzeniu wartości. Tylko dwa pochodzenia, bo tylko dwa może dziś wyprodukować ta
- * ścieżka; `recipe_nutrition` i `ai_from_recipe` dołoży S-04, dopisując tu dwa wiersze i nie
- * ruszając listy.
+ * Adnotacja o pochodzeniu wartości. Trzy pochodzenia, bo tyle może dziś wyprodukować ta ścieżka;
+ * `ai_from_recipe` dołoży S-04, dopisując tu jeden wiersz i nie ruszając listy.
  */
 const ORIGIN_LABELS: Partial<Record<CalorieOriginEnum, string>> = {
+  recipe_nutrition: "z przepisu",
   ai_from_description: "oszacowane z opisu",
   manual: "wpisane ręcznie",
 };
@@ -32,7 +32,7 @@ const ORIGIN_LABELS: Partial<Record<CalorieOriginEnum, string>> = {
  * Wartość kaloryczna jednego wpisu we wszystkich swoich stanach.
  *
  * Osobny komponent, bo tych stanów jest cztery i rozsypane po liście przestałyby się zgadzać po
- * pierwszej zmianie. S-04 pokaże tutaj piąte i szóste pochodzenie, nie dotykając `DiaryEntryList`.
+ * pierwszej zmianie. S-04 pokaże tutaj kolejne pochodzenie, nie dotykając `DiaryEntryList`.
  *
  * **Pole na liczbę jest nieaktywne wyłącznie przy `isInFlight`, nie w całym stanie `estimating`.**
  * Ten stan obejmuje trzy różne sytuacje i tylko jedna uzasadnia blokadę:

@@ -1,4 +1,4 @@
-import { DiaryService } from "@/lib/services/diary.service";
+import { DiaryService, RecipeNotFoundError } from "@/lib/services/diary.service";
 import type { CreateDiaryEntryCommand, DiaryEntryDto } from "@/types";
 import type { Database } from "@/db/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,10 +20,15 @@ interface QueryBuilderStub extends PromiseLike<QueryResponse> {
   maybeSingle: jest.Mock;
 }
 
+/** Tabele, po które sięga `DiaryService`. */
+type StubbedTable = "diary_entries" | "recipes";
+
 interface SupabaseStub {
   client: SupabaseClient<Database>;
   from: jest.Mock;
+  /** Builder tabeli `diary_entries` - alias sprzed rozdzielenia builderów po nazwie tabeli. */
   builder: QueryBuilderStub;
+  builders: Record<StubbedTable, QueryBuilderStub>;
 }
 
 /**
@@ -34,36 +39,51 @@ interface SupabaseStub {
  * `.single()`, tylko awaituje wynik `.order()`. Dlatego builder jest „thenable” - bez tego
  * `await` na łańcuchu nigdy by się nie rozwiązał.
  *
- * Odpowiedzi podaje się listą, bo warunkowy zapis to **dwa** zapytania na jedno wywołanie:
- * nietrafiony `UPDATE`, a po nim `SELECT` rozstrzygający, czy wpis w ogóle istnieje. Kolejne
- * zakończenia łańcucha zdejmują kolejne odpowiedzi; ostatnia zostaje i powtarza się w nieskończoność,
- * więc wywołanie z jedną odpowiedzią zachowuje się dokładnie jak przedtem.
+ * Builder jest osobny **dla każdej tabeli**, bo `createEntry` potrafi zapytać dwie: najpierw
+ * `recipes` o treść przepisu, potem `diary_entries` o insert. Ze wspólnym builderem `select`/`eq`
+ * obu zapytań przeplatałyby się w jednym `jest.fn()`, przez co `toHaveBeenCalledWith("user_id", …)`
+ * przestałoby cokolwiek rozstrzygać o konkretnym zapytaniu.
+ *
+ * Odpowiedzi idą z jednej kolejki, w kolejności zakończeń łańcucha: warunkowy zapis to **dwa**
+ * zapytania na jedno wywołanie (nietrafiony `UPDATE`, a po nim `SELECT`), tak samo jak wpis
+ * z przepisu. Ostatnia odpowiedź zostaje i powtarza się w nieskończoność, więc wywołanie z jedną
+ * odpowiedzią zachowuje się dokładnie jak przedtem.
  */
 function createSupabaseStub(...responses: QueryResponse[]): SupabaseStub {
   const queue = [...responses];
   const nextResponse = (): QueryResponse => (queue.length > 1 ? (queue.shift() as QueryResponse) : queue[0]);
 
-  // Adnotacja jest konieczna, nie ozdobna: pola literału odwołują się do `builder`, więc bez
-  // niej TypeScript zgłosiłby cykliczne wnioskowanie typu.
-  const builder: QueryBuilderStub = {
-    select: jest.fn(() => builder),
-    insert: jest.fn(() => builder),
-    update: jest.fn(() => builder),
-    eq: jest.fn(() => builder),
-    is: jest.fn(() => builder),
-    order: jest.fn(() => builder),
-    single: jest.fn(() => Promise.resolve(nextResponse())),
-    maybeSingle: jest.fn(() => Promise.resolve(nextResponse())),
-    then: (onfulfilled?: ((value: QueryResponse) => unknown) | null) =>
-      Promise.resolve(nextResponse()).then(onfulfilled),
-  } as unknown as QueryBuilderStub;
+  const createBuilder = (): QueryBuilderStub => {
+    // Adnotacja jest konieczna, nie ozdobna: pola literału odwołują się do `builder`, więc bez
+    // niej TypeScript zgłosiłby cykliczne wnioskowanie typu.
+    const builder: QueryBuilderStub = {
+      select: jest.fn(() => builder),
+      insert: jest.fn(() => builder),
+      update: jest.fn(() => builder),
+      eq: jest.fn(() => builder),
+      is: jest.fn(() => builder),
+      order: jest.fn(() => builder),
+      single: jest.fn(() => Promise.resolve(nextResponse())),
+      maybeSingle: jest.fn(() => Promise.resolve(nextResponse())),
+      then: (onfulfilled?: ((value: QueryResponse) => unknown) | null) =>
+        Promise.resolve(nextResponse()).then(onfulfilled),
+    } as unknown as QueryBuilderStub;
 
-  const from = jest.fn(() => builder);
+    return builder;
+  };
+
+  const builders: Record<StubbedTable, QueryBuilderStub> = {
+    diary_entries: createBuilder(),
+    recipes: createBuilder(),
+  };
+
+  const from = jest.fn((table: StubbedTable) => builders[table]);
 
   return {
     client: { from } as unknown as SupabaseClient<Database>,
     from,
-    builder,
+    builders,
+    builder: builders.diary_entries,
   };
 }
 
@@ -88,7 +108,28 @@ const BASE_COMMAND: CreateDiaryEntryCommand = {
   content: "Owsianka z bananem",
   amount_text: "1 talerz",
   calories: 450,
+  source_recipe_id: null,
+  portions: null,
 };
+
+/**
+ * Treść przepisu z blokiem, który sam deklaruje, że opisuje jedną porcję - jedyny kształt, który
+ * `resolveRecipeCalories` czyta (FR-009).
+ */
+const RECIPE_WITH_BLOCK = "Składniki:\n- owies\n\nWartości odżywcze (na porcję):\nKalorie: 250 kcal";
+
+/** Przepis bez bloku deklarującego porcję - wpis z niego zostaje bez wartości. */
+const RECIPE_WITHOUT_BLOCK = "Składniki:\n- owies\n\nPrzygotowanie:\n- ugotuj";
+
+/** Komenda wpisu utworzonego z przepisu: ilość opisuje liczba porcji, nie tekst. */
+const recipeCommand = (overrides: Partial<CreateDiaryEntryCommand> = {}): CreateDiaryEntryCommand => ({
+  ...BASE_COMMAND,
+  amount_text: null,
+  calories: null,
+  source_recipe_id: 7,
+  portions: 2,
+  ...overrides,
+});
 
 /** Ładunek przekazany do `insert`, odczytany z atrapy. */
 const insertPayload = (stub: SupabaseStub): Record<string, unknown> =>
@@ -186,6 +227,111 @@ describe("DiaryService", () => {
 
       await expect(new DiaryService(stub.client).createEntry("user-1", BASE_COMMAND)).rejects.toThrow(
         "naruszenie ograniczenia"
+      );
+    });
+
+    it("nie pyta o przepis, gdy wpis z żadnego nie pochodzi", async () => {
+      const stub = createSupabaseStub({ data: storedEntry({ calories: 450, calorie_origin: "manual" }), error: null });
+
+      await new DiaryService(stub.client).createEntry("user-1", BASE_COMMAND);
+
+      expect(stub.from).not.toHaveBeenCalledWith("recipes");
+    });
+  });
+
+  describe("createEntry z przepisu", () => {
+    /** Odpowiedź odczytu przepisu - pierwsze zapytanie tej ścieżki. */
+    const recipeRead = (content: string) => ({ data: { content }, error: null });
+
+    it("czyta przepis wyłącznie z wierszy tego użytkownika", async () => {
+      const stub = createSupabaseStub(recipeRead(RECIPE_WITH_BLOCK), { data: storedEntry(), error: null });
+
+      await new DiaryService(stub.client).createEntry("user-1", recipeCommand());
+
+      expect(stub.from).toHaveBeenCalledWith("recipes");
+      expect(stub.builders.recipes.eq).toHaveBeenCalledWith("id", 7);
+      expect(stub.builders.recipes.eq).toHaveBeenCalledWith("user_id", "user-1");
+    });
+
+    it("liczy wartość z bloku przepisu i stempluje pochodzenie 'recipe_nutrition'", async () => {
+      const saved = storedEntry({
+        calories: 500,
+        calorie_origin: "recipe_nutrition",
+        portions: 2,
+        source_recipe_id: 7,
+      });
+      const stub = createSupabaseStub(recipeRead(RECIPE_WITH_BLOCK), { data: saved, error: null });
+
+      const result = await new DiaryService(stub.client).createEntry("user-1", recipeCommand());
+
+      // 250 kcal na porcję razy 2 porcje.
+      expect(insertPayload(stub)).toMatchObject({
+        calories: 500,
+        calorie_origin: "recipe_nutrition",
+        source_recipe_id: 7,
+        portions: 2,
+      });
+      expect(result).toEqual(saved);
+    });
+
+    it("zostawia oba pola puste, gdy przepis nie deklaruje bloku na porcję", async () => {
+      // `diary_entries_value_has_origin` nie pozwala zapisać jednego bez drugiego, więc brak
+      // rozpoznanej liczby musi wyzerować także pochodzenie.
+      const stub = createSupabaseStub(recipeRead(RECIPE_WITHOUT_BLOCK), {
+        data: storedEntry({ portions: 2, source_recipe_id: 7 }),
+        error: null,
+      });
+
+      await new DiaryService(stub.client).createEntry("user-1", recipeCommand());
+
+      expect(insertPayload(stub)).toMatchObject({
+        calories: null,
+        calorie_origin: null,
+        source_recipe_id: 7,
+        portions: 2,
+      });
+    });
+
+    it("wartość podana ręcznie wygrywa z liczbą z przepisu", async () => {
+      const stub = createSupabaseStub(recipeRead(RECIPE_WITH_BLOCK), {
+        data: storedEntry({ calories: 450, calorie_origin: "manual", portions: 2, source_recipe_id: 7 }),
+        error: null,
+      });
+
+      await new DiaryService(stub.client).createEntry("user-1", recipeCommand({ calories: 450 }));
+
+      expect(insertPayload(stub)).toMatchObject({
+        calories: 450,
+        calorie_origin: "manual",
+        source_recipe_id: 7,
+        portions: 2,
+      });
+    });
+
+    it("sprawdza własność przepisu także wtedy, gdy przyszła wartość ręczna", async () => {
+      // Bez tego kroku wpis z własną liczbą zapisałby wskazanie na cudzy przepis: klucz obcy
+      // pilnuje tylko istnienia wiersza, a RLS wpisu - wyłącznie jego `user_id`.
+      const stub = createSupabaseStub({ data: null, error: null });
+
+      await expect(
+        new DiaryService(stub.client).createEntry("user-1", recipeCommand({ calories: 450 }))
+      ).rejects.toBeInstanceOf(RecipeNotFoundError);
+    });
+
+    it("odrzuca wskazanie cudzego albo nieistniejącego przepisu", async () => {
+      const stub = createSupabaseStub({ data: null, error: null });
+
+      await expect(new DiaryService(stub.client).createEntry("user-1", recipeCommand())).rejects.toBeInstanceOf(
+        RecipeNotFoundError
+      );
+      expect(stub.builders.diary_entries.insert).not.toHaveBeenCalled();
+    });
+
+    it("przepuszcza błąd bazy z odczytu przepisu zamiast zamieniać go w 404", async () => {
+      const stub = createSupabaseStub({ data: null, error: new Error("RLS odrzuciło zapytanie") });
+
+      await expect(new DiaryService(stub.client).createEntry("user-1", recipeCommand())).rejects.toThrow(
+        "RLS odrzuciło zapytanie"
       );
     });
   });

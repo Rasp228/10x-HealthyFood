@@ -17,6 +17,12 @@ const listSchema = z.object({
   sort: z.enum(["created_at", "updated_at", "title"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
   search: z.string().optional(),
+  // Zawężenie wyszukiwania do nazwy przepisu - ścieżka dziennika (FR-007). Jedna wartość
+  // w enumie z rozmysłem: ekran przepisów nie podaje tego parametru i nic dla niego nie zmienia.
+  search_field: z.enum(["title"]).optional(),
+  // Koercja, bo parametry adresu przychodzą jako tekst. Sufit 50 chroni odpowiedź przed
+  // wielkością, której podpowiedzi w dzienniku i tak nie pokażą.
+  limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 // Handler GET - pobieranie listy przepisów
@@ -50,7 +56,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
       );
     }
 
-    const { sort = "created_at", order = "desc", search } = validationResult.data;
+    const { sort = "created_at", order = "desc", search, search_field: searchField, limit } = validationResult.data;
 
     // Budowanie zapytania z wyszukiwaniem
     let query = locals.supabase.from("recipes").select("*", { count: "exact" }).eq("user_id", user.id);
@@ -58,13 +64,26 @@ export const GET: APIRoute = async ({ locals, url }) => {
     // Dodanie wyszukiwania jeśli podano
     if (search && search.trim() !== "") {
       const searchTerm = search.trim();
-      query = query.or(
-        `title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,additional_params.ilike.%${searchTerm}%`
-      );
+
+      if (searchField === "title") {
+        // `.ilike()` parametryzuje wartość po stronie klienta Supabase, więc ta ścieżka omija
+        // problem surowej interpolacji w łańcuchu `or()` poniżej (patrz docs/reference/known-drift.md).
+        query = query.ilike("title", `%${searchTerm}%`);
+      } else {
+        query = query.or(
+          `title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,additional_params.ilike.%${searchTerm}%`
+        );
+      }
     }
 
     // Sortowanie
     query = query.order(sort, { ascending: order === "asc" });
+
+    // `count: "exact"` zostaje nietknięty, więc `total` nadal podaje pełną liczbę trafień, a nie
+    // liczbę zwróconych wierszy - dzięki temu dziennik może napisać „pokazano 10 z 23".
+    if (limit !== undefined) {
+      query = query.limit(limit);
+    }
 
     const { data, error, count } = await query;
 

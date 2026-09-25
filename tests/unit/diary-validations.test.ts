@@ -14,6 +14,21 @@ type EntryResult = ReturnType<typeof createDiaryEntrySchema.safeParse>;
 const parseEntry = (overrides: Record<string, unknown> = {}): EntryResult =>
   createDiaryEntrySchema.safeParse({ ...VALID_ENTRY, ...overrides });
 
+/**
+ * Wpis utworzony z przepisu: ilość opisuje liczba porcji, nie tekst, a wartość liczy serwer.
+ * Osobna baza, bo `VALID_ENTRY` niesie `amount_text`, którego ta ścieżka nie wpuszcza - reguły
+ * granic `portions` sprawdzamy na ładunku, który poza nimi jest poprawny.
+ */
+const parseRecipeEntry = (overrides: Record<string, unknown> = {}): EntryResult =>
+  createDiaryEntrySchema.safeParse({
+    ...VALID_ENTRY,
+    amount_text: null,
+    calories: null,
+    source_recipe_id: 7,
+    portions: 1,
+    ...overrides,
+  });
+
 /** Komunikat przypisany do konkretnego pola albo `undefined`, gdy pole przeszło walidację. */
 function messageFor(result: EntryResult, path: string): string | undefined {
   if (result.success) return undefined;
@@ -164,6 +179,90 @@ describe("createDiaryEntrySchema", () => {
       const result = parseEntry({ calorie_origin: "ai_from_recipe" });
 
       expect(dataOf(result)).not.toHaveProperty("calorie_origin");
+    });
+  });
+
+  describe("source_recipe_id", () => {
+    it("przyjmuje dodatni identyfikator", () => {
+      expect(dataOf(parseRecipeEntry()).source_recipe_id).toBe(7);
+    });
+
+    it("odrzuca zero", () => {
+      expect(messageFor(parseRecipeEntry({ source_recipe_id: 0 }), "source_recipe_id")).toBe(
+        "Identyfikator przepisu musi być dodatni"
+      );
+    });
+
+    it("odrzuca ułamek", () => {
+      expect(messageFor(parseRecipeEntry({ source_recipe_id: 1.5 }), "source_recipe_id")).toBe(
+        "Identyfikator przepisu musi być liczbą całkowitą"
+      );
+    });
+
+    it("przyjmuje jawne null - wpis opisowy nie pochodzi z żadnego przepisu", () => {
+      expect(dataOf(parseEntry({ source_recipe_id: null })).source_recipe_id).toBeNull();
+    });
+  });
+
+  describe("portions", () => {
+    it("odrzuca zero - zjedzenie zera porcji nie jest wpisem", () => {
+      expect(messageFor(parseRecipeEntry({ portions: 0 }), "portions")).toBe("Liczba porcji musi być większa od zera");
+    });
+
+    it("przyjmuje pół porcji", () => {
+      expect(dataOf(parseRecipeEntry({ portions: 0.5 })).portions).toBe(0.5);
+    });
+
+    it("przyjmuje górną granicę 99", () => {
+      expect(dataOf(parseRecipeEntry({ portions: 99 })).portions).toBe(99);
+    });
+
+    it("odrzuca 99,01 - sufit jest twardy", () => {
+      expect(messageFor(parseRecipeEntry({ portions: 99.01 }), "portions")).toBe(
+        "Liczba porcji nie może przekraczać 99"
+      );
+    });
+
+    it("przyjmuje dwa miejsca po przecinku - tyle, ile mieści numeric(6,2)", () => {
+      expect(dataOf(parseRecipeEntry({ portions: 1.15 })).portions).toBe(1.15);
+    });
+
+    it("odrzuca trzy miejsca po przecinku", () => {
+      expect(messageFor(parseRecipeEntry({ portions: 1.125 }), "portions")).toBe(
+        "Liczba porcji może mieć najwyżej dwa miejsca po przecinku"
+      );
+    });
+
+    it("odrzuca liczbę podaną jako napis", () => {
+      expect(messageFor(parseRecipeEntry({ portions: "2" }), "portions")).toBe("Liczba porcji musi być liczbą");
+    });
+  });
+
+  describe("reguły wzajemne", () => {
+    it("odrzuca liczbę porcji bez przepisu - komunikatem przy polu, nie w ramce formularza", () => {
+      expect(messageFor(parseEntry({ portions: 2 }), "portions")).toBe(
+        "Liczbę porcji można podać tylko dla wpisu utworzonego z przepisu"
+      );
+    });
+
+    it("odrzuca przepis bez liczby porcji", () => {
+      expect(messageFor(parseEntry({ source_recipe_id: 7, amount_text: null, portions: undefined }), "portions")).toBe(
+        "Liczba porcji jest wymagana dla wpisu utworzonego z przepisu"
+      );
+    });
+
+    it("odrzuca wpis z przepisu niosący jednocześnie ilość tekstową", () => {
+      expect(messageFor(parseRecipeEntry({ amount_text: "1 talerz" }), "amount_text")).toBe(
+        "Wpis utworzony z przepisu opisuje ilość liczbą porcji, nie tekstem"
+      );
+    });
+
+    it("przepuszcza wpis z przepisu z pustym polem ilości - puste pole to brak ilości", () => {
+      expect(dataOf(parseRecipeEntry({ amount_text: "" })).amount_text).toBeNull();
+    });
+
+    it("przepuszcza wpis opisowy bez obu pól - ścieżka sprzed zmiany zostaje nietknięta", () => {
+      expect(parseEntry().success).toBe(true);
     });
   });
 });

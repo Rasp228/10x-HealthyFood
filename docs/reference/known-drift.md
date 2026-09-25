@@ -45,7 +45,36 @@ Only `login`, `register` and `reset-password` have been extracted so far.
 are application components. Do not add to that set; new application components go in
 `src/components/{ai,auth,common,feedback,layout,pages,profile,recipe}/`.
 
+## Trasy przepisów
+
+### Termin wyszukiwania wklejany surowo w łańcuch PostgREST `or()`
+
+`src/pages/api/recipes/index.ts:73-75` skleja `search` w napis
+`title.ilike.%…%,content.ilike.%…%,additional_params.ilike.%…%` bez żadnego uciekania. Ten napis ma
+własną gramatykę, więc znaki `,`, `(`, `)` i `%` wpisane przez użytkownika nie są traktowane jak
+tekst szukanej frazy: przecinek rozbija warunek na kolejne ogniwo `or`, nawiasy otwierają
+i zamykają grupę, a `%` jest wieloznacznikiem `ilike`. Skutkiem jest błąd 500 z PostgREST albo cicho
+poszerzony wynik — nie wyciek cudzych wierszy, bo `.eq("user_id", …)` i RLS zostają poza tym
+napisem.
+
+Ścieżka dziennika omija to z założenia: `search_field=title` używa `query.ilike("title", …)`, gdzie
+klient Supabase przekazuje wartość jako osobny parametr. Naprawa ogólnej gałęzi (uciekanie albo trzy
+osobne `.ilike()` złożone przez `.or()` z parametrami) czeka na własną zmianę — ekran przepisów
+dzisiaj na niej stoi.
+
 ## Trasy AI
+
+### Wycena AI na wpisie z przepisu ignoruje liczbę porcji
+
+`src/pages/api/diary-entries/[id]/estimate.ts` szacuje wartość wyłącznie z pola `content` i zapisuje
+ją przez `applyEstimate`, czyli zawsze z pochodzeniem `ai_from_description`. Wpis utworzony
+z przepisu ma wypełnione `portions` i `source_recipe_id`, ale ta trasa ich nie czyta — wiersz
+pokazuje więc liczbę porcji obok wartości, której przez nią nie pomnożono, a pochodzenie mówi
+„z opisu", choć wpis pochodzi z przepisu.
+
+Przyjęte świadomie (przegląd planu `recipe-entry-with-portions`, ustalenie F1): alternatywą było
+odebranie użytkownikowi jedynej ścieżki wyceny wpisu w stanie „Nie policzono". Zamyka to S-04, która
+dokłada `ai_from_recipe` i liczy z treści przepisu razem z liczbą porcji.
 
 ### Wywołania modelu bez limitu częstości i bez deduplikacji po stronie serwera
 

@@ -125,6 +125,8 @@ export interface CreateDiaryEntryCommand {
   content: string;
   amount_text: string | null;
   calories: number | null;
+  source_recipe_id: number | null;
+  portions: number | null;
 }
 
 // Command do ręcznego ustawienia wartości kalorycznej istniejącego wpisu dziennika.

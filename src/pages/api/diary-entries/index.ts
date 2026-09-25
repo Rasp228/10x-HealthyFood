@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { DiaryService } from "../../../lib/services/diary.service";
+import { DiaryService, RecipeNotFoundError } from "../../../lib/services/diary.service";
 import { createDiaryEntrySchema } from "../../../lib/validations/diary/create-entry";
 import { listDiaryEntriesSchema } from "../../../lib/validations/diary/list-entries";
 import { zodIssues } from "../../../lib/utils/validation-errors";
@@ -95,11 +95,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       content: validationResult.data.content,
       amount_text: validationResult.data.amount_text ?? null,
       calories: validationResult.data.calories ?? null,
+      source_recipe_id: validationResult.data.source_recipe_id ?? null,
+      portions: validationResult.data.portions ?? null,
     });
 
     // Zwróć utworzony wpis
     return new Response(JSON.stringify(entry), { status: 201, headers: { "Content-Type": "application/json" } });
   } catch (error) {
+    // Wskazanie cudzego albo nieistniejącego przepisu to jedyny błąd tej ścieżki, który nie jest
+    // awarią serwera. Komunikat celowo ten sam, którym odpowiada `recipes/[id].ts`.
+    if (error instanceof RecipeNotFoundError) {
+      return new Response(JSON.stringify({ error: "Przepis nie został znaleziony" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Obsługa błędów
     const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
 
