@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { DiaryService } from "../../../../lib/services/diary.service";
+import { DiaryService, RecipeNotFoundError } from "../../../../lib/services/diary.service";
 import { CalorieEstimationService } from "../../../../lib/services/calorie-estimation.service";
 import { entryIdSchema } from "../../../../lib/validations/diary/set-calories";
 import { zodIssues } from "../../../../lib/utils/validation-errors";
@@ -8,10 +8,23 @@ import { OpenRouterError } from "../../../../lib/api/openrouter.types";
 export const prerender = false;
 
 /**
+ * Granice wartości, która trafi do bazy. Te same, co w `caloriesValueSchema`, w checku migracji
+ * i w `recipe-nutrition.ts` - iloczyn porcji musi przejść przez nie drugi raz, bo `extractCalories`
+ * pilnuje tylko wartości JEDNEJ porcji.
+ */
+const MIN_TOTAL_CALORIES = 0;
+const MAX_TOTAL_CALORIES = 5000;
+
+/**
  * Handler POST - zlecenie oszacowania kalorii dla wpisu dziennika.
  *
  * Bez ciała żądania: opis pochodzi z wiersza, nie od klienta. Gdyby przyszedł w żądaniu, można by
- * wysłać do modelu cokolwiek i zapisać wynik jako pochodzący z opisu wpisu.
+ * wysłać do modelu cokolwiek i zapisać wynik jako pochodzący z opisu wpisu. Treść przepisu podlega
+ * tej samej zasadzie - czytamy ją z bazy, filtrem po `user_id`, nigdy z żądania.
+ *
+ * Kaskada ma trzy gałęzie w tej kolejności: wpis z wartością kończy się bez modelu, wpis
+ * ze wskazanym własnym przepisem jest wyceniany z jego treści i mnożony przez liczbę porcji
+ * (`ai_from_recipe`), a każdy inny - z samego opisu (`ai_from_description`).
  *
  * Brak oszacowania NIE jest błędem HTTP - to wiersz bez wartości, czekający na "Policz ponownie"
  * albo na liczbę wpisaną ręcznie. Jedyne wyjście inne niż 200 po walidacji to awaria dostawcy.
@@ -63,11 +76,48 @@ export const POST: APIRoute = async ({ params, locals }) => {
       return new Response(JSON.stringify(entry), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
+    // Gałąź przepisowa zaczyna się od odczytu treści przepisu - tym samym filtrem po `user_id`,
+    // którym czyta ją zapis wpisu. Dwa różne braki znaczą tu jedno i to samo: `null` (wpis nie
+    // pochodzi z przepisu) oraz `RecipeNotFoundError` (przepis usunięty albo cudzy) kierują na
+    // gałąź opisową. Ten rzut NIGDY nie daje 404 - wpis istnieje, brakuje wyłącznie przepisu.
+    let recipeContent: string | null = null;
+
+    try {
+      recipeContent = await diaryService.readOwnRecipeContent(user.id, entry.source_recipe_id);
+    } catch (error) {
+      if (!(error instanceof RecipeNotFoundError)) {
+        throw error;
+      }
+    }
+
     let estimate: number | null;
+
+    // Pochodzenie ustala ta sama gałąź, która policzy wartość. Inaczej wiersz dostałby etykietę
+    // źródła, którego model w ogóle nie widział.
+    const origin = recipeContent === null ? "ai_from_description" : "ai_from_recipe";
 
     try {
       const estimationService = new CalorieEstimationService();
-      estimate = await estimationService.estimateFromDescription(entry.content, entry.amount_text);
+
+      if (recipeContent === null) {
+        estimate = await estimationService.estimateFromDescription(entry.content, entry.amount_text);
+      } else {
+        // Model odpowiada na jedno pytanie - ile ma JEDNA porcja - a mnożenie i zaokrąglenie robi
+        // kod, tak samo jak `resolveRecipeCalories`.
+        //
+        // Iloczyn liczymy PRZED `applyEstimate`, nie po: do zapisu ma dojechać liczba gotowa do
+        // wejścia w sumę dnia. Iloczyn poza zakresem jest więc traktowany jak brak wartości -
+        // inaczej wpis dostałby `calories: 12000` z etykietą „oszacowane z przepisu", której suma
+        // dnia nie ma jak zakwestionować.
+        //
+        // `?? 1` jest obowiązkowe, nie defensywne: parę `portions` + `source_recipe_id` wymusza
+        // tylko schemat tworzenia wpisu, kolumna w bazie jej nie pilnuje, a `null * cokolwiek`
+        // to `NaN`, które przeszłoby zaokrąglenie i wywróciło się dopiero na ograniczeniu bazy.
+        const perPortion = await estimationService.estimateFromRecipe(recipeContent, entry.content);
+        const total = perPortion === null ? null : Math.round(perPortion * (entry.portions ?? 1));
+
+        estimate = total !== null && total >= MIN_TOTAL_CALORIES && total <= MAX_TOTAL_CALORIES ? total : null;
+      }
     } catch (error) {
       // Awaria dostawcy łapana PRZED zewnętrznym catchem trasy: inaczej byłaby w logach
       // nieodróżnialna od zwykłego 500. Wiersz zostaje ze znacznikiem i bez wartości - ta zmiana
@@ -106,7 +156,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
       return new Response(JSON.stringify(current), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    const updated = await diaryService.applyEstimate(user.id, entryId, estimate);
+    const updated = await diaryService.applyEstimate(user.id, entryId, estimate, origin);
 
     if (!updated) {
       return new Response(JSON.stringify({ error: "Wpis nie został znaleziony" }), {

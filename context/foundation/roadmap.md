@@ -49,7 +49,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 | S-01 | `manual-diary-entry` | otworzyć panel dziennika, zapisać wpis na wybrany dzień z ręcznie wpisaną liczbą kalorii i zobaczyć sumę dnia | F-01 | US-01, FR-001, FR-002, FR-004, FR-011, FR-016 | done |
 | S-02 | `ai-estimate-for-free-text` | poprosić o wyliczenie kalorii dla opisowego wpisu i dostać wartość bez czekania na zapis | S-01 | US-01, FR-003, FR-004, FR-011 | done |
 | S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | done |
-| S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | proposed |
+| S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | in-progress |
 | S-05 | `edit-and-delete-entry` | poprawić dowolną część zapisanego wpisu i usunąć wpis po potwierdzeniu | S-01, S-02 | US-01, FR-005, FR-006 | proposed |
 | S-06 | `daily-goal-and-progress` | ustawić w profilu opcjonalny dzienny cel kaloryczny i widzieć sumę dnia względem niego | S-01 | FR-012, FR-013, FR-015 | proposed |
 
@@ -143,7 +143,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** domyka kaskadę FR-009 → FR-010, czyli ostatnie źródło przed wpisaniem liczby ręcznie. Zależy od `S-02`, bo dzieli z nim całą mechanikę „zapisz teraz, wartość później" i sposób pokazywania pochodzenia — zbudowanie tego dwa razy jest głównym kosztem, którego okno trzech tygodni nie uniesie. Przy 3–4 użytkownikach powtarzane wywołania modelu dla tego samego przepisu nie są warte optymalizowania, a zapisanie wyniku do przepisu jest wprost wykluczone.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-05: Edycja i usuwanie wpisu
 

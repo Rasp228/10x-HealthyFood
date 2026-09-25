@@ -492,7 +492,7 @@ describe("DiaryService", () => {
     it("ustawia calorie_origin 'ai_from_description' razem z liczbą", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
 
       expect(updatePayload(stub)).toMatchObject({
         calories: 320,
@@ -503,7 +503,7 @@ describe("DiaryService", () => {
     it("zapisuje warunkowo, więc spóźnione oszacowanie nie nadpisze liczby wpisanej ręcznie", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
 
       expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
       expect(stub.builder.maybeSingle).toHaveBeenCalled();
@@ -513,7 +513,7 @@ describe("DiaryService", () => {
     it("nie dotyka estimation_requested_at", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
 
       expect(updatePayload(stub)).not.toHaveProperty("estimation_requested_at");
     });
@@ -521,7 +521,7 @@ describe("DiaryService", () => {
     it("filtruje po id i po user_id", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
 
       expect(stub.builder.eq).toHaveBeenCalledWith("id", 1);
       expect(stub.builder.eq).toHaveBeenCalledWith("user_id", "user-1");
@@ -531,7 +531,7 @@ describe("DiaryService", () => {
       const manual = storedEntry({ calories: 450, calorie_origin: "manual" });
       const stub = createSupabaseStub({ data: null, error: null }, { data: manual, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320);
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
 
       expect(result).toEqual(manual);
     });
@@ -539,7 +539,7 @@ describe("DiaryService", () => {
     it("zwraca null dla cudzego albo nieistniejącego wpisu", async () => {
       const stub = createSupabaseStub({ data: null, error: null }, { data: null, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 999, 320);
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 999, 320, "ai_from_description");
 
       expect(result).toBeNull();
     });
@@ -547,9 +547,9 @@ describe("DiaryService", () => {
     it("przepuszcza błąd bazy", async () => {
       const stub = createSupabaseStub({ data: null, error: new Error("naruszenie ograniczenia") });
 
-      await expect(new DiaryService(stub.client).applyEstimate("user-1", 1, 320)).rejects.toThrow(
-        "naruszenie ograniczenia"
-      );
+      await expect(
+        new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description")
+      ).rejects.toThrow("naruszenie ograniczenia");
     });
   });
 

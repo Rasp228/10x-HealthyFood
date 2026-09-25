@@ -19,6 +19,32 @@ Zasady:
 `;
 
 /**
+ * Wiadomość systemowa dla wyceny z treści przepisu.
+ *
+ * Osobna od `SYSTEM_MESSAGE`, bo pytanie jest inne: tam „ile ma ta porcja, którą opisano", tu
+ * „na ile porcji dzieli się ten przepis i ile ma jedna". Format odpowiedzi celowo ten sam, żeby
+ * `extractCalories` nie musiał znać dwóch kształtów.
+ *
+ * Dwa źródła potrafią sobie przeczyć, więc pierwszeństwo jest tu rozstrzygnięte wprost: przepis
+ * mówi, co jest w daniu, notatka użytkownika to koryguje.
+ */
+const RECIPE_SYSTEM_MESSAGE = `
+Jesteś kalkulatorem wartości energetycznej posiłków. Na podstawie treści przepisu szacujesz liczbę
+kilokalorii JEDNEJ porcji tego przepisu.
+
+Zasady:
+- Zwracasz wyłącznie obiekt JSON w formacie {"calories": <liczba>} i nic poza nim.
+- NIGDY nie pokazujesz procesu myślenia, nie dodajesz komentarzy, jednostek ani wyjaśnień.
+- "calories" to liczba całkowita z przedziału ${MIN_CALORIES}-${MAX_CALORIES} (kcal dla jednej porcji).
+- Treść przepisu jest źródłem składników i ich ilości.
+- Notatka użytkownika, jeśli jest, koryguje przepis (np. "bez sera", "połowa porcji sera").
+  Gdy notatka jest samym tytułem przepisu albo nic nie wnosi, zignoruj ją.
+- Zwracasz kalorie JEDNEJ porcji, nie całego przepisu.
+- Jeśli przepis nie mówi, na ile porcji jest, przyjmij typowy podział dla takiego dania.
+- Jeśli treść nie pozwala oszacować wartości, zwróć {"calories": null}. Nie zgaduj na chybił trafił.
+`;
+
+/**
  * Buduje klienta OpenRoutera pod wycenę kalorii.
  *
  * Osobna instancja, nie współdzielona z `AIService`: `responseFormat` jest w tym kliencie globalny,
@@ -114,6 +140,31 @@ export class CalorieEstimationService {
     const userMessage = [`Opis posiłku: ${content}`, `Ilość: ${amountText ?? "nie podano"}`].join("\n");
 
     const response = await this.openRouterService.sendMessage(userMessage, SYSTEM_MESSAGE);
+
+    return this.extractCalories(response);
+  }
+
+  /**
+   * Szacuje wartość energetyczną JEDNEJ porcji przepisu.
+   *
+   * Mnożenie przez liczbę porcji NIE należy do tej metody - robi je trasa, tak samo jak
+   * `resolveRecipeCalories` robi je poza modelem. Dzięki temu wynik dla ułamkowej liczby porcji
+   * da się sprawdzić bez wywołania dostawcy.
+   *
+   * @param recipeContent - Treść przepisu należącego do tego użytkownika
+   * @param entryNote - Pole `content` wpisu, przekazane jako notatka korygująca przepis, a nie
+   *   jako opis dania. Bywa samym tytułem przepisu - wtedy wiadomość systemowa każe je zignorować.
+   * @returns Liczba całkowita z przedziału 0-5000 dla jednej porcji albo `null`, gdy odpowiedź
+   *   modelu jest bezużyteczna.
+   * @throws {OpenRouterError} Gdy dostawca jest nieosiągalny albo odmówił - dokładnie jak
+   *   `estimateFromDescription`, bo trasa buduje z tego jedno 502 dla obu gałęzi.
+   */
+  async estimateFromRecipe(recipeContent: string, entryNote: string | null): Promise<number | null> {
+    const userMessage = [`Treść przepisu:\n${recipeContent}`, `Notatka użytkownika: ${entryNote ?? "brak"}`].join(
+      "\n\n"
+    );
+
+    const response = await this.openRouterService.sendMessage(userMessage, RECIPE_SYSTEM_MESSAGE);
 
     return this.extractCalories(response);
   }

@@ -111,8 +111,13 @@ export class DiaryService {
    * wiersz wskazujący przepis, którego autor wpisu nie może przeczytać.
    *
    * Filtr po `user_id` mimo RLS - tak samo jak w `getEntry`: serwis nie zakłada roli klienta.
+   *
+   * Publiczna, bo drugim wywołującym jest trasa wyceny kalorii: potrzebuje treści przepisu, żeby
+   * policzyć wartość jednej porcji. Rzut `RecipeNotFoundError` znaczy tam co innego niż przy
+   * zapisie wpisu - wpis istnieje, brakuje tylko przepisu, więc trasa schodzi na gałąź opisową
+   * zamiast oddać 404.
    */
-  private async readOwnRecipeContent(userId: string, recipeId: number | null): Promise<string | null> {
+  async readOwnRecipeContent(userId: string, recipeId: number | null): Promise<string | null> {
     if (recipeId === null) {
       return null;
     }
@@ -183,14 +188,23 @@ export class DiaryService {
    * @param userId - ID użytkownika
    * @param entryId - ID wpisu
    * @param calories - Oszacowana wartość energetyczna
+   * @param origin - Pochodzenie wartości, ustalone przez trasę w tej samej gałęzi, która ją
+   *   policzyła. Typ zawężony do dwóch oszacowań AI: `manual` i `recipe_nutrition` mają własne,
+   *   bezwarunkowe ścieżki zapisu (`setCaloriesManually`, `createEntry`), a bez zawężenia tą
+   *   metodą dałoby się zapisać `manual` na wpisie, którego użytkownik nie tknął.
    * @returns Faktyczny stan wiersza albo `null`, gdy taki wpis u tego użytkownika nie istnieje
    */
-  async applyEstimate(userId: string, entryId: number, calories: number): Promise<DiaryEntryDto | null> {
+  async applyEstimate(
+    userId: string,
+    entryId: number,
+    calories: number,
+    origin: Extract<CalorieOriginEnum, "ai_from_description" | "ai_from_recipe">
+  ): Promise<DiaryEntryDto | null> {
     const { data: updated, error } = await this.supabase
       .from("diary_entries")
       .update({
         calories,
-        calorie_origin: "ai_from_description",
+        calorie_origin: origin,
         updated_at: new Date().toISOString(),
       })
       .eq("id", entryId)
