@@ -806,14 +806,14 @@ kolumny, które starszy kod po prostu ignoruje.
 
 #### Automated
 
-- [x] 1.1 Nowe testy jednostkowe parsera przechodzą: `npm run test -- recipe-nutrition`
-- [x] 1.2 Cała suita jednostkowa przechodzi: `npm run test`
-- [x] 1.3 Sprawdzenie typów bez błędów: `npm run typecheck`
-- [x] 1.4 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check`
+- [x] 1.1 Nowe testy jednostkowe parsera przechodzą: `npm run test -- recipe-nutrition` — 8f923ef
+- [x] 1.2 Cała suita jednostkowa przechodzi: `npm run test` — 8f923ef
+- [x] 1.3 Sprawdzenie typów bez błędów: `npm run typecheck` — 8f923ef
+- [x] 1.4 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check` — 8f923ef
 
 #### Manual
 
-- [x] 1.5 Rozpoznanie sprawdzone na co najmniej trzech prawdziwych przepisach, w tym jednym odrzuconym
+- [x] 1.5 Rozpoznanie sprawdzone na co najmniej trzech prawdziwych przepisach, w tym jednym odrzuconym — 8f923ef
 
 ### Phase 2: Kontrakt serwerowy
 

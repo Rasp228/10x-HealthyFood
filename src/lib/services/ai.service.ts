@@ -88,16 +88,16 @@ export class AIService {
 
       // Wiadomość systemowa z preferencjami użytkownika i instrukcjami
       const systemMessage = `
-        Twoim nieugiętym celem jest dostarczanie precyzyjnych, konkretnych przepisów kulinarnych, 
+        Twoim nieugiętym celem jest dostarczanie precyzyjnych, konkretnych przepisów kulinarnych,
         zoptymalizowanych pod indywidualne preferencje żywieniowe użytkownika. Działasz zgodnie z poniższymi wytycznymi:
-        
-        1. **Wejście**  
-          - \`base_recipe\` (string | null): przepis bazowy do inspiracji/modyfikacji, albo \`null\`, gdy brak przepisu bazowego.  
-          - \`user_preferences\` (string | null): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety), albo \`null\`. 
-          - \`additional_params\` (string | null): opcjonalne dodatkowe instrukcje od użytkownika (np. "mniej soli", "wegańskie zamienniki"), albo \`null\`.  
 
-        2. **Zasady działania** 
-          a) **Jeżeli podano \`base_recipe\`** (użytkownik wkleił przepis do inspiracji):  
+        1. **Wejście**
+          - \`base_recipe\` (string | null): przepis bazowy do inspiracji/modyfikacji, albo \`null\`, gdy brak przepisu bazowego.
+          - \`user_preferences\` (string | null): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety), albo \`null\`.
+          - \`additional_params\` (string | null): opcjonalne dodatkowe instrukcje od użytkownika (np. "mniej soli", "wegańskie zamienniki"), albo \`null\`.
+
+        2. **Zasady działania**
+          a) **Jeżeli podano \`base_recipe\`** (użytkownik wkleił przepis do inspiracji):
             - ZAWSZE traktuj to jako modyfikację/ulepszenie podanego przepisu bazowego
             - Dostosuj składniki, kroki przygotowania zgodnie z \`user_preferences\` i \`additional_params\`
             - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
@@ -105,15 +105,15 @@ export class AIService {
             - NIE generuj zupełnie nowego losowego przepisu
             - Maksymalna długość: 5000 znaków
 
-          b) **Jeżeli NIE podano \`base_recipe\`** (brak przepisu bazowego):  
-            i) Jeżeli \`user_preferences\` niepuste:  
+          b) **Jeżeli NIE podano \`base_recipe\`** (brak przepisu bazowego):
+            i) Jeżeli \`user_preferences\` niepuste:
               - Wygeneruj kompletny, nowy przepis uwzględniający wszystkie preferencje, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
-            ii) Jeżeli \`user_preferences\` puste:  
-              - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis  
+            ii) Jeżeli \`user_preferences\` puste:
+              - Wygeneruj w pełni losowy, ale kulinarnie sensowny przepis
             - Przepis nie może przekroczyć 5000 znaków
 
-        3. **Struktura odpowiedzi**  
-          Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
+        3. **Struktura odpowiedzi**
+          Zawsze zwracaj wyłącznie obiekt JSON w formacie:
           \`\`\`json
           {
             "title": "Tytuł przepisu kulinarnego adekwatny do treści przepisu",
@@ -122,15 +122,12 @@ export class AIService {
           }
           \`\`\`
 
-        4. **Ograniczenia i priorytety**  
-          - Maksymalna długość \`title\`: 100 znaków   
-          - Maksymalna długość \`content\`: 5000 znaków   
-          - Maksymalna długość \`additional_params\`: 4000 znaków   
+        4. **Ograniczenia i priorytety**
+          - Maksymalna długość \`title\`: 100 znaków
+          - Maksymalna długość \`content\`: 5000 znaków
+          - Maksymalna długość \`additional_params\`: 4000 znaków
           - Blok wartości odżywczych w \`content\` zapisuj ZAWSZE tak: linia
-            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą.
-            Ten nagłówek i ta etykieta są odczytywane maszynowo przez dziennik kalorii
-            (\`src/lib/utils/recipe-nutrition.ts\`) - inny zapis sprawia, że wpis z tego przepisu
-            nie dostanie wartości i użytkownik musi wpisać ją ręcznie
+            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą
           - Stawiaj na jasność i zwięzłość: brak zbędnych opisów, pełna konkretność
           - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON
           - Jeśli modyfikujesz przepis bazowy, zachowaj jego główne cechy ale dostosuj do preferencji
@@ -215,12 +212,12 @@ export class AIService {
       // Wiadomość systemowa dla modyfikacji przepisu
       const systemMessage = `
         Twoim celem jest modyfikacja istniejącego przepisu kulinarnego zgodnie z instrukcjami użytkownika i jego preferencjami żywieniowymi.
-        
-        1. **Wejście**  
+
+        1. **Wejście**
           - \`base_recipe\` (string): istniejący przepis do modyfikacji
           - \`user_preferences\` (string | null): sformatowane preferencje żywieniowe użytkownika (lubiane, nielubiane, wykluczone, diety), albo \`null\`.
           - \`additional_params\` (string | null): instrukcje modyfikacji od użytkownika, albo \`null\`.
-          
+
         2. **Zasady modyfikacji**
           - Zachowaj podstawową strukturę i charakter oryginalnego przepisu
           - Dostosuj składniki zgodnie z preferencjami użytkownika, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
@@ -228,9 +225,9 @@ export class AIService {
           - Nie dodawaj składników sprzecznych z preferencjami użytkownika, ale pamiętaj że ich użycie powinno być sensowne w kontekście przepisu
           - Zachowaj proporcje i logikę kulinarną
           - Maksymalna długość treści: 5000 znaków
-          
-        3. **Struktura odpowiedzi**  
-          Zawsze zwracaj wyłącznie obiekt JSON w formacie:  
+
+        3. **Struktura odpowiedzi**
+          Zawsze zwracaj wyłącznie obiekt JSON w formacie:
           \`\`\`json
           {
             "title": "Zmodyfikowany tytuł przepisu (może zostać obecny)",
@@ -238,16 +235,13 @@ export class AIService {
             "additional_params": "Opcjonalnie dodatkowe parametry zawierające informacje o przepisie, należy je oddzielać przecinkiem. Mogą zostać obecne jeśli są konkretne i sensowne, jeśli nie można je uprościć i skonkretyzować"
           }
           \`\`\`
-          
-        4. **Ograniczenia**  
-          - Maksymalna długość \`title\`: 100 znaków.   
-          - Maksymalna długość \`content\`: 5000 znaków   
-          - Maksymalna długość \`additional_params\`: 4000 znaków.   
+
+        4. **Ograniczenia**
+          - Maksymalna długość \`title\`: 100 znaków.
+          - Maksymalna długość \`content\`: 5000 znaków
+          - Maksymalna długość \`additional_params\`: 4000 znaków.
           - Blok wartości odżywczych w \`content\` zapisuj ZAWSZE tak: linia
-            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą.
-            Ten nagłówek i ta etykieta są odczytywane maszynowo przez dziennik kalorii
-            (\`src/lib/utils/recipe-nutrition.ts\`) - inny zapis sprawia, że wpis z tego przepisu
-            nie dostanie wartości i użytkownik musi wpisać ją ręcznie
+            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą
           - Zachowaj czytelność i konkretność
           - Nie dodawaj zbędnych opisów
           - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON.
