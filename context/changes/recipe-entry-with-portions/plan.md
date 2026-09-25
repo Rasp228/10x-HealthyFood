@@ -819,53 +819,53 @@ kolumny, które starszy kod po prostu ignoruje.
 
 #### Automated
 
-- [x] 2.1 Rozszerzone testy schematu przechodzą: `npm run test -- diary-validations`
-- [x] 2.2 Rozszerzone testy serwisu przechodzą: `npm run test -- diary-service`
-- [x] 2.3 Cała suita jednostkowa przechodzi: `npm run test`
-- [x] 2.4 Sprawdzenie typów bez błędów: `npm run typecheck`
-- [x] 2.5 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check`
+- [x] 2.1 Rozszerzone testy schematu przechodzą: `npm run test -- diary-validations` — 23749ef
+- [x] 2.2 Rozszerzone testy serwisu przechodzą: `npm run test -- diary-service` — 23749ef
+- [x] 2.3 Cała suita jednostkowa przechodzi: `npm run test` — 23749ef
+- [x] 2.4 Sprawdzenie typów bez błędów: `npm run typecheck` — 23749ef
+- [x] 2.5 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check` — 23749ef
 
 #### Manual
 
-- [x] 2.6 `POST` z przepisem i porcjami zwraca 201 z wartością i pochodzeniem `recipe_nutrition`
-- [x] 2.7 `POST` z `calories` zapisuje wartość ręczną mimo obecnego `source_recipe_id`
-- [x] 2.8 `POST` z cudzym lub nieistniejącym przepisem zwraca 404, także razem z `calories`
-- [x] 2.9 `POST` z przepisem i niepustym `amount_text` zwraca 400 z błędem na tym polu
-- [x] 2.10 `GET /api/recipes?search=` bez nowych parametrów zwraca to samo co przed zmianą
-- [x] 2.11 `GET /api/recipes` z `search_field=title&limit=5` filtruje po tytule, tnie do pięciu, zachowuje `total`
+- [x] 2.6 `POST` z przepisem i porcjami zwraca 201 z wartością i pochodzeniem `recipe_nutrition` — 23749ef
+- [x] 2.7 `POST` z `calories` zapisuje wartość ręczną mimo obecnego `source_recipe_id` — 23749ef
+- [x] 2.8 `POST` z cudzym lub nieistniejącym przepisem zwraca 404, także razem z `calories` — 23749ef
+- [x] 2.9 `POST` z przepisem i niepustym `amount_text` zwraca 400 z błędem na tym polu — 23749ef
+- [x] 2.10 `GET /api/recipes?search=` bez nowych parametrów zwraca to samo co przed zmianą — 23749ef
+- [x] 2.11 `GET /api/recipes` z `search_field=title&limit=5` filtruje po tytule, tnie do pięciu, zachowuje `total` — 23749ef
 
 ### Phase 3: Powierzchnia dziennika
 
 #### Automated
 
-- [x] 3.1 Testy odmiany porcji przechodzą: `npm run test -- diary-portions`
-- [x] 3.2 Cała suita jednostkowa przechodzi: `npm run test`
-- [x] 3.3 Sprawdzenie typów bez błędów: `npm run typecheck`
-- [x] 3.4 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check`
+- [x] 3.1 Testy odmiany porcji przechodzą: `npm run test -- diary-portions` — 23749ef
+- [x] 3.2 Cała suita jednostkowa przechodzi: `npm run test` — 23749ef
+- [x] 3.3 Sprawdzenie typów bez błędów: `npm run typecheck` — 23749ef
+- [x] 3.4 Lint i formatowanie przechodzą: `npm run lint` oraz `npm run format:check` — 23749ef
 
 #### Manual
 
-- [x] 3.5 Wyszukanie i wybór przepisu wypełnia opis, ukrywa ilość tekstową i pokazuje porcje z wartością 1
-- [x] 3.6 Zmiana liczby porcji przelicza podgląd; wartość `0,5` jest przyjmowana
-- [x] 3.7 Przepis bez bloku pokazuje zdanie informacyjne i daje wpis „Nie policzono" z aktywnym polem
-- [x] 3.8 Wpis z przepisu pokazuje na liście porcje i etykietę „z przepisu", a suma dnia go obejmuje
-- [x] 3.9 Ręczne zastąpienie wartości przestawia etykietę na „wpisane ręcznie"
-- [x] 3.10 Usunięcie wyboru przepisu przywraca pole ilości i zostawia opis nietknięty
-- [x] 3.11 Ścieżka opisowa zachowuje się jak przed zmianą, z oboma przyciskami
-- [x] 3.12 Ekrany sprzed zmiany — przepisy, profil, logowanie — zachowują się jak dotąd
-- [x] 3.13 Pole kalorii znika i czyści się przy wyborze przepisu, wraca puste po usunięciu wyboru
-- [x] 3.14 Wpis z przepisu bez bloku ma działającą wycenę „Policz kalorie" (bez skalowania porcjami)
+- [x] 3.5 Wyszukanie i wybór przepisu wypełnia opis, ukrywa ilość tekstową i pokazuje porcje z wartością 1 — 23749ef
+- [x] 3.6 Zmiana liczby porcji przelicza podgląd; wartość `0,5` jest przyjmowana — 23749ef
+- [x] 3.7 Przepis bez bloku pokazuje zdanie informacyjne i daje wpis „Nie policzono" z aktywnym polem — 23749ef
+- [x] 3.8 Wpis z przepisu pokazuje na liście porcje i etykietę „z przepisu", a suma dnia go obejmuje — 23749ef
+- [x] 3.9 Ręczne zastąpienie wartości przestawia etykietę na „wpisane ręcznie" — 23749ef
+- [x] 3.10 Usunięcie wyboru przepisu przywraca pole ilości i zostawia opis nietknięty — 23749ef
+- [x] 3.11 Ścieżka opisowa zachowuje się jak przed zmianą, z oboma przyciskami — 23749ef
+- [x] 3.12 Ekrany sprzed zmiany — przepisy, profil, logowanie — zachowują się jak dotąd — 23749ef
+- [x] 3.13 Pole kalorii znika i czyści się przy wyborze przepisu, wraca puste po usunięciu wyboru — 23749ef
+- [x] 3.14 Wpis z przepisu bez bloku ma działającą wycenę „Policz kalorie" (bez skalowania porcjami) — 23749ef
 
 ### Phase 4: Testy i domknięcie bramki
 
 #### Automated
 
-- [ ] 4.1 Rozszerzona suita E2E przechodzi: `npm run test:e2e`
-- [ ] 4.2 `tests/e2e/recipe-management.spec.ts` przechodzi bez zmiany w pliku (ścieżka bez `search`)
-- [ ] 4.3 Cała suita jednostkowa przechodzi: `npm run test`
-- [ ] 4.4 Pełna bramka `code-quality`: `lint` → `typecheck` → `format:check` → `test:security`
+- [x] 4.1 Rozszerzona suita E2E przechodzi: `npm run test:e2e`
+- [x] 4.2 `tests/e2e/recipe-management.spec.ts` przechodzi bez zmiany w pliku (ścieżka bez `search`)
+- [x] 4.3 Cała suita jednostkowa przechodzi: `npm run test`
+- [x] 4.4 Pełna bramka `code-quality`: `lint` → `typecheck` → `format:check` → `test:security`
 
 #### Manual
 
-- [ ] 4.5 Pełne przejście US-02 na prawdziwym przepisie z blokiem odżywczym
-- [ ] 4.6 Usunięcie przepisu użytego we wpisie zostawia wpis i sumę dnia bez zmian
+- [x] 4.5 Pełne przejście US-02 na prawdziwym przepisie z blokiem odżywczym
+- [x] 4.6 Usunięcie przepisu użytego we wpisie zostawia wpis i sumę dnia bez zmian

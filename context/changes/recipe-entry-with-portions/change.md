@@ -1,7 +1,7 @@
 ---
 change_id: recipe-entry-with-portions
 title: Wpis dziennika z własnego przepisu z liczbą porcji
-status: implementing
+status: implemented
 created: 2026-09-25
 updated: 2026-09-25
 ---

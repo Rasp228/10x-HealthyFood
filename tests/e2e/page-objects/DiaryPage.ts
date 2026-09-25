@@ -23,12 +23,19 @@ export class DiaryPage {
   readonly nextDayButton: Locator;
   readonly todayButton: Locator;
   readonly entryForm: Locator;
+  readonly recipeSearchInput: Locator;
+  readonly recipeResults: Locator;
+  readonly recipeSelected: Locator;
+  readonly recipeClearButton: Locator;
+  readonly recipePreview: Locator;
   readonly contentInput: Locator;
   readonly contentError: Locator;
   readonly amountInput: Locator;
   readonly amountError: Locator;
   readonly caloriesInput: Locator;
   readonly caloriesError: Locator;
+  readonly portionsInput: Locator;
+  readonly portionsError: Locator;
   readonly submitButton: Locator;
   readonly submitEstimateButton: Locator;
   readonly formAiNotice: Locator;
@@ -49,12 +56,21 @@ export class DiaryPage {
     this.nextDayButton = page.getByTestId("day-next-button");
     this.todayButton = page.getByTestId("day-today-button");
     this.entryForm = page.getByTestId("diary-entry-form");
+    this.recipeSearchInput = page.getByTestId("diary-recipe-search-input");
+    // Podpowiedź niesie w testid identyfikator przepisu z bazy, którego test nie zna - stąd wzorzec
+    // zamiast dosłownej nazwy. Pojedynczy wynik wybiera się z niego filtrem po tytule.
+    this.recipeResults = page.getByTestId(/^diary-recipe-result-/);
+    this.recipeSelected = page.getByTestId("diary-recipe-selected");
+    this.recipeClearButton = page.getByTestId("diary-recipe-clear-button");
+    this.recipePreview = page.getByTestId("diary-recipe-preview");
     this.contentInput = page.getByTestId("diary-content-input");
     this.contentError = page.getByTestId("diary-content-error");
     this.amountInput = page.getByTestId("diary-amount-input");
     this.amountError = page.getByTestId("diary-amount-error");
     this.caloriesInput = page.getByTestId("diary-calories-input");
     this.caloriesError = page.getByTestId("diary-calories-error");
+    this.portionsInput = page.getByTestId("diary-portions-input");
+    this.portionsError = page.getByTestId("diary-portions-error");
     this.submitButton = page.getByTestId("diary-submit-button");
     this.submitEstimateButton = page.getByTestId("diary-submit-estimate-button");
     // `diary-ai-notice` występuje na stronie wiele razy - raz w formularzu i raz przy każdym
@@ -121,6 +137,60 @@ export class DiaryPage {
     await expect(this.submitButton).toBeEnabled();
   }
 
+  /**
+   * Wybiera przepis z podpowiedzi formularza.
+   *
+   * Podpowiedzi ruszają dopiero od dwóch znaków i po 500 ms opóźnienia, więc na wynik czeka
+   * asercja, a nie sztywny `waitForTimeout`: opóźnienie jest stałe, czas odpowiedzi serwera nie.
+   * Tytuł musi być unikalny na koncie testowym - filtr po tekście trafiłby inaczej w kilka
+   * wyników naraz i Playwright zgłosiłby naruszenie trybu strict.
+   */
+  async selectRecipe(title: string) {
+    await this.recipeSearchInput.fill(title);
+
+    const result = this.recipeResults.filter({ hasText: title });
+
+    await expect(result).toBeVisible({ timeout: 15000 });
+    await result.click();
+
+    await expect(this.recipeSelected).toContainText(title);
+  }
+
+  /**
+   * Formularz po wyborze przepisu: tytuł wstawiony w opis, ilość tekstowa i kalorie zniknęły,
+   * a na ich miejscu stoi liczba porcji z domyślną jedynką.
+   *
+   * Asercje na `toHaveCount(0)`, bo tych dwóch pól nie ma wtedy w drzewie - nie są tylko ukryte.
+   */
+  async expectRecipeMode(title: string) {
+    await expect(this.contentInput).toHaveValue(title);
+    await expect(this.amountInput).toHaveCount(0);
+    await expect(this.caloriesInput).toHaveCount(0);
+    await expect(this.portionsInput).toHaveValue("1");
+  }
+
+  async setPortions(portions: string) {
+    await this.portionsInput.fill(portions);
+  }
+
+  /** Podgląd wartości pod polami - jedyne miejsce, w którym widać wyliczenie przed zapisem. */
+  async expectRecipePreview(text: string) {
+    await expect(this.recipePreview).toHaveText(text, { timeout: 15000 });
+  }
+
+  /**
+   * Zapisuje wpis przyciskiem "Dodaj wpis".
+   *
+   * Ten sam warunek zakończenia co w `addEntry` - wyczyszczony opis - ale bez wypełniania pól
+   * ilości tekstowej i kalorii, których przy wybranym przepisie po prostu nie ma w drzewie.
+   */
+  async submitEntry() {
+    await this.submitButton.click();
+
+    await expect(this.contentInput).toHaveValue("", { timeout: 15000 });
+    await expect(this.submitButton).toBeEnabled();
+  }
+
   async expectEntryVisible(content: string) {
     await expect(this.entryContents.filter({ hasText: content })).toBeVisible({ timeout: 15000 });
   }
@@ -183,6 +253,11 @@ export class DiaryPage {
     await expect(this.caloriesError).toHaveText(errorText);
   }
 
+  async expectPortionsError(errorText: string) {
+    await expect(this.portionsError).toBeVisible();
+    await expect(this.portionsError).toHaveText(errorText);
+  }
+
   /**
    * Wiersz wpisu o podanej treści.
    *
@@ -233,5 +308,29 @@ export class DiaryPage {
   /** Adnotacja o pochodzeniu wartości przy wpisie. */
   async expectEntryOrigin(content: string, originLabel: string) {
     await expect(this.entryRow(content).getByTestId("diary-entry-origin")).toHaveText(originLabel, { timeout: 15000 });
+  }
+
+  /**
+   * Ilość pokazana pod opisem wpisu.
+   *
+   * Jeden lokator dla obu ścieżek: wpis z przepisu opisuje ilość liczbą porcji, wpis opisowy -
+   * tekstem, a lista rysuje je w tym samym miejscu.
+   */
+  async expectEntryAmount(content: string, amount: string) {
+    await expect(this.entryRow(content).getByTestId("diary-entry-amount")).toHaveText(amount, { timeout: 15000 });
+  }
+
+  /** Wartość kaloryczna przy wpisie - ta, którą wiersz dokłada do sumy dnia. */
+  async expectEntryCalories(content: string, calories: number) {
+    const value = this.entryRow(content).getByTestId("diary-entry-calories");
+
+    await expect(value).toHaveText(`${calories} kcal`, { timeout: 15000 });
+  }
+
+  /** Pole na ręczną liczbę przy wpisie przyjmuje pisanie - wpis bez wartości nie jest ślepym zaułkiem. */
+  async expectEntryCaloriesEditable(content: string) {
+    const field = this.entryRow(content).getByTestId("diary-entry-calories-input");
+
+    await expect(field).toBeEnabled();
   }
 }
