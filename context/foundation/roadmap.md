@@ -3,7 +3,7 @@ project: 10x-HealthyFood
 version: 1
 status: draft
 created: 2026-09-21
-updated: 2026-09-24
+updated: 2026-09-25
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -48,7 +48,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 | F-01 | `diary-entry-store` | (fundament) istnieje prywatny magazyn wpisów dziennika z polem na wartość, jej pochodzenie i status wyliczenia | — | FR-001, FR-002, FR-015, Access Control Changes | done |
 | S-01 | `manual-diary-entry` | otworzyć panel dziennika, zapisać wpis na wybrany dzień z ręcznie wpisaną liczbą kalorii i zobaczyć sumę dnia | F-01 | US-01, FR-001, FR-002, FR-004, FR-011, FR-016 | done |
 | S-02 | `ai-estimate-for-free-text` | poprosić o wyliczenie kalorii dla opisowego wpisu i dostać wartość bez czekania na zapis | S-01 | US-01, FR-003, FR-004, FR-011 | done |
-| S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | proposed |
+| S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | in-progress |
 | S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | proposed |
 | S-05 | `edit-and-delete-entry` | poprawić dowolną część zapisanego wpisu i usunąć wpis po potwierdzeniu | S-01, S-02 | US-01, FR-005, FR-006 | proposed |
 | S-06 | `daily-goal-and-progress` | ustawić w profilu opcjonalny dzienny cel kaloryczny i widzieć sumę dnia względem niego | S-01 | FR-012, FR-013, FR-015 | proposed |
@@ -130,7 +130,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Unknowns:**
   - Które warianty nagłówka bloku odżywczego liczą się jako samodeklarujące porcję? PRD podaje jeden przykład i dopisuje „i równoważne", ale listy równoważników nie ma — Owner: user. Block: no. Nierozpoznany nagłówek jest bezpieczny: figury nieoznaczone traktuje się jak nieobecne, więc wpis spada do wyceny ręcznej, a po `S-04` — do oszacowania z treści.
 - **Risk:** PRD zamknął problem interpretacji, zawężając FR-009 do figur samodeklarujących, więc ryzyko przesunęło się z „policzymy kilkakrotnie za dużo" na „nie rozpoznamy bloku i policzymy inaczej" — to drugie jest wielokrotnie tańsze. Przepisy są wyłącznie czytane: nic nie zapisuje się z powrotem do rekordu przepisu ani do jego opisu (FR-014, FR-015).
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-04: Oszacowanie kalorii z treści przepisu
 

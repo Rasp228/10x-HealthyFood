@@ -126,6 +126,11 @@ export class AIService {
           - Maksymalna długość \`title\`: 100 znaków   
           - Maksymalna długość \`content\`: 5000 znaków   
           - Maksymalna długość \`additional_params\`: 4000 znaków   
+          - Blok wartości odżywczych w \`content\` zapisuj ZAWSZE tak: linia
+            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą.
+            Ten nagłówek i ta etykieta są odczytywane maszynowo przez dziennik kalorii
+            (\`src/lib/utils/recipe-nutrition.ts\`) - inny zapis sprawia, że wpis z tego przepisu
+            nie dostanie wartości i użytkownik musi wpisać ją ręcznie
           - Stawiaj na jasność i zwięzłość: brak zbędnych opisów, pełna konkretność
           - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON
           - Jeśli modyfikujesz przepis bazowy, zachowaj jego główne cechy ale dostosuj do preferencji
@@ -238,6 +243,11 @@ export class AIService {
           - Maksymalna długość \`title\`: 100 znaków.   
           - Maksymalna długość \`content\`: 5000 znaków   
           - Maksymalna długość \`additional_params\`: 4000 znaków.   
+          - Blok wartości odżywczych w \`content\` zapisuj ZAWSZE tak: linia
+            \`Wartości odżywcze (na porcję):\`, a pod nią linia \`Kalorie: N kcal\` z liczbą całkowitą.
+            Ten nagłówek i ta etykieta są odczytywane maszynowo przez dziennik kalorii
+            (\`src/lib/utils/recipe-nutrition.ts\`) - inny zapis sprawia, że wpis z tego przepisu
+            nie dostanie wartości i użytkownik musi wpisać ją ręcznie
           - Zachowaj czytelność i konkretność
           - Nie dodawaj zbędnych opisów
           - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON.
