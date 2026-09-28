@@ -64,18 +64,6 @@ dzisiaj na niej stoi.
 
 ## Trasy AI
 
-### Wycena AI na wpisie z przepisu ignoruje liczbę porcji
-
-`src/pages/api/diary-entries/[id]/estimate.ts` szacuje wartość wyłącznie z pola `content` i zapisuje
-ją przez `applyEstimate`, czyli zawsze z pochodzeniem `ai_from_description`. Wpis utworzony
-z przepisu ma wypełnione `portions` i `source_recipe_id`, ale ta trasa ich nie czyta — wiersz
-pokazuje więc liczbę porcji obok wartości, której przez nią nie pomnożono, a pochodzenie mówi
-„z opisu", choć wpis pochodzi z przepisu.
-
-Przyjęte świadomie (przegląd planu `recipe-entry-with-portions`, ustalenie F1): alternatywą było
-odebranie użytkownikowi jedynej ścieżki wyceny wpisu w stanie „Nie policzono". Zamyka to S-04, która
-dokłada `ai_from_recipe` i liczy z treści przepisu razem z liczbą porcji.
-
 ### Wywołania modelu bez limitu częstości i bez deduplikacji po stronie serwera
 
 `src/pages/api/diary-entries/[id]/estimate.ts` oraz trzy trasy `src/pages/api/ai/` wołają dostawcę
@@ -86,10 +74,15 @@ do modelu tyle wywołań, ile wyślą — wygrywa pierwszy `applyEstimate`, resz
 i wyrzucona. Kolejka FIFO w `src/hooks/diary/useCalorieEstimation.ts` dyscyplinuje uczciwą
 przeglądarkę, nie endpoint.
 
-Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustalenie F2): model jest
-darmowy, użytkowników jest kilku, a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej
-w trasie wyceny to warunek świeżości znacznika w `markEstimationRequested` — kolumna już istnieje
-i czeka na czytelnika. Do przemyślenia razem z S-04, która dziedziczy ten kontrakt.
+Od S-04 ta sama trasa wycenia też wpisy z przepisu, wysyłając do modelu całą treść przepisu zamiast
+jednego zdania opisu — prompt jest o rząd wielkości większy, więc niekontrolowana pętla kosztuje
+teraz odpowiednio więcej. Luka jest ta sama, urosła tylko jej cena.
+
+Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustalenie F2; podtrzymane
+w planie `ai-estimate-from-recipe`, decyzja D6): model jest darmowy, użytkowników jest kilku,
+a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej w trasie wyceny to warunek
+świeżości znacznika w `markEstimationRequested` — kolumna już istnieje i czeka na czytelnika.
+Do przemyślenia razem z S-05, która dziedziczy ten kontrakt.
 
 ## Wpisy dziennika
 
@@ -111,3 +104,15 @@ Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalen
 wymagałoby migracji, którą plan tej zmiany wprost wyklucza. **S-05 (`edit-and-delete-entry`) musi to
 przewidzieć** — schemat edycji nie może odrzucać wiersza z `portions` i pustym `source_recipe_id`,
 bo inaczej użytkownik dostanie 400 na wpisie, którego nie tknął.
+
+Od S-04 ta sama sierota ma drugi skutek, przy wycenie. Wiersz bez `source_recipe_id`, który nie
+dostał jeszcze wartości, trasa `src/pages/api/diary-entries/[id]/estimate.ts` kieruje na gałąź
+opisową. Do modelu idzie wtedy `content` — zwykle sam tytuł przepisu — i `amount_text = null`,
+a `portions` pomija się zupełnie: nie trafia do promptu i niczego nie mnoży. Wiersz pokazuje więc
+„2 porcje" obok wartości oszacowanej dla jednej. To objaw zamkniętego w S-04 znaleziska „wycena
+ignoruje liczbę porcji", tylko ograniczony do wierszy po usuniętym przepisie.
+
+Przyjęte świadomie (plan `ai-estimate-from-recipe`, decyzja D3, podtrzymana w przeglądzie wdrożenia,
+ustalenie F1): sierota zostaje na dzisiejszej ścieżce opisowej, bez nowego kodu. Naprawa, np.
+przekazanie `portions` jako ilości na gałęzi opisowej, łamie zasadę „ścieżka opisowa bez zmian".
+Najlepiej rozstrzygnąć ją w S-05, razem ze schematem edycji tego samego wiersza.

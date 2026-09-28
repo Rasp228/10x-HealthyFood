@@ -14,6 +14,15 @@ export interface DiaryEntryData {
  */
 const AI_NOTICE_TEXT = "Opis posiłku zostanie wysłany do dostawcy modelu.";
 
+/**
+ * Wariant uprzedzenia dla ścieżki z przepisu - kopia `AI_NOTICE_RECIPE` z tego samego modułu.
+ *
+ * Dwa zdania, bo do dostawcy jedzie co innego: na tej ścieżce cała treść przepisu, a nie sam opis
+ * posiłku. Asercja pilnuje, że użytkownik widzi to zdanie, które odpowiada temu, co faktycznie
+ * opuszcza produkt.
+ */
+const AI_NOTICE_RECIPE_TEXT = "Treść przepisu i Twój opis zostaną wysłane do dostawcy modelu.";
+
 export class DiaryPage {
   readonly page: Page;
   readonly diaryPage: Locator;
@@ -275,12 +284,26 @@ export class DiaryPage {
     await expect(this.formAiNotice).toHaveText(AI_NOTICE_TEXT);
   }
 
+  /** Uprzedzenie w formularzu po wybraniu przepisu - wtedy do dostawcy jedzie jego treść. */
+  async expectRecipeAiNotice() {
+    await expect(this.formAiNotice).toBeVisible();
+    await expect(this.formAiNotice).toHaveText(AI_NOTICE_RECIPE_TEXT);
+  }
+
   /** Uprzedzenie o wysyłce treści przy konkretnym wpisie - obok jego przycisku wyceny. */
   async expectEntryAiNotice(content: string) {
     const notice = this.entryRow(content).getByTestId("diary-ai-notice");
 
     await expect(notice).toBeVisible();
     await expect(notice).toHaveText(AI_NOTICE_TEXT);
+  }
+
+  /** Uprzedzenie przy wpisie pochodzącym z przepisu - zdanie o treści przepisu, nie o opisie. */
+  async expectEntryRecipeAiNotice(content: string) {
+    const notice = this.entryRow(content).getByTestId("diary-ai-notice");
+
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText(AI_NOTICE_RECIPE_TEXT);
   }
 
   /**

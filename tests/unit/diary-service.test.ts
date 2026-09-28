@@ -510,6 +510,34 @@ describe("DiaryService", () => {
       expect(stub.builder.single).not.toHaveBeenCalled();
     });
 
+    it("ustawia calorie_origin 'ai_from_recipe', gdy wartość policzono z treści przepisu", async () => {
+      // Pochodzenie przychodzi z trasy - z tej samej gałęzi kaskady, która policzyła liczbę.
+      // Ta asercja pilnuje, że argument faktycznie dojeżdża do UPDATE, a nie ginie po drodze
+      // pod zaszytą wcześniej wartością `ai_from_description`.
+      const fromRecipe = storedEntry({ calories: 500, calorie_origin: "ai_from_recipe", source_recipe_id: 7 });
+      const stub = createSupabaseStub({ data: fromRecipe, error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe");
+
+      expect(updatePayload(stub)).toMatchObject({
+        calories: 500,
+        calorie_origin: "ai_from_recipe",
+      });
+      expect(result).toEqual(fromRecipe);
+    });
+
+    it("zapisuje warunkowo także na gałęzi przepisowej - ręczna liczba wygrywa z oszacowaniem", async () => {
+      // Wyścig kończy się po stronie człowieka niezależnie od gałęzi: `.is("calories", null)`
+      // nie trafia w wiersz z wartością, a metoda oddaje jego stan faktyczny.
+      const manual = storedEntry({ calories: 450, calorie_origin: "manual", source_recipe_id: 7 });
+      const stub = createSupabaseStub({ data: null, error: null }, { data: manual, error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe");
+
+      expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
+      expect(result).toEqual(manual);
+    });
+
     it("nie dotyka estimation_requested_at", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 

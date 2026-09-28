@@ -112,7 +112,8 @@ export const POST: APIRoute = async ({ params, locals }) => {
         //
         // `?? 1` jest obowiązkowe, nie defensywne: parę `portions` + `source_recipe_id` wymusza
         // tylko schemat tworzenia wpisu, kolumna w bazie jej nie pilnuje, a `null * cokolwiek`
-        // to `NaN`, które przeszłoby zaokrąglenie i wywróciło się dopiero na ograniczeniu bazy.
+        // to w JS `0`, nie `NaN` - przeszłoby bramkę zakresu i ograniczenie bazy, a wpis po cichu
+        // dostałby 0 kcal z etykietą „oszacowane z przepisu".
         const perPortion = await estimationService.estimateFromRecipe(recipeContent, entry.content);
         const total = perPortion === null ? null : Math.round(perPortion * (entry.portions ?? 1));
 

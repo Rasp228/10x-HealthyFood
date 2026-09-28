@@ -135,6 +135,12 @@ POST /api/diary-entries/[id]/estimate
 Wiersz-sierota (`portions` bez `source_recipe_id`, po usuniętym przepisie) trafia do trzeciej
 gałęzi bez żadnego dodatkowego warunku — brak `source_recipe_id` sam go tam kieruje (decyzja D3).
 
+Wycena czyta **bieżącą** treść przepisu, z chwili kliknięcia, a nie migawkę z chwili utworzenia
+wpisu. Jeśli przepis zmieniono w międzyczasie, oszacowanie opiera się na nowej treści. Tak samo po
+dopisaniu bloku wartości odżywczych: przycisk nadal uruchamia wycenę AI, bo zgodnie z decyzją D2
+blok czyta się wyłącznie przy tworzeniu wpisu. Migawka wymagałaby nowej kolumny, a to wychodzi
+poza zakres („Żadnej migracji").
+
 ## Critical Implementation Details
 
 **Kolejność w trasie: iloczyn liczymy PRZED `applyEstimate`, nie po.** `applyEstimate` zapisuje
@@ -145,8 +151,9 @@ musi zostać potraktowany jak brak wartości (odczyt wiersza i 200), inaczej wpi
 
 **`entry.portions` bywa `null` mimo niezerowego `source_recipe_id`.** Schemat tworzenia wpisu
 wymusza tę parę (`create-entry.ts:129-137`), ale tylko w chwili zapisu; kolumna w bazie jej nie
-pilnuje. `?? 1` w trasie jest tu obowiązkowe, nie defensywne — `null * cokolwiek` to `NaN`, które
-przeszłoby zaokrąglenie i wywróciło się dopiero na ograniczeniu bazy.
+pilnuje. `?? 1` w trasie jest tu obowiązkowe, nie defensywne — w JS `null * cokolwiek` to `0`,
+nie `NaN`, więc taki iloczyn przeszedłby bramkę 0–5000 i ograniczenie bazy, a wpis po cichu
+dostałby 0 kcal z etykietą „oszacowane z przepisu".
 
 ## Phase 1: Kontrakt serwerowy
 
@@ -386,6 +393,23 @@ większa od opisu, więc koszt niekontrolowanej pętli wzrósł.
 **Contract**: sekcja „Trasy AI" — pierwszy wpis usunięty, drugi uzupełniony o zdanie o wycenie
 z przepisu i o tym, że decyzja D6 tego planu świadomie zostawiła go otwartym dla S-05.
 
+#### 5. Testy jednostkowe trasy wyceny
+
+**File**: `tests/unit/diary-estimate-route.test.ts` (nowy) oraz `tests/setup/jest.setup.ts`
+
+**Intent**: Mnożenie porcji i bramka zakresu żyją w trasie (decyzja D1), więc testy serwisów z
+punktów 1–2 ich nie dosięgają. Nowy plik woła `POST` z `estimate.ts` bezpośrednio i pokrywa:
+porcje 1, 2, 1,5 i `null`, iloczyn ponad 5000 kcal, wybór gałęzi (brak przepisu, wiersz-sierota,
+`RecipeNotFoundError` → gałąź opisowa, nie 404), wpis z wartością bez modelu oraz 502
+`AI_UNAVAILABLE` z gałęzi przepisowej.
+
+**Contract**: plik deklaruje `@jest-environment node`, bo trasa buduje `Response`, którego jsdom
+nie dostarcza. `CalorieEstimationService` zamockowany w całości (ten sam powód co w punkcie 1),
+`DiaryService` prawdziwy z podmienionymi metodami — inaczej `instanceof RecipeNotFoundError`
+porównywałby dwie różne klasy. Globalny mock `window.matchMedia` w `jest.setup.ts` dostaje warunek
+`typeof window !== "undefined"`: bez niego setup wywraca każdy plik w środowisku node, zanim
+dojdzie do pierwszej asercji. Pliki jsdom zachowują się bez zmian.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -430,8 +454,13 @@ weryfikację `curl`-em w Fazie 1 i przez E2E w Fazie 3.
 3. Wpis z przepisu bez bloku na 1 porcję: zapisz i policz, zanotuj wartość
 4. Ten sam przepis na 2 porcje: wartość powinna być mniej więcej dwukrotnie większa
 5. Wpis opisowy („zjadłem frytki", „około 200 g"): wartość i etykieta jak przed zmianą
-6. Usuń przepis użyty w kroku 3 i sprawdź, że wpis i suma dnia się nie zmieniły; kliknij przy nim
-   „Policz ponownie" i sprawdź, że dostaje „oszacowane z opisu" zamiast błędu
+6. Z tego samego przepisu bez bloku zrób jeszcze jeden wpis przyciskiem „Zapisz" (bez wyceny —
+   zostaje „Nie policzono"). Usuń przepis i sprawdź, że wyceniony wpis z kroku 3 i suma dnia się
+   nie zmieniły
+7. Przy wpisie z kroku 6 kliknij „Policz kalorie" i sprawdź, że dostaje „oszacowane z opisu"
+   zamiast błędu — wpis wyceniony („valued") nie ma przycisku wyceny, a trasa przy
+   `calories !== null` i tak nie woła modelu, więc tej gałęzi nie da się sprawdzić na wpisie
+   z kroku 3
 
 ## Performance Considerations
 
@@ -476,38 +505,38 @@ a ich przeliczenie znaczyłoby nadpisanie wartości, których użytkownik mógł
 #### Manual
 
 - [x] 1.4 `curl -X POST` na `/api/diary-entries/<id>/estimate` dla wpisu z przepisem bez bloku odżywczego i `portions = 2` zwraca wiersz z `calorie_origin: "ai_from_recipe"` i wartością mniej więcej dwukrotnie większą niż ten sam przepis z `portions = 1` — f8cdfc2
-- [x] 1.5 Ten sam `curl` na wpisie opisowym zwraca `calorie_origin: "ai_from_description"` i wartość porównywalną z tą sprzed zmiany — f8cdfc2
-- [x] 1.6 Wpis z `portions` i `source_recipe_id = null` dostaje `ai_from_description`, a trasa nie zwraca 404 — f8cdfc2
+- [x] 1.5 Ten sam `curl` na wpisie **opisowym** zwraca `calorie_origin: "ai_from_description"` i wartość porównywalną z tą sprzed zmiany — f8cdfc2
+- [x] 1.6 Wpis z `portions` i `source_recipe_id = null` (wiersz po usuniętym przepisie) dostaje `ai_from_description`, a trasa nie zwraca 404 — f8cdfc2
 - [x] 1.7 Wywołanie z nieprawidłowym `OPENROUTER_API_KEY` nadal kończy się 502 `AI_UNAVAILABLE`, a nie 500 — f8cdfc2
 
 ### Phase 2: Powierzchnia dziennika
 
 #### Automated
 
-- [x] 2.1 Sprawdzenie typów przechodzi: `npm run typecheck`
-- [x] 2.2 Lint przechodzi: `npm run lint`
-- [x] 2.3 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 Sprawdzenie typów przechodzi: `npm run typecheck` — a7b06ea
+- [x] 2.2 Lint przechodzi: `npm run lint` — a7b06ea
+- [x] 2.3 Formatowanie zgodne: `npm run format:check` — a7b06ea
 
 #### Manual
 
-- [x] 2.4 Wpis zapisany z przepisu bez bloku odżywczego po wycenie pokazuje „oszacowane z przepisu"
-- [x] 2.5 Wpis opisowy po wycenie nadal pokazuje „oszacowane z opisu"
-- [x] 2.6 Po wybraniu przepisu w formularzu zdanie pod przyciskami mówi o treści przepisu; po „Usuń wybór" wraca zdanie o opisie posiłku
-- [x] 2.7 Przy wierszu wpisu z przepisu w stanie „Nie policzono" stoi zdanie o treści przepisu, a przy wierszu opisowym — o opisie posiłku
+- [x] 2.4 Wpis zapisany z przepisu bez bloku odżywczego po wycenie pokazuje „oszacowane z przepisu" — a7b06ea
+- [x] 2.5 Wpis opisowy po wycenie nadal pokazuje „oszacowane z opisu" — a7b06ea
+- [x] 2.6 Po wybraniu przepisu w formularzu zdanie pod przyciskami mówi o treści przepisu; po „Usuń wybór" wraca zdanie o opisie posiłku — a7b06ea
+- [x] 2.7 Przy wierszu wpisu z przepisu w stanie „Nie policzono" stoi zdanie o treści przepisu, a przy wierszu opisowym — o opisie posiłku — a7b06ea
 
 ### Phase 3: Testy i domknięcie bramki
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą: `npm run test`
-- [ ] 3.2 Testy E2E przechodzą: `npm run test:e2e`
-- [ ] 3.3 Sprawdzenie typów przechodzi: `npm run typecheck`
-- [ ] 3.4 Lint przechodzi: `npm run lint`
-- [ ] 3.5 Formatowanie zgodne: `npm run format:check`
-- [ ] 3.6 Audyt bezpieczeństwa przechodzi: `npm run test:security`
+- [x] 3.1 Testy jednostkowe przechodzą: `npm run test`
+- [x] 3.2 Testy E2E przechodzą: `npm run test:e2e`
+- [x] 3.3 Sprawdzenie typów przechodzi: `npm run typecheck`
+- [x] 3.4 Lint przechodzi: `npm run lint`
+- [x] 3.5 Formatowanie zgodne: `npm run format:check`
+- [x] 3.6 Audyt bezpieczeństwa przechodzi: `npm run test:security`
 
 #### Manual
 
-- [ ] 3.7 Pełne przejście ścieżki w przeglądarce: przepis bez bloku → wpis na 2 porcje → „Policz kalorie" → wartość z etykietą „oszacowane z przepisu", wchodząca do sumy dnia
-- [ ] 3.8 Ekrany sprzed zmiany — przepisy z wyszukiwarką, profil, logowanie, rejestracja — zachowują się jak dotąd
-- [ ] 3.9 Usunięcie przepisu, z którego powstał wpis, nie zmienia ani wpisu, ani sumy tamtego dnia
+- [x] 3.7 Pełne przejście ścieżki w przeglądarce: przepis bez bloku → wpis na 2 porcje → „Policz kalorie" → wartość z etykietą „oszacowane z przepisu", wchodząca do sumy dnia
+- [x] 3.8 Ekrany sprzed zmiany — przepisy z wyszukiwarką, profil, logowanie, rejestracja — zachowują się jak dotąd
+- [x] 3.9 Usunięcie przepisu, z którego powstał wpis, nie zmienia ani wpisu, ani sumy tamtego dnia

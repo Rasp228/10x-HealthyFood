@@ -277,4 +277,66 @@ test.describe("Diary Entry", () => {
     // 8. Oznacz test jako zaliczony (umożliwia czyszczenie danych)
     testPassed = true;
   });
+
+  test("should offer estimation from the recipe content for an uncounted entry with portions", async ({ baseURL }) => {
+    // Scenariusz celowo nie klika w „Policz kalorie" - precedens z pozostałych: suita zostaje
+    // deterministyczna i nie dotyka OpenRoutera. Sprawdzamy powierzchnię wyceny z przepisu:
+    // wpis z liczbą porcji ląduje w stanie „Nie policzono", a zdanie przy nim mówi o treści
+    // przepisu, bo to ona opuści produkt po kliknięciu.
+    const runId = Date.now();
+    const recipe: RecipeData = {
+      title: `E2E Orzechy na porcje ${runId}`,
+      content: RECIPE_CONTENT_WITHOUT_NUTRITION,
+      additionalParams: "e2e-test",
+    };
+    const portions = 2;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Inicjalizuj serwis czyszczenia po zalogowaniu
+    app.initializeCleanup(baseURL || "http://localhost:3000", testCredentials.userId);
+
+    // 3. Przepis bez bloku odżywczego - jedyny, dla którego wycena z treści ma sens
+    await app.homePage.clickAddRecipe();
+    await app.recipeFormPage.expectAddRecipeModal();
+    await app.recipeFormPage.fillRecipeForm(recipe);
+    await app.recipeFormPage.submitForm();
+    await app.recipeFormPage.expectModalClosed();
+
+    // 4. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const missingBefore = await app.diaryPage.readMissingCount();
+
+    // 5. Bez wybranego przepisu formularz uprzedza o samym opisie posiłku
+    await app.diaryPage.expectAiNotice();
+
+    // 6. Po wybraniu przepisu zdanie się zmienia - wychodzi treść przepisu, nie sam opis
+    await app.diaryPage.selectRecipe(recipe.title);
+    await app.diaryPage.expectRecipeMode(recipe.title);
+    await app.diaryPage.expectRecipeAiNotice();
+
+    // 7. Dwie porcje; podgląd przyznaje się do braku wartości i kieruje na wycenę po zapisie
+    await app.diaryPage.setPortions(String(portions));
+    await app.diaryPage.expectRecipePreview(
+      "Ten przepis nie podaje wartości odżywczych na porcję — kalorie ustalisz po zapisaniu wpisu"
+    );
+
+    // 8. Zapis
+    await app.diaryPage.submitEntry();
+
+    // 9. Wiersz niesie liczbę porcji i czeka na wycenę, a zdanie przy nim mówi o treści przepisu
+    await app.diaryPage.expectEntryVisible(recipe.title);
+    await app.diaryPage.expectEntryAmount(recipe.title, `${portions} porcje`);
+    await app.diaryPage.expectNotCalculated(recipe.title);
+    await app.diaryPage.expectEntryRecipeAiNotice(recipe.title);
+    await app.diaryPage.expectMissingCount(missingBefore + 1);
+
+    // 10. Oznacz test jako zaliczony (umożliwia czyszczenie danych)
+    testPassed = true;
+  });
 });

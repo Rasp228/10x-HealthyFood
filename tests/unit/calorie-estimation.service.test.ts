@@ -46,6 +46,21 @@ const estimateFor = (content: string, amountText: string | null = null): Promise
   return new CalorieEstimationService().estimateFromDescription("frytki", amountText);
 };
 
+/**
+ * Treść przepisu używana w gałęzi przepisowej.
+ *
+ * Celowo bez słowa „porcja" w żadnej formie: jedna z asercji sprawdza, że do promptu nie trafia
+ * liczba porcji, a przepis niosący to słowo sam by ją unieważnił.
+ */
+const RECIPE_CONTENT = "Składniki:\n- 100 g płatków owsianych\n- 200 ml mleka\n\nPrzygotowanie:\n1. Zagotuj mleko";
+
+/** Wynik wyceny z przepisu dla odpowiedzi modelu o podanej treści. */
+const estimateRecipeFor = (content: string, entryNote: string | null = null): Promise<number | null> => {
+  sendMessage.mockResolvedValue(chatResponse(content));
+
+  return new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, entryNote);
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   OpenRouterServiceMock.mockImplementation(() => ({ sendMessage, setResponseFormat }));
@@ -247,6 +262,92 @@ describe("CalorieEstimationService", () => {
       await expect(new CalorieEstimationService().estimateFromDescription("frytki", null)).rejects.toThrow();
 
       expect(sendMessage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("estimateFromRecipe", () => {
+    describe("prompt", () => {
+      it("wysyła treść przepisu razem z notatką użytkownika", async () => {
+        // Oba źródła naraz są tu całą rzeczą: bez treści przepisu model liczyłby z samego tytułu,
+        // a bez notatki przepadłaby jedyna poprawka, którą użytkownik mógł wnieść („bez sera").
+        sendMessage.mockResolvedValue(chatResponse('{"calories": 320}'));
+
+        await new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, "bez sera");
+
+        expect(userMessageSent()).toContain(RECIPE_CONTENT);
+        expect(userMessageSent()).toContain("Notatka użytkownika: bez sera");
+      });
+
+      it("mówi wprost, że notatki nie ma, zamiast milczeć o niej", async () => {
+        sendMessage.mockResolvedValue(chatResponse('{"calories": 320}'));
+
+        await new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, null);
+
+        expect(userMessageSent()).toContain("Notatka użytkownika: brak");
+      });
+
+      it("pyta własną wiadomością systemową o kalorie JEDNEJ porcji", async () => {
+        // Inne pytanie niż na ścieżce opisowej („ile ma ta porcja, którą opisano"), więc i inna
+        // wiadomość systemowa - wspólna psułaby jedną z dwóch gałęzi.
+        sendMessage.mockResolvedValue(chatResponse('{"calories": 320}'));
+
+        await new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, null);
+
+        expect(systemMessageSent()).toContain("JEDNEJ porcji");
+        expect(systemMessageSent()).not.toContain("CAŁEJ opisanej porcji");
+      });
+
+      it("nie wysyła liczby porcji - mnożenie należy do trasy, nie do modelu", async () => {
+        // Gdyby liczba porcji poszła w prompcie, iloczyn liczyłby model, a granica 5000 kcal
+        // przestałaby dawać się sprawdzić bez jego wywołania.
+        sendMessage.mockResolvedValue(chatResponse('{"calories": 320}'));
+
+        await new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, "Owsianka z bananem");
+
+        expect(userMessageSent()).not.toMatch(/porcj/i);
+      });
+    });
+
+    describe("liczba wraca z odpowiedzi", () => {
+      it("przyjmuje czysty obiekt JSON", async () => {
+        await expect(estimateRecipeFor('{"calories": 320}')).resolves.toBe(320);
+      });
+
+      it("radzi sobie z odpowiedzią owiniętą w ogrodzenia ```json", async () => {
+        await expect(estimateRecipeFor('```json\n{"calories": 640}\n```')).resolves.toBe(640);
+      });
+
+      it("woła dostawcę dokładnie raz", async () => {
+        await estimateRecipeFor('{"calories": 320}');
+
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("odpowiedź bezużyteczna daje null, a nie wyjątek", () => {
+      it("odrzuca jawne null, które sam prompt dopuszcza przy nieczytelnym przepisie", async () => {
+        await expect(estimateRecipeFor('{"calories": null}')).resolves.toBeNull();
+      });
+
+      it("odrzuca wartość powyżej sufitu - granica 0-5000 obowiązuje już na jednej porcji", async () => {
+        // Ta sama granica nakłada się drugi raz na iloczyn po stronie trasy. Tu chroni przed
+        // wartością, której żadna liczba porcji nie naprawi.
+        await expect(estimateRecipeFor('{"calories": 5001}')).resolves.toBeNull();
+      });
+
+      it("odrzuca wartość ujemną", async () => {
+        await expect(estimateRecipeFor('{"calories": -1}')).resolves.toBeNull();
+      });
+    });
+
+    describe("awaria dostawcy to co innego niż odpowiedź bezużyteczna", () => {
+      it("wypuszcza OpenRouterError na zewnątrz, bo trasa buduje z niego to samo 502 co na gałęzi opisowej", async () => {
+        sendMessage.mockRejectedValue(new RateLimitError());
+
+        await expect(new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, null)).rejects.toThrow(
+          OpenRouterError
+        );
+      });
     });
   });
 });

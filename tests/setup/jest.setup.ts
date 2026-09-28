@@ -14,20 +14,26 @@ if (typeof global.TextDecoder === "undefined") {
   global.TextDecoder = TextDecoder as any;
 }
 
-// Globalne mocki dla Astro/browser APIs
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: jest.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// Globalne mocki dla Astro/browser APIs.
+//
+// Pod warunkiem, bo nie każdy plik testowy biegnie w jsdom: testy kodu serwerowego deklarują
+// `@jest-environment node` (trasa buduje `Response`, którego jsdom nie dostarcza), a tam `window`
+// nie istnieje i samo wejście w ten blok wywracało cały plik przed pierwszą asercją.
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+}
 
 // Mock dla IntersectionObserver
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
