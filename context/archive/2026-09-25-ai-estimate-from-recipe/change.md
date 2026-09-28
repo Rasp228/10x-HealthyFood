@@ -1,7 +1,8 @@
 ---
 change_id: ai-estimate-from-recipe
 title: Oszacowanie kalorii z treści przepisu
-status: impl_reviewed
+status: archived
+archived_at: 2026-09-28T14:22:37Z
 created: 2026-09-25
 updated: 2026-09-28
 ---
