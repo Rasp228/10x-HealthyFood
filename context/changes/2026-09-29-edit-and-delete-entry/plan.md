@@ -561,7 +561,7 @@ i przeliczyć z uwzględnieniem porcji.
 
 #### Manual
 
-- [ ] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID)
+- [x] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID) — e1edc34
 - [x] 1.7 `PATCH` z `{calories: N}` z pola w wierszu dalej zapisuje liczbę „wpisane ręcznie” — a5bd9b7
 
 ### Phase 2: Powierzchnia dziennika
