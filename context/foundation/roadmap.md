@@ -50,7 +50,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 | S-02 | `ai-estimate-for-free-text` | poprosić o wyliczenie kalorii dla opisowego wpisu i dostać wartość bez czekania na zapis | S-01 | US-01, FR-003, FR-004, FR-011 | done |
 | S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | done |
 | S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | done |
-| S-05 | `edit-and-delete-entry` | poprawić dowolną część zapisanego wpisu i usunąć wpis po potwierdzeniu | S-01, S-02 | US-01, FR-005, FR-006 | in-progress |
+| S-05 | `edit-and-delete-entry` | poprawić dowolną część zapisanego wpisu i usunąć wpis po potwierdzeniu | S-01, S-02 | US-01, FR-005, FR-006 | done |
 | S-06 | `daily-goal-and-progress` | ustawić w profilu opcjonalny dzienny cel kaloryczny i widzieć sumę dnia względem niego | S-01 | FR-012, FR-013, FR-015 | proposed |
 
 ## Streams
@@ -155,7 +155,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** automatyczne przeliczanie po każdej edycji skasowałoby po cichu wartość, którą użytkownik poprawił ręcznie — czyli dokładnie to zabezpieczenie, po które istnieje FR-004. Jawne żądanie jest tu wymaganiem poprawności, nie wygody. Zależy od `S-02`, bo „zaproponuj przeliczenie" zakłada, że jest czym przeliczyć. Potwierdzenie przy usuwaniu kosztuje jeden dialog i pokrywa przypadkowe dotknięcia na telefonie.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-06: Dzienny cel kaloryczny i postęp
 
@@ -213,3 +213,4 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **S-02: użytkownik prosi o wyliczenie kalorii dla opisowego wpisu; wpis zapisuje się i pojawia na liście natychmiast, wartość dopisuje się później, a gdy nie ustali się w ciągu minuty, wpis pokazuje się jako niepoliczony z możliwością wpisania liczby ręcznie. Suma dnia mówi, ilu wartości jeszcze w niej nie ma.** — Archived 2026-09-24 → `context/archive/2026-09-23-ai-estimate-for-free-text/`. Lesson: —.
 - **S-03: użytkownik wyszukuje swoje przepisy po nazwie, wybiera jeden jako treść wpisu i podaje liczbę zjedzonych porcji (pole startuje od jedynki); wartość kaloryczna bierze się z figur odżywczych przepisu tam, gdzie te figury same deklarują, że opisują jedną porcję, przemnożona przez liczbę porcji. Wyświetlona wartość mówi, skąd pochodzi, i można ją zastąpić liczbą wpisaną ręcznie.** — Archived 2026-09-25 → `context/archive/2026-09-25-recipe-entry-with-portions/`. Lesson: —.
 - **S-04: użytkownik prosi o oszacowanie kalorii z samej treści przepisu, gdy ten nie ma figur odżywczych albo ma takie, które nie mówią, co opisują; wynik trafia do wpisu dziennika, oznaczony jako oszacowany z przepisu, i nigdy nie jest zapisywany do samego przepisu.** — Archived 2026-09-28 → `context/archive/2026-09-25-ai-estimate-from-recipe/`. Lesson: —.
+- **S-05: użytkownik poprawia dowolną część zapisanego wpisu — treść, ilość, wartość kaloryczną i dzień — oraz usuwa wpis po potwierdzeniu. Przeliczenie wartości po edycji dzieje się wyłącznie na jego jawne żądanie; dopóki go nie zażąda, stoi wartość zapisana.** — Archived 2026-09-29 → `context/archive/2026-09-29-edit-and-delete-entry/`. Lesson: —.
