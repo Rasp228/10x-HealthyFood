@@ -579,13 +579,13 @@ i przeliczyć z uwzględnieniem porcji.
 
 #### Automated
 
-- [x] 3.1 Scenariusze E2E dziennika przechodzą: `npm run test:e2e -- tests/e2e/diary-entry.spec.ts`
-- [x] 3.2 Testy jednostkowe przechodzą: `npm run test`
-- [x] 3.3 Typy bez błędów: `npm run typecheck`
-- [x] 3.4 Lint przechodzi: `npm run lint`
-- [x] 3.5 Formatowanie zgodne: `npm run format:check`
+- [x] 3.1 Scenariusze E2E dziennika przechodzą: `npm run test:e2e -- tests/e2e/diary-entry.spec.ts` — 157ebb5
+- [x] 3.2 Testy jednostkowe przechodzą: `npm run test` — 157ebb5
+- [x] 3.3 Typy bez błędów: `npm run typecheck` — 157ebb5
+- [x] 3.4 Lint przechodzi: `npm run lint` — 157ebb5
+- [x] 3.5 Formatowanie zgodne: `npm run format:check` — 157ebb5
 
 #### Manual
 
-- [x] 3.6 Po E2E konto testowe nie ma wpisów pod dniami scenariuszy
-- [x] 3.7 `known-drift.md` opisuje stan sieroty i F2 zgodnie z kodem
+- [x] 3.6 Po E2E konto testowe nie ma wpisów pod dniami scenariuszy — 157ebb5
+- [x] 3.7 `known-drift.md` opisuje stan sieroty i F2 zgodnie z kodem — 157ebb5
