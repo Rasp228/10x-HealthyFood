@@ -163,7 +163,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
       return new Response(JSON.stringify(current), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    const updated = await diaryService.applyEstimate(user.id, entryId, estimate, origin);
+    // Znacznik z kroku stemplowania: zapis trafi tylko wtedy, gdy nikt w międzyczasie nie
+    // unieważnił tego zlecenia (edycja, "Zapisz i przelicz", nowe zlecenie z innej karty).
+    const updated = await diaryService.applyEstimate(user.id, entryId, estimate, origin, entry.estimation_requested_at);
 
     if (!updated) {
       return new Response(JSON.stringify({ error: "Wpis nie został znaleziony" }), {

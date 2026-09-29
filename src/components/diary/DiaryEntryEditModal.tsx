@@ -193,6 +193,13 @@ export default function DiaryEntryEditModal({ entry, isOpen, today, onClose, onS
   };
 
   const submit = async (recalculate: boolean) => {
+    // „Zapisz” bez żadnej zmiany nie ma czego wysłać - zamyka modal jak „Anuluj”, zamiast
+    // pokazywać błąd pustego ciała. „Zapisz i przelicz” zawsze niesie `recalculate`.
+    if (!recalculate && Object.keys(toPayload(values, entry, false)).length === 0) {
+      onClose();
+      return;
+    }
+
     const { result, issues } = validate(values, recalculate);
 
     if (!result.success || issues.length > 0) {

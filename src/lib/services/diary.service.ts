@@ -209,6 +209,12 @@ export class DiaryService {
    * wymaga ich razem. Warunek `.is("calories", null)` chroni liczbę, którą użytkownik zdążył
    * wpisać ręcznie, zanim model odpowiedział - wyścig kończy się po stronie człowieka.
    *
+   * Drugi warunek - znacznik równy temu, który zapisało to samo żądanie - chroni wpis, który
+   * zmienił się w trakcie wyceny. Anulowanie w przeglądarce nie zatrzymuje trasy, więc bez niego
+   * wycena treści sprzed edycji albo sprzed "Zapisz i przelicz" wylądowałaby na wierszu, który
+   * `updateEntry` już wyzerował. Każdy zapis, który unieważnia wycenę, zeruje znacznik, a nowe
+   * zlecenie nadpisuje go własnym - wygrywa więc tylko najnowsze zlecenie.
+   *
    * @param userId - ID użytkownika
    * @param entryId - ID wpisu
    * @param calories - Oszacowana wartość energetyczna
@@ -216,14 +222,22 @@ export class DiaryService {
    *   policzyła. Typ zawężony do dwóch oszacowań AI: `manual` i `recipe_nutrition` mają własne,
    *   bezwarunkowe ścieżki zapisu (`updateEntry`, `createEntry`), a bez zawężenia tą
    *   metodą dałoby się zapisać `manual` na wpisie, którego użytkownik nie tknął.
+   * @param requestedAt - `estimation_requested_at` wiersza zwróconego przez
+   *   `markEstimationRequested`, czyli dokładnie w zapisie bazy. `null` znaczy, że to żądanie
+   *   niczego nie ostemplowało - wtedy nic nie zapisujemy.
    * @returns Faktyczny stan wiersza albo `null`, gdy taki wpis u tego użytkownika nie istnieje
    */
   async applyEstimate(
     userId: string,
     entryId: number,
     calories: number,
-    origin: Extract<CalorieOriginEnum, "ai_from_description" | "ai_from_recipe">
+    origin: Extract<CalorieOriginEnum, "ai_from_description" | "ai_from_recipe">,
+    requestedAt: string | null
   ): Promise<DiaryEntryDto | null> {
+    if (requestedAt === null) {
+      return this.getEntry(userId, entryId);
+    }
+
     const { data: updated, error } = await this.supabase
       .from("diary_entries")
       .update({
@@ -234,6 +248,7 @@ export class DiaryService {
       .eq("id", entryId)
       .eq("user_id", userId)
       .is("calories", null)
+      .eq("estimation_requested_at", requestedAt)
       .select()
       .maybeSingle();
 
@@ -335,6 +350,16 @@ export class DiaryService {
     } else if (command.calories !== undefined) {
       changes.calories = command.calories;
       changes.calorie_origin = "manual";
+    }
+
+    // Zmieniona treść albo ilość unieważnia wycenę zleconą dla poprzedniej wersji wpisu: wynik
+    // opisywałby inny posiłek. Zerowanie znacznika odcina ją w `applyEstimate` (warunek na
+    // znaczniku), a wiersz wraca do "Policz kalorie". Wpis z wartością nie czeka na żadną wycenę.
+    const describesMeal =
+      command.content !== undefined || command.amount_text !== undefined || command.portions !== undefined;
+
+    if (describesMeal && changes.calories === undefined && current.calories === null) {
+      changes.estimation_requested_at = null;
     }
 
     // `.maybeSingle()`: wpis mógł zniknąć między odczytem a zapisem - to wciąż "nie ma takiego

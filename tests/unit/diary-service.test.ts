@@ -486,12 +486,35 @@ describe("DiaryService", () => {
   });
 
   describe("applyEstimate", () => {
+    /** Znacznik, który zapisało to samo żądanie w `markEstimationRequested`. */
+    const STAMP = "2026-09-23T08:00:00.000Z";
     const estimated = storedEntry({ calories: 320, calorie_origin: "ai_from_description" });
+
+    it("zapisuje tylko przy znaczniku własnego zlecenia - edycja w trakcie wyceny ją unieważnia", async () => {
+      // Anulowanie w przeglądarce nie zatrzymuje trasy. Gdyby nie ten warunek, wycena treści
+      // sprzed edycji trafiłaby na wiersz, który `updateEntry` wyzerował razem ze znacznikiem.
+      const edited = storedEntry({ content: "Owsianka bez cukru", estimation_requested_at: null });
+      const stub = createSupabaseStub({ data: null, error: null }, { data: edited, error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
+
+      expect(stub.builder.eq).toHaveBeenCalledWith("estimation_requested_at", STAMP);
+      expect(result).toEqual(edited);
+    });
+
+    it("bez znacznika niczego nie zapisuje i oddaje stan faktyczny wiersza", async () => {
+      const stub = createSupabaseStub({ data: storedEntry(), error: null });
+
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", null);
+
+      expect(stub.builder.update).not.toHaveBeenCalled();
+      expect(result).toEqual(storedEntry());
+    });
 
     it("ustawia calorie_origin 'ai_from_description' razem z liczbą", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
 
       expect(updatePayload(stub)).toMatchObject({
         calories: 320,
@@ -502,7 +525,7 @@ describe("DiaryService", () => {
     it("zapisuje warunkowo, więc spóźnione oszacowanie nie nadpisze liczby wpisanej ręcznie", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
 
       expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
       expect(stub.builder.maybeSingle).toHaveBeenCalled();
@@ -516,7 +539,7 @@ describe("DiaryService", () => {
       const fromRecipe = storedEntry({ calories: 500, calorie_origin: "ai_from_recipe", source_recipe_id: 7 });
       const stub = createSupabaseStub({ data: fromRecipe, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe");
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe", STAMP);
 
       expect(updatePayload(stub)).toMatchObject({
         calories: 500,
@@ -531,7 +554,7 @@ describe("DiaryService", () => {
       const manual = storedEntry({ calories: 450, calorie_origin: "manual", source_recipe_id: 7 });
       const stub = createSupabaseStub({ data: null, error: null }, { data: manual, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe");
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 500, "ai_from_recipe", STAMP);
 
       expect(stub.builder.is).toHaveBeenCalledWith("calories", null);
       expect(result).toEqual(manual);
@@ -540,7 +563,7 @@ describe("DiaryService", () => {
     it("nie dotyka estimation_requested_at", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
 
       expect(updatePayload(stub)).not.toHaveProperty("estimation_requested_at");
     });
@@ -548,7 +571,7 @@ describe("DiaryService", () => {
     it("filtruje po id i po user_id", async () => {
       const stub = createSupabaseStub({ data: estimated, error: null });
 
-      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
+      await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
 
       expect(stub.builder.eq).toHaveBeenCalledWith("id", 1);
       expect(stub.builder.eq).toHaveBeenCalledWith("user_id", "user-1");
@@ -558,7 +581,7 @@ describe("DiaryService", () => {
       const manual = storedEntry({ calories: 450, calorie_origin: "manual" });
       const stub = createSupabaseStub({ data: null, error: null }, { data: manual, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description");
+      const result = await new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP);
 
       expect(result).toEqual(manual);
     });
@@ -566,7 +589,13 @@ describe("DiaryService", () => {
     it("zwraca null dla cudzego albo nieistniejącego wpisu", async () => {
       const stub = createSupabaseStub({ data: null, error: null }, { data: null, error: null });
 
-      const result = await new DiaryService(stub.client).applyEstimate("user-1", 999, 320, "ai_from_description");
+      const result = await new DiaryService(stub.client).applyEstimate(
+        "user-1",
+        999,
+        320,
+        "ai_from_description",
+        STAMP
+      );
 
       expect(result).toBeNull();
     });
@@ -575,7 +604,7 @@ describe("DiaryService", () => {
       const stub = createSupabaseStub({ data: null, error: new Error("naruszenie ograniczenia") });
 
       await expect(
-        new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description")
+        new DiaryService(stub.client).applyEstimate("user-1", 1, 320, "ai_from_description", STAMP)
       ).rejects.toThrow("naruszenie ograniczenia");
     });
   });
@@ -615,6 +644,26 @@ describe("DiaryService", () => {
       expect(payload).not.toHaveProperty("calories");
       expect(payload).not.toHaveProperty("calorie_origin");
       expect(payload).not.toHaveProperty("estimation_requested_at");
+    });
+
+    it("zmiana treści wpisu bez wartości zeruje znacznik, żeby wycena starej treści nie trafiła", async () => {
+      const pending = storedEntry({ amount_text: "1 talerz", estimation_requested_at: "2026-09-23T08:00:00.000Z" });
+      const stub = createSupabaseStub(rowRead(pending), { data: pending, error: null });
+
+      await new DiaryService(stub.client).updateEntry("user-1", 1, { content: "Owsianka bez cukru" });
+
+      const payload = updatePayload(stub);
+      expect(payload).toMatchObject({ content: "Owsianka bez cukru", estimation_requested_at: null });
+      expect(payload).not.toHaveProperty("calories");
+    });
+
+    it("zmiana samego dnia wpisu bez wartości nie unieważnia wyceny", async () => {
+      const pending = storedEntry({ estimation_requested_at: "2026-09-23T08:00:00.000Z" });
+      const stub = createSupabaseStub(rowRead(pending), { data: pending, error: null });
+
+      await new DiaryService(stub.client).updateEntry("user-1", 1, { entry_date: "2026-09-22" });
+
+      expect(updatePayload(stub)).not.toHaveProperty("estimation_requested_at");
     });
 
     it("calories: N zapisuje liczbę z pochodzeniem 'manual' i nie dotyka znacznika", async () => {

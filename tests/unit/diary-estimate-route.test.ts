@@ -181,6 +181,17 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
   });
 
   describe("wybór gałęzi", () => {
+    it("przekazuje do zapisu znacznik z kroku stemplowania, żeby unieważnione zlecenie nie trafiło", async () => {
+      markEstimationRequested.mockResolvedValue(
+        storedEntry({ estimation_requested_at: "2026-09-29T10:00:00.123+00:00" })
+      );
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext());
+
+      expect(applyEstimate.mock.calls[0][4]).toBe("2026-09-29T10:00:00.123+00:00");
+    });
+
     it("wpis bez przepisu idzie gałęzią opisową, dokładnie jak przed zmianą", async () => {
       markEstimationRequested.mockResolvedValue(storedEntry({ content: "frytki", amount_text: "około 200 g" }));
       estimateFromDescription.mockResolvedValue(420);

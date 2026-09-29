@@ -101,7 +101,11 @@ declare
   a_wlasne bigint;
   b_obce   bigint;
   b_wlasne bigint;
+  wiersz_a bigint;
   wiersz_b bigint;
+  a_zmienia_wlasny bigint;
+  a_oddaje_wlasny  text;
+  a_usuwa_wlasny   bigint;
   a_zmienia_obce bigint;
   a_usuwa_obce   bigint;
   b_nietkniety   bigint;
@@ -125,9 +129,10 @@ begin
 
   -- 3b. Dane testowe: po jednym wierszu dla każdego z dwóch użytkowników. Wstawiane jeszcze
   -- przed przełączeniem roli, czyli z pominięciem RLS. Jedyna tabela, której dotyka ten skrypt.
-  -- Wiersz B osobnym insertem, bo jego id jest celem prób UPDATE i DELETE w 3d'.
+  -- Osobne inserty, bo id obu wierszy są celem prób UPDATE i DELETE w 3d' i 3d''.
   insert into diary_entries (user_id, entry_date, content)
-  values ('<uuid-a>'::uuid, current_date, 'rls check - wpis użytkownika A');
+  values ('<uuid-a>'::uuid, current_date, 'rls check - wpis użytkownika A')
+  returning id into wiersz_a;
 
   insert into diary_entries (user_id, entry_date, content)
   values ('<uuid-b>'::uuid, current_date, 'rls check - wpis użytkownika B')
@@ -160,6 +165,30 @@ begin
    where id = wiersz_b;
   get diagnostics a_usuwa_obce = row_count;
 
+  -- 3d''. Kontrola pozytywna: te same polityki przepuszczają zmianę i usunięcie WŁASNEGO wiersza.
+  -- Bez niej zera z 3d' przeszłyby też przy polityce `using (false)`, która blokuje wszystko -
+  -- a wtedy trasy PATCH i DELETE kończyłyby się 404 dla właściciela wpisu.
+  update diary_entries
+     set content = 'rls check - zmienione przez A'
+   where id = wiersz_a;
+  get diagnostics a_zmienia_wlasny = row_count;
+
+  -- Połowa `with check` polityki UPDATE: A nie może oddać własnego wiersza użytkownikowi B.
+  -- Naruszenie `with check` to błąd 42501, nie zero wierszy, więc łapiemy go w podbloku - jego
+  -- savepoint wycofuje tylko tę próbę, a blok główny liczy dalej.
+  begin
+    update diary_entries
+       set user_id = '<uuid-b>'::uuid
+     where id = wiersz_a;
+    a_oddaje_wlasny := 'przepuszczone';
+  exception when insufficient_privilege then
+    a_oddaje_wlasny := 'odrzucone';
+  end;
+
+  delete from diary_entries
+   where id = wiersz_a;
+  get diagnostics a_usuwa_wlasny = row_count;
+
   -- 3e. Użytkownik B widzi wyłącznie własne wiersze.
   perform set_config('request.jwt.claims', '{"sub":"<uuid-b>","role":"authenticated"}', true);
   uid_b := (auth.uid())::text;
@@ -188,6 +217,9 @@ begin
      and b_wlasne >= 1
      and a_zmienia_obce = 0
      and a_usuwa_obce = 0
+     and a_zmienia_wlasny = 1
+     and a_oddaje_wlasny = 'odrzucone'
+     and a_usuwa_wlasny = 1
      and b_nietkniety = 1
     then 'PASS'
     else 'FAIL'
@@ -208,6 +240,9 @@ begin
     E'  B widzi wlasnych     : %s   (wymagane: >= 1)\n'
     E'  A zmienia cudzy      : %s   (wymagane: 0)\n'
     E'  A usuwa cudzy        : %s   (wymagane: 0)\n'
+    E'  A zmienia wlasny     : %s   (wymagane: 1)\n'
+    E'  A oddaje wlasny B    : %s   (wymagane: odrzucone)\n'
+    E'  A usuwa wlasny       : %s   (wymagane: 1)\n'
     E'  wiersz B nietkniety  : %s   (wymagane: 1)',
     werdykt,
     coalesce(array_length(polityki_znalezione, 1), 0),
@@ -222,6 +257,9 @@ begin
     b_wlasne,
     a_zmienia_obce,
     a_usuwa_obce,
+    a_zmienia_wlasny,
+    a_oddaje_wlasny,
+    a_usuwa_wlasny,
     b_nietkniety
   );
 end

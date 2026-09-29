@@ -78,6 +78,7 @@ export default function DiaryPage() {
   const { estimate, cancel, inFlightId, queuedIds, settledIds } = useCalorieEstimation(refetch);
   const [entryToEdit, setEntryToEdit] = useState<DiaryEntryDto | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<DiaryEntryDto | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   /** Co ta wyspa wie o żądaniu dla wpisu. Wpis w kolejce jest dla użytkownika "w toku", stąd `live`. */
   const phaseFor = (entryId: number): EstimationRequestPhase => {
@@ -135,7 +136,8 @@ export default function DiaryPage() {
 
       // Wpis ma już liczbę, więc nie ma po co pytać o nią modelu - jeśli czekał w kolejce, wypada
       // z niej przed wysłaniem. Wartości w locie to nie dotyczy: przy niej pole jest nieaktywne,
-      // a spóźnione oszacowanie i tak nie nadpisze liczby (zapis warunkowy w `applyEstimate`).
+      // a spóźnione oszacowanie i tak nie nadpisze liczby (zapis warunkowy w `applyEstimate`,
+      // także po anulowaniu, bo trasa na serwerze kończy pracę mimo przerwanego `fetch`).
       cancel(entryId);
       refetch();
       showToast("Kalorie zostały zapisane", "success");
@@ -168,7 +170,9 @@ export default function DiaryPage() {
     setEntryToEdit(null);
     cancel(updated.id);
     refetch();
-    // Dzień w tym samym zapisie RRRR-MM-DD, który pokazuje datownik `DayNavigator`.
+    // Dzień w surowym zapisie RRRR-MM-DD: dziennik nie ma formatera daty do wyświetlania, a natywny
+    // datownik `DayNavigator` pokazuje datę w formacie lokalnym przeglądarki, więc zapisy mogą się
+    // różnić. Wspólny formater to osobna zmiana (przegląd wdrożenia `edit-and-delete-entry`, F4).
     showToast(moved ? `Wpis przeniesiono na ${updated.entry_date}` : "Wpis został zapisany", "success");
 
     if (recalculated && updated.calories === null && !moved) {
@@ -187,6 +191,10 @@ export default function DiaryPage() {
     const entryId = entryToDelete.id;
 
     setEntryToDelete(null);
+    // Dialog zamyka się od razu, więc do odpowiedzi wiersz trzyma zablokowane akcje - inaczej
+    // "Edytuj" otworzyłby modal na wpisie, który za chwilę dostanie 404. Po sukcesie `refetch()`
+    // i tak zdejmuje listę na czas ładowania.
+    setDeletingId(entryId);
     cancel(entryId);
 
     try {
@@ -205,6 +213,8 @@ export default function DiaryPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Wystąpił błąd podczas usuwania wpisu";
       showToast(message, "error");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -257,6 +267,7 @@ export default function DiaryPage() {
               entries={entries}
               entryState={entryState}
               inFlightId={inFlightId}
+              deletingId={deletingId}
               queuedIds={queuedIds}
               onEstimate={estimate}
               onCancel={cancel}

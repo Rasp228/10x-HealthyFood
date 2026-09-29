@@ -11,6 +11,8 @@ interface DiaryEntryListProps {
   /** Stan wartości wpisu liczy wyspa - ona jedna zna zegar i swoje żądania w locie. */
   entryState: (entry: DiaryEntryDto) => EstimationState;
   inFlightId: number | null;
+  /** Wpis, którego `DELETE` jest w drodze - jego akcje czekają na odpowiedź. */
+  deletingId: number | null;
   queuedIds: readonly number[];
   onEstimate: (entryId: number) => void;
   onCancel: (entryId: number) => void;
@@ -40,6 +42,7 @@ export default function DiaryEntryList({
   entries,
   entryState,
   inFlightId,
+  deletingId,
   queuedIds,
   onEstimate,
   onCancel,
@@ -51,9 +54,11 @@ export default function DiaryEntryList({
     <ul className="flex flex-col gap-3" data-testid="diary-entry-list">
       {entries.map((entry) => {
         const amount = amountLabel(entry);
-        // Wpis w locie ma zablokowane akcje: edycja albo usunięcie w trakcie wyceny ścigałyby się
-        // z `applyEstimate` o ten sam wiersz.
+        // Wpis w locie ma zablokowane akcje, żeby nie przerywać wyceny, na którą użytkownik czeka.
+        // Wyścigu z `applyEstimate` to nie zamyka - anulowana trasa i tak kończy pracę - zamyka go
+        // warunek na `estimation_requested_at`, który edycja zeruje.
         const isInFlight = inFlightId === entry.id;
+        const isLocked = isInFlight || deletingId === entry.id;
 
         return (
           <li
@@ -77,7 +82,7 @@ export default function DiaryEntryList({
                     variant="outline"
                     size="sm"
                     onClick={() => onEdit(entry)}
-                    disabled={isInFlight}
+                    disabled={isLocked}
                     aria-label={`Edytuj wpis: ${entry.content}`}
                     data-testid="diary-entry-edit-button"
                   >
@@ -89,7 +94,7 @@ export default function DiaryEntryList({
                     variant="ghost"
                     size="sm"
                     onClick={() => onDelete(entry)}
-                    disabled={isInFlight}
+                    disabled={isLocked}
                     aria-label={`Usuń wpis: ${entry.content}`}
                     className="text-destructive hover:text-destructive"
                     data-testid="diary-entry-delete-button"

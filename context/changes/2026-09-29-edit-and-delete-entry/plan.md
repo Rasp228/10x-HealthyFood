@@ -536,6 +536,15 @@ i przeliczyć z uwzględnieniem porcji.
 - Wzorce: `src/components/recipe/RecipeFormModal.tsx:61-68`, `src/components/pages/HomePage.tsx:394-403`,
   `tests/unit/diary-estimate-route.test.ts`
 
+## Addenda
+
+- **Sprzątanie E2E tylko po zdanym teście** (faza 3, pkt 3; przegląd wdrożenia, F5). `afterEach`
+  w `tests/e2e/diary-entry.spec.ts` sprząta `SCENARIO_DAYS` wyłącznie wtedy, gdy test przeszedł.
+  Nieudany test zostawia swoje wiersze pod `2000-01-01`/`1999-12-31` do obejrzenia, bo tych dni
+  nikt w dzienniku nie otwiera. Koszt: po porażce następny przebieg zaczyna z tymi wierszami, więc
+  asercje sumy dnia mogą się rozjechać, dopóki następny zdany test ich nie sprzątnie albo nie
+  zrobimy tego ręcznie.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
@@ -552,7 +561,7 @@ i przeliczyć z uwzględnieniem porcji.
 
 #### Manual
 
-- [x] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID) — a5bd9b7
+- [ ] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID)
 - [x] 1.7 `PATCH` z `{calories: N}` z pola w wierszu dalej zapisuje liczbę „wpisane ręcznie” — a5bd9b7
 
 ### Phase 2: Powierzchnia dziennika

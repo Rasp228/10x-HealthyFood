@@ -1,7 +1,7 @@
 ---
 change_id: edit-and-delete-entry
 title: Edycja i usuwanie wpisu dziennika
-status: implemented
+status: impl_reviewed
 created: 2026-09-29
 updated: 2026-09-29
 ---

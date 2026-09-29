@@ -69,9 +69,9 @@ dzisiaj na niej stoi.
 `src/pages/api/diary-entries/[id]/estimate.ts` oraz trzy trasy `src/pages/api/ai/` wołają dostawcę
 modelu bez żadnego ograniczenia liczby żądań na użytkownika. W trasie wyceny kalorii jedyną bramką
 jest `entry.calories !== null`: `markEstimationRequested` zapisuje `estimation_requested_at`, ale
-nic po stronie serwera tej kolumny nie czyta, więc dwie otwarte karty albo pętla w `curl` doprowadzą
-do modelu tyle wywołań, ile wyślą — wygrywa pierwszy `applyEstimate`, reszta jest opłacona
-i wyrzucona. Kolejka FIFO w `src/hooks/diary/useCalorieEstimation.ts` dyscyplinuje uczciwą
+czyta go tylko `applyEstimate`, i to już po wywołaniu modelu — żeby zapisać wynik wyłącznie
+najnowszego zlecenia. Dwie otwarte karty albo pętla w `curl` doprowadzą więc do modelu
+tyle wywołań, ile wyślą; zapisze się ostatnie zlecenie, reszta jest opłacona i wyrzucona. Kolejka FIFO w `src/hooks/diary/useCalorieEstimation.ts` dyscyplinuje uczciwą
 przeglądarkę, nie endpoint.
 
 Od S-04 ta sama trasa wycenia też wpisy z przepisu, wysyłając do modelu całą treść przepisu zamiast
@@ -86,7 +86,8 @@ dowolną liczbę razy, bez żadnego limitu po stronie serwera.
 Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustalenie F2; podtrzymane
 w planie `ai-estimate-from-recipe`, decyzja D6): model jest darmowy, użytkowników jest kilku,
 a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej w trasie wyceny to warunek
-świeżości znacznika w `markEstimationRequested` — kolumna już istnieje i czeka na czytelnika.
+świeżości znacznika w `markEstimationRequested` — kolumnę czyta już `applyEstimate` (przegląd
+wdrożenia `edit-and-delete-entry`, ustalenie F1), brakuje czytelnika przed wywołaniem modelu.
 Do przemyślenia razem z S-05, która dziedziczy ten kontrakt.
 
 ## Wpisy dziennika
