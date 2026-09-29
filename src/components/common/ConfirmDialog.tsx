@@ -11,6 +11,11 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   severity?: "warning" | "danger" | "info";
+  /**
+   * Identyfikator testowy dialogu. Przyciski dostają wtedy `${testid}-confirm` / `${testid}-cancel`,
+   * bo jeden ekran potrafi mieć kilka dialogów potwierdzenia. Bez propu DOM zostaje bez zmian.
+   */
+  "data-testid"?: string;
 }
 
 export default function ConfirmDialog({
@@ -22,6 +27,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   severity = "warning",
+  "data-testid": dataTestId,
 }: ConfirmDialogProps) {
   const severityConfig = {
     warning: {
@@ -41,7 +47,7 @@ export default function ConfirmDialog({
   const config = severityConfig[severity];
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onCancel} title={title} maxWidth="md" zIndex={70}>
+    <BaseModal isOpen={isOpen} onClose={onCancel} title={title} maxWidth="md" zIndex={70} data-testid={dataTestId}>
       <div className="flex items-start space-x-4">
         <div className={`mt-1 ${config.iconClass}`} aria-hidden="true">
           <svg
@@ -66,10 +72,14 @@ export default function ConfirmDialog({
       </div>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} data-testid={dataTestId ? `${dataTestId}-cancel` : undefined}>
           {cancelLabel}
         </Button>
-        <Button variant={config.confirmButtonVariant} onClick={onConfirm}>
+        <Button
+          variant={config.confirmButtonVariant}
+          onClick={onConfirm}
+          data-testid={dataTestId ? `${dataTestId}-confirm` : undefined}
+        >
           {confirmLabel}
         </Button>
       </div>

@@ -544,36 +544,36 @@ i przeliczyć z uwzględnieniem porcji.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą: `npm run test`
-- [x] 1.2 Typy bez błędów: `npm run typecheck`
-- [x] 1.3 Lint przechodzi: `npm run lint`
-- [x] 1.4 Formatowanie zgodne: `npm run format:check`
-- [x] 1.5 W `src/` nie ma już odwołań do `setCaloriesManually` ani `setEntryCaloriesSchema` (`grep -rn "setCaloriesManually\|setEntryCaloriesSchema" src` nic nie zwraca)
+- [x] 1.1 Testy jednostkowe przechodzą: `npm run test` — a5bd9b7
+- [x] 1.2 Typy bez błędów: `npm run typecheck` — a5bd9b7
+- [x] 1.3 Lint przechodzi: `npm run lint` — a5bd9b7
+- [x] 1.4 Formatowanie zgodne: `npm run format:check` — a5bd9b7
+- [x] 1.5 W `src/` nie ma już odwołań do `setCaloriesManually` ani `setEntryCaloriesSchema` (`grep -rn "setCaloriesManually\|setEntryCaloriesSchema" src` nic nie zwraca) — a5bd9b7
 
 #### Manual
 
-- [x] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID)
-- [x] 1.7 `PATCH` z `{calories: N}` z pola w wierszu dalej zapisuje liczbę „wpisane ręcznie”
+- [x] 1.6 `supabase/checks/diary-entries-rls.sql` kończy się `[PASS]` (edytor SQL Supabase, podstawione UUID) — a5bd9b7
+- [x] 1.7 `PATCH` z `{calories: N}` z pola w wierszu dalej zapisuje liczbę „wpisane ręcznie” — a5bd9b7
 
 ### Phase 2: Powierzchnia dziennika
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą: `npm run test`
-- [ ] 2.2 Typy bez błędów: `npm run typecheck`
-- [ ] 2.3 Lint, w tym reguły React Compiler, przechodzi: `npm run lint`
-- [ ] 2.4 Formatowanie zgodne: `npm run format:check`
-- [ ] 2.5 Build przechodzi: `npm run build`
+- [x] 2.1 Testy jednostkowe przechodzą: `npm run test`
+- [x] 2.2 Typy bez błędów: `npm run typecheck`
+- [x] 2.3 Lint, w tym reguły React Compiler, przechodzi: `npm run lint`
+- [x] 2.4 Formatowanie zgodne: `npm run format:check`
+- [x] 2.5 Build przechodzi: `npm run build`
 
 #### Manual
 
-- [ ] 2.6 Edycja samej treści zostawia liczbę i etykietę pochodzenia
-- [ ] 2.7 Zmiana porcji i „Zapisz i przelicz” daje wartość „z przepisu” bez modelu
-- [ ] 2.8 „Zapisz i przelicz” na wpisie opisowym przechodzi przez kolejkę do nowej wartości AI
-- [ ] 2.9 Wyczyszczenie liczby daje „Nie policzono” i zmienia sumę dnia
-- [ ] 2.10 Zmiana dnia usuwa wpis z listy, pokazuje toast i wpis jest na nowym dniu
-- [ ] 2.11 Usunięcie wymaga potwierdzenia, „Anuluj” zostawia wpis
-- [ ] 2.12 Modal i dialog działają z klawiatury i na szerokości telefonu
+- [x] 2.6 Edycja samej treści zostawia liczbę i etykietę pochodzenia
+- [x] 2.7 Zmiana porcji i „Zapisz i przelicz” daje wartość „z przepisu” bez modelu
+- [x] 2.8 „Zapisz i przelicz” na wpisie opisowym przechodzi przez kolejkę do nowej wartości AI
+- [x] 2.9 Wyczyszczenie liczby daje „Nie policzono” i zmienia sumę dnia
+- [x] 2.10 Zmiana dnia usuwa wpis z listy, pokazuje toast i wpis jest na nowym dniu
+- [x] 2.11 Usunięcie wymaga potwierdzenia, „Anuluj” zostawia wpis
+- [x] 2.12 Modal i dialog działają z klawiatury i na szerokości telefonu
 
 ### Phase 3: E2E i porządki
 

@@ -1,4 +1,6 @@
 import React from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import DiaryEntryCalories from "./DiaryEntryCalories";
 import type { EstimationState } from "@/lib/utils/diary-estimation";
 import { formatPortions } from "@/lib/utils/diary-portions";
@@ -13,6 +15,8 @@ interface DiaryEntryListProps {
   onEstimate: (entryId: number) => void;
   onCancel: (entryId: number) => void;
   onSetCalories: (entryId: number, calories: number) => Promise<void>;
+  onEdit: (entry: DiaryEntryDto) => void;
+  onDelete: (entry: DiaryEntryDto) => void;
 }
 
 /**
@@ -40,11 +44,16 @@ export default function DiaryEntryList({
   onEstimate,
   onCancel,
   onSetCalories,
+  onEdit,
+  onDelete,
 }: DiaryEntryListProps) {
   return (
     <ul className="flex flex-col gap-3" data-testid="diary-entry-list">
       {entries.map((entry) => {
         const amount = amountLabel(entry);
+        // Wpis w locie ma zablokowane akcje: edycja albo usunięcie w trakcie wyceny ścigałyby się
+        // z `applyEstimate` o ten sam wiersz.
+        const isInFlight = inFlightId === entry.id;
 
         return (
           <li
@@ -62,12 +71,39 @@ export default function DiaryEntryList({
                     {amount}
                   </p>
                 )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(entry)}
+                    disabled={isInFlight}
+                    aria-label={`Edytuj wpis: ${entry.content}`}
+                    data-testid="diary-entry-edit-button"
+                  >
+                    <Pencil aria-hidden="true" />
+                    Edytuj
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(entry)}
+                    disabled={isInFlight}
+                    aria-label={`Usuń wpis: ${entry.content}`}
+                    className="text-destructive hover:text-destructive"
+                    data-testid="diary-entry-delete-button"
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Usuń
+                  </Button>
+                </div>
               </div>
 
               <DiaryEntryCalories
                 entry={entry}
                 state={entryState(entry)}
-                isInFlight={inFlightId === entry.id}
+                isInFlight={isInFlight}
                 isQueued={queuedIds.includes(entry.id)}
                 onEstimate={onEstimate}
                 onCancel={onCancel}

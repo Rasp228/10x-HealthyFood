@@ -1,8 +1,10 @@
-import React, { useMemo, useSyncExternalStore } from "react";
+import React, { useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import ConfirmDialog from "../common/ConfirmDialog";
 import DayNavigator from "./DayNavigator";
 import DiaryDaySummary from "./DiaryDaySummary";
+import DiaryEntryEditModal from "./DiaryEntryEditModal";
 import DiaryEntryForm from "./DiaryEntryForm";
 import DiaryEntryList from "./DiaryEntryList";
 import ToastContainer from "../feedback/ToastContainer";
@@ -74,6 +76,8 @@ export default function DiaryPage() {
   // Wyspa jest właścicielem żądania w locie, bo to ona trzyma listę: po każdym zakończeniu wycena
   // każe odświeżyć wiersze i stan wpisu bierze się z danych, a nie z pamięci komponentu.
   const { estimate, cancel, inFlightId, queuedIds, settledIds } = useCalorieEstimation(refetch);
+  const [entryToEdit, setEntryToEdit] = useState<DiaryEntryDto | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<DiaryEntryDto | null>(null);
 
   /** Co ta wyspa wie o żądaniu dla wpisu. Wpis w kolejce jest dla użytkownika "w toku", stąd `live`. */
   const phaseFor = (entryId: number): EstimationRequestPhase => {
@@ -141,6 +145,69 @@ export default function DiaryPage() {
     }
   };
 
+  /**
+   * Otwarcie edycji wyjmuje wpis z kolejki wyceny. Przycisk jest nieaktywny dla wpisu w locie, ale
+   * wpis czekający w kolejce mógłby w nią wejść, gdy modal jest otwarty - i wtedy wycena starej
+   * treści ścigałaby się z zapisem, a `estimate(id)` po "Zapisz i przelicz" odbiłby się od wpisu
+   * wciąż uznanego za będący w locie. Wpis wyjęty z kolejki zostaje z "Policz kalorie".
+   */
+  const handleEdit = (entry: DiaryEntryDto) => {
+    cancel(entry.id);
+    setEntryToEdit(entry);
+  };
+
+  /**
+   * Zapis z modala. Wpis przeniesiony na inny dzień zniknie z bieżącej listy po odświeżeniu, więc
+   * toast mówi, dokąd trafił, a do kolejki nie idzie - jego wiersza tu już nie ma, zostaje
+   * z "Policz kalorie" na swoim nowym dniu. Wpis, który przeliczenie zostawiło bez wartości (parser
+   * przepisu nic nie ustalił albo to wpis opisowy), dostaje wycenę od razu.
+   */
+  const handleSaved = (updated: DiaryEntryDto, recalculated: boolean) => {
+    const moved = updated.entry_date !== day;
+
+    setEntryToEdit(null);
+    cancel(updated.id);
+    refetch();
+    // Dzień w tym samym zapisie RRRR-MM-DD, który pokazuje datownik `DayNavigator`.
+    showToast(moved ? `Wpis przeniesiono na ${updated.entry_date}` : "Wpis został zapisany", "success");
+
+    if (recalculated && updated.calories === null && !moved) {
+      estimate(updated.id);
+    }
+  };
+
+  /**
+   * Usunięcie po potwierdzeniu. Wpis wypada z kolejki przed wysłaniem, bo wycena nieistniejącego
+   * wiersza byłaby opłaconym wywołaniem modelu bez odbiorcy. 404 to też sukces: wpisu już nie ma
+   * (np. usunięty w drugiej karcie), a lista i tak musi się odświeżyć.
+   */
+  const handleConfirmDelete = async () => {
+    if (entryToDelete === null) return;
+
+    const entryId = entryToDelete.id;
+
+    setEntryToDelete(null);
+    cancel(entryId);
+
+    try {
+      const response = await fetch(`/api/diary-entries/${entryId}`, {
+        method: "DELETE",
+        credentials: "include", // Ważne dla przesyłania cookies z sesją
+      });
+
+      if (!response.ok && response.status !== 404) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      refetch();
+      showToast("Wpis został usunięty", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Wystąpił błąd podczas usuwania wpisu";
+      showToast(message, "error");
+    }
+  };
+
   // Dzień rozstrzyga przeglądarka, więc do czasu pierwszej migawki klienckiej nie mamy czego
   // pokazać. Policzenie "dzisiaj" na serwerze dałoby dzień serwera i rozjechałoby hydratację.
   if (day === null || today === null) {
@@ -194,10 +261,32 @@ export default function DiaryPage() {
               onEstimate={estimate}
               onCancel={cancel}
               onSetCalories={handleSetCalories}
+              onEdit={handleEdit}
+              onDelete={setEntryToDelete}
             />
           </div>
         )}
       </div>
+
+      <DiaryEntryEditModal
+        entry={entryToEdit}
+        isOpen={entryToEdit !== null}
+        today={today}
+        onClose={() => setEntryToEdit(null)}
+        onSaved={handleSaved}
+      />
+
+      <ConfirmDialog
+        isOpen={entryToDelete !== null}
+        title="Usuń wpis"
+        message={`Czy na pewno chcesz usunąć wpis „${entryToDelete?.content ?? ""}”? Tej operacji nie można cofnąć.`}
+        confirmLabel="Usuń"
+        cancelLabel="Anuluj"
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setEntryToDelete(null)}
+        severity="danger"
+        data-testid="diary-delete-confirm"
+      />
 
       <ToastContainer />
     </div>

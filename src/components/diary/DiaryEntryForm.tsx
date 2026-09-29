@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { parseCalories } from "@/lib/utils/diary-calories";
 import { AI_NOTICE, AI_NOTICE_RECIPE } from "@/lib/utils/diary-estimation";
-import { formatPortions } from "@/lib/utils/diary-portions";
+import { formatPortions, parsePortions } from "@/lib/utils/diary-portions";
 import { resolveRecipeCalories, type RecipeCalorieResult } from "@/lib/utils/recipe-nutrition";
 import { createDiaryEntrySchema, portionsSchema } from "@/lib/validations/diary/create-entry";
 import type { DiaryEntryDto, RecipeDto } from "../../types";
@@ -49,24 +49,6 @@ const EMPTY_FORM: DiaryFormValues = {
 
 /** Etykieta pola wyboru przepisu - w dwóch gałęziach układu, więc w jednym miejscu. */
 const RECIPE_FIELD_LABEL = "Z mojego przepisu (opcjonalnie)";
-
-/**
- * Zamiana tego, co użytkownik wpisał w pole porcji, na liczbę dla schematu.
- *
- * Ta sama ostrożność co w `parseCalories`: `Number` czyta więcej form liczby, niż to pole miało
- * kiedykolwiek przyjmować ("1e3" cicho robi się tysiącem porcji). Przepuszczamy więc wyłącznie
- * cyfry z opcjonalną częścią dziesiętną, a resztę zwracamy jako NaN - i celowo nie sprawdzamy tu
- * ani zakresu, ani liczby miejsc po przecinku, żeby to `portionsSchema` powiedziało, co dokładnie
- * jest nie tak. Parser mieszka przy formularzu, bo tylko on czyta to pole; `formatPortions` musiał
- * trafić do `src/lib/utils/`, bo czyta z niego także lista dnia.
- */
-const parsePortions = (raw: string): number | null => {
-  const trimmed = raw.trim();
-
-  if (trimmed === "") return null;
-
-  return /^[0-9]+([.,][0-9]+)?$/.test(trimmed) ? Number(trimmed.replace(",", ".")) : Number.NaN;
-};
 
 /**
  * Buduje dane wejściowe dla schematu z Fazy 1. Formularz zna tylko napisy, a schemat oczekuje

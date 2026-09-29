@@ -30,3 +30,25 @@ function portionNoun(portions: number): string {
 export function formatPortions(portions: number): string {
   return `${String(portions).replace(".", ",")} ${portionNoun(portions)}`;
 }
+
+/**
+ * Zamiana tego, co użytkownik wpisał w pole porcji, na liczbę dla schematu.
+ *
+ * Ta sama ostrożność co w `parseCalories`: `Number` czyta więcej form liczby, niż to pole miało
+ * kiedykolwiek przyjmować ("1e3" cicho robi się tysiącem porcji). Przepuszczamy więc wyłącznie
+ * cyfry z opcjonalną częścią dziesiętną, a resztę zwracamy jako NaN - i celowo nie sprawdzamy tu
+ * ani zakresu, ani liczby miejsc po przecinku, żeby to `portionsSchema` powiedziało, co dokładnie
+ * jest nie tak. Wspólne dla formularza nowego wpisu i modala edycji: dwie kopie tej reguły
+ * rozjechałyby się przy pierwszej zmianie.
+ */
+export const parsePortions = (raw: string): number | null => {
+  const trimmed = raw.trim();
+
+  if (trimmed === "") return null;
+
+  return /^[0-9]+([.,][0-9]+)?$/.test(trimmed) ? Number(trimmed.replace(",", ".")) : Number.NaN;
+};
+
+/** Droga powrotna: liczba porcji z wiersza jako zawartość pola tekstowego, z polskim przecinkiem. */
+export const formatPortionsInput = (portions: number | null): string =>
+  portions === null ? "" : String(portions).replace(".", ",");
