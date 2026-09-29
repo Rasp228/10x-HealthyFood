@@ -205,6 +205,28 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
       expect(savedOrigin()).toBe("ai_from_description");
     });
 
+    it("sierota wysyła do modelu swoje porcje jako ilość", async () => {
+      // Sierota nie ma tekstu ilości - bez tego model wyceniłby jedną porcję, a wiersz
+      // pokazywałby „2 porcje" obok wartości dla jednej.
+      markEstimationRequested.mockResolvedValue(
+        storedEntry({ content: "Owsianka", portions: 2, source_recipe_id: null, amount_text: null })
+      );
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext());
+
+      expect(estimateFromDescription).toHaveBeenCalledWith("Owsianka", "2 porcje");
+    });
+
+    it("zwykły wpis opisowy dalej wysyła amount_text, także pusty", async () => {
+      markEstimationRequested.mockResolvedValue(storedEntry({ content: "frytki", amount_text: null }));
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext());
+
+      expect(estimateFromDescription).toHaveBeenCalledWith("frytki", null);
+    });
+
     it("usunięty albo cudzy przepis schodzi na gałąź opisową, a nie na 404", async () => {
       // Wpis istnieje - brakuje wyłącznie przepisu. 404 kłamałoby o wpisie, którego użytkownik
       // ma przed oczami.

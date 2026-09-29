@@ -129,11 +129,18 @@ export interface CreateDiaryEntryCommand {
   portions: number | null;
 }
 
-// Command do ręcznego ustawienia wartości kalorycznej istniejącego wpisu dziennika.
-// Bez `calorie_origin` - pochodzenie rozstrzyga serwer (tutaj zawsze `manual`).
+// Command do częściowej edycji istniejącego wpisu dziennika. Brak pola znaczy "bez zmian".
+// Bez `calorie_origin` - pochodzenie rozstrzyga serwer (`manual` dla liczby, parser albo `null`
+// przy `recalculate`).
+// Bez `source_recipe_id` - przepis wpisu jest niezmienny; zmiana przepisu to nowy wpis.
 // Bez `user_id` - tożsamość podróżuje osobnym argumentem serwisu.
-export interface SetEntryCaloriesCommand {
-  calories: number;
+export interface UpdateDiaryEntryCommand {
+  entry_date?: string;
+  content?: string;
+  amount_text?: string | null;
+  portions?: number;
+  calories?: number | null;
+  recalculate?: true;
 }
 
 /**

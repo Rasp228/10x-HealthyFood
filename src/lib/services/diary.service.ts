@@ -1,6 +1,12 @@
-import type { CalorieOriginEnum, CreateDiaryEntryCommand, DiaryEntriesDto, DiaryEntryDto } from "../../types";
+import type {
+  CalorieOriginEnum,
+  CreateDiaryEntryCommand,
+  DiaryEntriesDto,
+  DiaryEntryDto,
+  UpdateDiaryEntryCommand,
+} from "../../types";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../../db/database.types";
+import type { Database, TablesUpdate } from "../../db/database.types";
 import { resolveRecipeCalories } from "../utils/recipe-nutrition";
 
 /**
@@ -13,6 +19,24 @@ export class RecipeNotFoundError extends Error {
   constructor(message = "Przepis nie został znaleziony") {
     super(message);
     this.name = "RecipeNotFoundError";
+  }
+}
+
+/**
+ * Pole ilości nie pasuje do kształtu zapisanego wiersza: porcje przyszły do wpisu opisowego albo
+ * tekst ilości do wpisu z porcjami.
+ *
+ * Typowana klasa z `path`, bo reguła zależy od wiersza w bazie, a nie od ciała żądania - schemat
+ * Zod jej nie widzi. Trasa zamienia ten błąd na 400 w kształcie `ValidationIssue`, więc formularz
+ * pokaże go przy polu, którego dotyczy. Idiom jak `RecipeNotFoundError`.
+ */
+export class EntryShapeError extends Error {
+  constructor(
+    readonly path: "portions" | "amount_text",
+    message: string
+  ) {
+    super(message);
+    this.name = "EntryShapeError";
   }
 }
 
@@ -190,7 +214,7 @@ export class DiaryService {
    * @param calories - Oszacowana wartość energetyczna
    * @param origin - Pochodzenie wartości, ustalone przez trasę w tej samej gałęzi, która ją
    *   policzyła. Typ zawężony do dwóch oszacowań AI: `manual` i `recipe_nutrition` mają własne,
-   *   bezwarunkowe ścieżki zapisu (`setCaloriesManually`, `createEntry`), a bez zawężenia tą
+   *   bezwarunkowe ścieżki zapisu (`updateEntry`, `createEntry`), a bez zawężenia tą
    *   metodą dałoby się zapisać `manual` na wpisie, którego użytkownik nie tknął.
    * @returns Faktyczny stan wiersza albo `null`, gdy taki wpis u tego użytkownika nie istnieje
    */
@@ -225,41 +249,134 @@ export class DiaryService {
   }
 
   /**
-   * Ustawia wartość podaną ręcznie przez użytkownika.
+   * Zmienia wybrane pola wpisu użytkownika. Brak pola w komendzie znaczy "bez zmian".
    *
-   * Zapis bezwarunkowy: człowiek nadpisuje oszacowanie, więc `.is("calories", null)` byłoby tu
-   * błędem. `estimation_requested_at` zostaje nietknięte - wpisanie liczby nie unieważnia faktu,
-   * że oszacowanie kiedyś zlecono.
+   * Najpierw odczyt wiersza, bo reguły kształtu ilości zależą od tego, co zapisano, a nie od ciała
+   * żądania: porcje zmienia się tylko we wpisie, który je ma (także w sierocie po usuniętym
+   * przepisie), a tekst ilości - tylko we wpisie bez porcji. Konwersji między kształtami nie ma.
+   *
+   * Kolumny wartości ustala jedna z czterech gałęzi:
+   * - brak `calories` i `recalculate` - wartość, pochodzenie i znacznik zostają nietknięte;
+   * - `calories: N` - zapis bezwarunkowy z pochodzeniem `manual` (człowiek nadpisuje oszacowanie),
+   *   znacznik nietknięty - wpisanie liczby nie unieważnia faktu, że oszacowanie kiedyś zlecono;
+   * - `calories: null` - trzy kolumny `null`;
+   * - `recalculate: true` - jak `null`, chyba że parser przepisu ustali wartość dla porcji PO
+   *   edycji; wtedy `recipe_nutrition`.
+   *
+   * Każde wyzerowanie wartości zeruje też `estimation_requested_at`: baza tej reguły nie egzekwuje,
+   * a stary znacznik pokazałby wyzerowany wiersz jako "Liczę..." albo "Policz ponownie".
+   *
+   * Zmiany pól i wynik parsera idą w JEDNYM zapisie. Dwa zapisy zostawiłyby między sobą wiersz bez
+   * wartości przy starym znaczniku.
    *
    * @param userId - ID użytkownika
    * @param entryId - ID wpisu
-   * @param calories - Wartość podana przez użytkownika
+   * @param command - Zwalidowane pola do zmiany
    * @returns Zaktualizowany wpis albo `null`, gdy taki wpis u tego użytkownika nie istnieje
+   * @throws EntryShapeError - gdy pole ilości nie pasuje do kształtu zapisanego wiersza
    */
-  async setCaloriesManually(userId: string, entryId: number, calories: number): Promise<DiaryEntryDto | null> {
+  async updateEntry(userId: string, entryId: number, command: UpdateDiaryEntryCommand): Promise<DiaryEntryDto | null> {
+    const current = await this.getEntry(userId, entryId);
+
+    if (!current) {
+      return null;
+    }
+
+    if (command.portions !== undefined && current.portions === null) {
+      throw new EntryShapeError("portions", "Liczbę porcji można zmienić tylko we wpisie, który ją ma");
+    }
+
+    // Pusty tekst ilości przyszedł tu już jako `null` - wyczyszczenie pola nie łamie kształtu.
+    if (command.amount_text !== undefined && command.amount_text !== null && current.portions !== null) {
+      throw new EntryShapeError("amount_text", "Wpis z liczbą porcji opisuje ilość porcjami, nie tekstem");
+    }
+
+    const now = new Date().toISOString();
+    const changes: TablesUpdate<"diary_entries"> = { updated_at: now };
+
+    if (command.entry_date !== undefined) changes.entry_date = command.entry_date;
+    if (command.content !== undefined) changes.content = command.content;
+    if (command.amount_text !== undefined) changes.amount_text = command.amount_text;
+    if (command.portions !== undefined) changes.portions = command.portions;
+
+    if (command.recalculate === true) {
+      changes.calories = null;
+      changes.calorie_origin = null;
+      changes.estimation_requested_at = null;
+
+      // Usunięty albo cudzy przepis nie jest tu błędem, tylko brakiem treści: wpis zostaje bez
+      // wartości i czeka na wycenę, która i tak zejdzie na gałąź opisową.
+      let recipeContent: string | null = null;
+
+      try {
+        recipeContent = await this.readOwnRecipeContent(userId, current.source_recipe_id);
+      } catch (error) {
+        if (!(error instanceof RecipeNotFoundError)) {
+          throw error;
+        }
+      }
+
+      // Porcje po edycji: nowe, jeśli przyszły w tym samym żądaniu, inaczej zapisane. Wpis
+      // z przepisem bez porcji parser pomija, tak jak `createEntry`.
+      const portions = command.portions ?? current.portions;
+
+      if (recipeContent !== null && portions !== null) {
+        const { total } = resolveRecipeCalories(recipeContent, portions);
+
+        if (total !== null) {
+          changes.calories = total;
+          changes.calorie_origin = "recipe_nutrition";
+        }
+      }
+    } else if (command.calories === null) {
+      changes.calories = null;
+      changes.calorie_origin = null;
+      changes.estimation_requested_at = null;
+    } else if (command.calories !== undefined) {
+      changes.calories = command.calories;
+      changes.calorie_origin = "manual";
+    }
+
+    // `.maybeSingle()`: wpis mógł zniknąć między odczytem a zapisem - to wciąż "nie ma takiego
+    // wpisu", a nie błąd `PGRST116`.
     const { data, error } = await this.supabase
       .from("diary_entries")
-      .update({
-        calories,
-        calorie_origin: "manual",
-        updated_at: new Date().toISOString(),
-      })
+      .update(changes)
       .eq("id", entryId)
       .eq("user_id", userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
-      // Bez warunku na `calories` brak wiersza znaczy dokładnie jedno: nie ma takiego wpisu
-      // u tego użytkownika. `.single()` zgłasza to kodem PGRST116, tak jak w `recipes/[id].ts`.
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
       throw error;
     }
 
     return data;
+  }
+
+  /**
+   * Usuwa wpis użytkownika.
+   *
+   * `.select("id")`, bo sam DELETE bez `returning` nie mówi, czy cokolwiek trafił: cudzy
+   * i nieistniejący wpis kończą się tak samo, pustą listą.
+   *
+   * @param userId - ID użytkownika
+   * @param entryId - ID wpisu
+   * @returns `true`, gdy wpis usunięto; `false`, gdy taki wpis u tego użytkownika nie istnieje
+   */
+  async deleteEntry(userId: string, entryId: number): Promise<boolean> {
+    const { data, error } = await this.supabase
+      .from("diary_entries")
+      .delete()
+      .eq("id", entryId)
+      .eq("user_id", userId)
+      .select("id");
+
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []).length > 0;
   }
 
   /**

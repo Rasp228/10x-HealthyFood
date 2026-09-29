@@ -101,6 +101,10 @@ declare
   a_wlasne bigint;
   b_obce   bigint;
   b_wlasne bigint;
+  wiersz_b bigint;
+  a_zmienia_obce bigint;
+  a_usuwa_obce   bigint;
+  b_nietkniety   bigint;
   werdykt  text;
 begin
   -- 3a. Nazwy polityk i samo włączenie RLS (czytane jeszcze jako właściciel).
@@ -121,10 +125,13 @@ begin
 
   -- 3b. Dane testowe: po jednym wierszu dla każdego z dwóch użytkowników. Wstawiane jeszcze
   -- przed przełączeniem roli, czyli z pominięciem RLS. Jedyna tabela, której dotyka ten skrypt.
+  -- Wiersz B osobnym insertem, bo jego id jest celem prób UPDATE i DELETE w 3d'.
   insert into diary_entries (user_id, entry_date, content)
-  values
-    ('<uuid-a>'::uuid, current_date, 'rls check - wpis użytkownika A'),
-    ('<uuid-b>'::uuid, current_date, 'rls check - wpis użytkownika B');
+  values ('<uuid-a>'::uuid, current_date, 'rls check - wpis użytkownika A');
+
+  insert into diary_entries (user_id, entry_date, content)
+  values ('<uuid-b>'::uuid, current_date, 'rls check - wpis użytkownika B')
+  returning id into wiersz_b;
 
   -- 3c. Przełączenie na rolę aplikacyjną. set_config(..., true) to odpowiednik SET LOCAL, czyli
   -- obowiązuje do końca tego bloku. Jeśli `rola` nie wyjdzie 'authenticated', liczniki poniżej
@@ -141,6 +148,18 @@ begin
     into a_obce, a_wlasne
   from diary_entries;
 
+  -- 3d'. Użytkownik A nie zmienia i nie usuwa cudzego wiersza, nawet wskazanego po id. Na tych
+  -- politykach stoją trasy PATCH i DELETE /api/diary-entries/:id. Oba zapytania mają trafić
+  -- zero wierszy - `row_count` mierzy to, co polityka faktycznie przepuściła.
+  update diary_entries
+     set content = 'rls check - nadpisane przez A'
+   where id = wiersz_b;
+  get diagnostics a_zmienia_obce = row_count;
+
+  delete from diary_entries
+   where id = wiersz_b;
+  get diagnostics a_usuwa_obce = row_count;
+
   -- 3e. Użytkownik B widzi wyłącznie własne wiersze.
   perform set_config('request.jwt.claims', '{"sub":"<uuid-b>","role":"authenticated"}', true);
   uid_b := (auth.uid())::text;
@@ -149,6 +168,13 @@ begin
     count(*) filter (where user_id =  '<uuid-b>'::uuid)
     into b_obce, b_wlasne
   from diary_entries;
+
+  -- Wiersz B nadal istnieje z pierwotną treścią - drugi dowód, że próby A z 3d' niczego nie ruszyły.
+  select count(*)
+    into b_nietkniety
+  from diary_entries
+  where id = wiersz_b
+    and content = 'rls check - wpis użytkownika B';
 
   werdykt := case
     when coalesce(array_length(polityki_brakujace, 1), 0) = 0
@@ -160,6 +186,9 @@ begin
      and b_obce = 0
      and a_wlasne >= 1
      and b_wlasne >= 1
+     and a_zmienia_obce = 0
+     and a_usuwa_obce = 0
+     and b_nietkniety = 1
     then 'PASS'
     else 'FAIL'
   end;
@@ -176,7 +205,10 @@ begin
     E'  A widzi wlasnych     : %s   (wymagane: >= 1)\n'
     E'  auth.uid() dla B     : %s   (wymagane: <uuid-b>)\n'
     E'  B widzi cudzych      : %s   (wymagane: 0)\n'
-    E'  B widzi wlasnych     : %s   (wymagane: >= 1)',
+    E'  B widzi wlasnych     : %s   (wymagane: >= 1)\n'
+    E'  A zmienia cudzy      : %s   (wymagane: 0)\n'
+    E'  A usuwa cudzy        : %s   (wymagane: 0)\n'
+    E'  wiersz B nietkniety  : %s   (wymagane: 1)',
     werdykt,
     coalesce(array_length(polityki_znalezione, 1), 0),
     coalesce(array_to_string(polityki_brakujace, ', '), 'brak'),
@@ -187,7 +219,10 @@ begin
     a_wlasne,
     uid_b,
     b_obce,
-    b_wlasne
+    b_wlasne,
+    a_zmienia_obce,
+    a_usuwa_obce,
+    b_nietkniety
   );
 end
 $$;

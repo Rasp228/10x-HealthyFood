@@ -1,7 +1,8 @@
 import type { APIRoute } from "astro";
 import { DiaryService, RecipeNotFoundError } from "../../../../lib/services/diary.service";
 import { CalorieEstimationService } from "../../../../lib/services/calorie-estimation.service";
-import { entryIdSchema } from "../../../../lib/validations/diary/set-calories";
+import { entryIdSchema } from "../../../../lib/validations/diary/update-entry";
+import { formatPortions } from "../../../../lib/utils/diary-portions";
 import { zodIssues } from "../../../../lib/utils/validation-errors";
 import { OpenRouterError } from "../../../../lib/api/openrouter.types";
 
@@ -100,7 +101,12 @@ export const POST: APIRoute = async ({ params, locals }) => {
       const estimationService = new CalorieEstimationService();
 
       if (recipeContent === null) {
-        estimate = await estimationService.estimateFromDescription(entry.content, entry.amount_text);
+        // Sierota (porcje bez własnego przepisu - usuniętego albo cudzego) nie ma tekstu ilości,
+        // więc jej porcje idą do modelu jako ilość. Wynik opisuje cały posiłek i nie jest mnożony.
+        // Decyzja z planu `edit-and-delete-entry`, faza 1, pkt 4. Zwykły wpis opisowy bez zmian.
+        const amountText = entry.portions !== null ? formatPortions(entry.portions) : entry.amount_text;
+
+        estimate = await estimationService.estimateFromDescription(entry.content, amountText);
       } else {
         // Model odpowiada na jedno pytanie - ile ma JEDNA porcja - a mnożenie i zaokrąglenie robi
         // kod, tak samo jak `resolveRecipeCalories`.

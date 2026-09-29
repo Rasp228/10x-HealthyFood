@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatCalories, parseCalories } from "@/lib/utils/diary-calories";
 import { AI_NOTICE, AI_NOTICE_RECIPE, type EstimationState } from "@/lib/utils/diary-estimation";
-import { setEntryCaloriesSchema } from "@/lib/validations/diary/set-calories";
+import { caloriesValueSchema } from "@/lib/validations/diary/create-entry";
 import type { CalorieOriginEnum, DiaryEntryDto } from "../../types";
 
 interface DiaryEntryCaloriesProps {
@@ -80,8 +80,9 @@ export default function DiaryEntryCalories({
   const isFieldDisabled = isInFlight || isSaving;
 
   const handleSave = async () => {
-    // Ten sam schemat co na trasie `PATCH` - granice i komunikaty nie mają jak się rozjechać.
-    const result = setEntryCaloriesSchema.safeParse({ calories: parseCalories(draft) });
+    // Ta sama reguła wartości co na trasie `PATCH` - granice i komunikaty nie mają jak się
+    // rozjechać. Sama reguła, nie schemat edycji: to pole zapisuje liczbę i nie czyści wartości.
+    const result = caloriesValueSchema.safeParse(parseCalories(draft));
 
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? "Nieprawidłowa wartość kalorii");
@@ -92,7 +93,7 @@ export default function DiaryEntryCalories({
     setIsSaving(true);
 
     try {
-      await onSetCalories(entry.id, result.data.calories);
+      await onSetCalories(entry.id, result.data);
     } finally {
       setIsSaving(false);
     }

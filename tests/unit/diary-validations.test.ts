@@ -1,6 +1,6 @@
 import { createDiaryEntrySchema } from "@/lib/validations/diary/create-entry";
 import { listDiaryEntriesSchema } from "@/lib/validations/diary/list-entries";
-import { setEntryCaloriesSchema } from "@/lib/validations/diary/set-calories";
+import { entryIdSchema, updateDiaryEntrySchema } from "@/lib/validations/diary/update-entry";
 
 const VALID_ENTRY = {
   entry_date: "2026-09-23",
@@ -293,19 +293,23 @@ describe("listDiaryEntriesSchema", () => {
   });
 });
 
-describe("setEntryCaloriesSchema", () => {
-  /** Komunikat pola `calories` albo `undefined`, gdy walidacja przeszła. */
-  const messageForCalories = (input: unknown): string | undefined => {
-    const result = setEntryCaloriesSchema.safeParse(input);
+describe("updateDiaryEntrySchema", () => {
+  type UpdateResult = ReturnType<typeof updateDiaryEntrySchema.safeParse>;
+
+  const parseUpdate = (input: unknown): UpdateResult => updateDiaryEntrySchema.safeParse(input);
+
+  /** Komunikat dla danej ścieżki albo `undefined`, gdy walidacja przeszła lub ścieżka jest czysta. */
+  const messageFor = (input: unknown, path: string): string | undefined => {
+    const result = parseUpdate(input);
 
     if (result.success) return undefined;
 
-    return result.error.issues.find((issue) => issue.path.join(".") === "calories")?.message;
+    return result.error.issues.find((issue) => issue.path.join(".") === path)?.message;
   };
 
-  /** Wartość po udanej walidacji. Rzuca, bo test, który tu trafił, oczekiwał sukcesu. */
-  const caloriesOf = (input: unknown): number => {
-    const result = setEntryCaloriesSchema.safeParse(input);
+  /** Dane po udanej walidacji. Rzuca, bo test, który tu trafił, oczekiwał sukcesu. */
+  const dataOf = (input: unknown) => {
+    const result = parseUpdate(input);
 
     if (!result.success) {
       throw new Error(
@@ -313,38 +317,102 @@ describe("setEntryCaloriesSchema", () => {
       );
     }
 
-    return result.data.calories;
+    return result.data;
   };
 
-  it("przyjmuje zero - wpis o zerowej wartości to nadal wpis policzony", () => {
-    expect(caloriesOf({ calories: 0 })).toBe(0);
+  it("przyjmuje częściowe ciało - zmienia się tylko to, co przyszło", () => {
+    expect(dataOf({ content: "  Owsianka bez cukru  " })).toEqual({ content: "Owsianka bez cukru" });
   });
 
-  it("przyjmuje górną granicę 5000", () => {
-    expect(caloriesOf({ calories: 5000 })).toBe(5000);
+  it("przyjmuje dawne ciało {calories: N} z pola w wierszu", () => {
+    expect(dataOf({ calories: 450 })).toEqual({ calories: 450 });
   });
 
-  it("odrzuca wartość ujemną tym samym komunikatem co tworzenie wpisu", () => {
-    expect(messageForCalories({ calories: -1 })).toBe("Kalorie nie mogą być ujemne");
+  it("odrzuca puste ciało komunikatem bez ścieżki pola", () => {
+    const result = parseUpdate({});
+
+    if (result.success) throw new Error("Oczekiwano błędu walidacji");
+
+    // `path: []` - problem nie dotyczy żadnego pola, więc trafia do ogólnej ramki formularza.
+    expect(result.error.issues).toHaveLength(1);
+    expect(result.error.issues[0].path).toEqual([]);
   });
 
-  it("odrzuca wartość powyżej sufitu", () => {
-    expect(messageForCalories({ calories: 5001 })).toBe("Kalorie nie mogą przekraczać 5000 kcal");
+  it("odrzuca ciało, które nie jest obiektem", () => {
+    expect(parseUpdate(null).success).toBe(false);
   });
 
-  it("odrzuca ułamek", () => {
-    expect(messageForCalories({ calories: 450.5 })).toBe("Kalorie muszą być liczbą całkowitą");
+  it("recalculate razem z calories daje błąd na polu calories", () => {
+    expect(messageFor({ recalculate: true, calories: 450 }, "calories")).toBe(
+      "Nie można jednocześnie podać kalorii i zlecić przeliczenia"
+    );
   });
 
-  it("odrzuca liczbę podaną jako napis", () => {
-    expect(messageForCalories({ calories: "450" })).toBe("Kalorie muszą być liczbą");
+  it("recalculate razem z calories: null też jest sprzecznym poleceniem", () => {
+    expect(messageFor({ recalculate: true, calories: null }, "calories")).toBeDefined();
   });
 
-  it("odrzuca brak pola - ta trasa nie ma innego ładunku niż liczba", () => {
-    expect(messageForCalories({})).toBe("Kalorie muszą być liczbą");
+  it("przyjmuje samo recalculate: true", () => {
+    expect(dataOf({ recalculate: true })).toEqual({ recalculate: true });
   });
 
-  it("odrzuca jawne null - zerowanie wartości pociągałoby za sobą zerowanie znacznika", () => {
-    expect(messageForCalories({ calories: null })).toBe("Kalorie muszą być liczbą");
+  it("odrzuca recalculate: false - przeliczenie zleca się wyłącznie jawnym true", () => {
+    expect(parseUpdate({ recalculate: false }).success).toBe(false);
+  });
+
+  it.each(["source_recipe_id", "calorie_origin", "user_id", "estimation_requested_at"])(
+    "odrzuca pole %s w ciele - schemat jest zamknięty",
+    (field) => {
+      const value = field === "source_recipe_id" ? 7 : "cokolwiek";
+
+      expect(parseUpdate({ content: "Owsianka", [field]: value }).success).toBe(false);
+    }
+  );
+
+  it("przyjmuje calories: null - wyczyszczenie liczby jest częścią edycji", () => {
+    expect(dataOf({ calories: null })).toEqual({ calories: null });
+  });
+
+  it("odrzuca portions: null - wpis z porcjami nie traci ich przez edycję", () => {
+    expect(parseUpdate({ portions: null }).success).toBe(false);
+  });
+
+  it("stosuje do portions tę samą regułę co tworzenie wpisu", () => {
+    expect(messageFor({ portions: 0 }, "portions")).toBe("Liczba porcji musi być większa od zera");
+    expect(dataOf({ portions: 1.5 })).toEqual({ portions: 1.5 });
+  });
+
+  it("zamienia pusty amount_text na null", () => {
+    expect(dataOf({ amount_text: "   " })).toEqual({ amount_text: null });
+  });
+
+  it("odrzuca pustą treść tym samym komunikatem co tworzenie wpisu", () => {
+    expect(messageFor({ content: "   " }, "content")).toBe("Opis posiłku jest wymagany");
+  });
+
+  it("odrzuca nieistniejący dzień tą samą regułą co tworzenie wpisu", () => {
+    expect(messageFor({ entry_date: "2026-02-31" }, "entry_date")).toBe("Podana data nie istnieje");
+  });
+
+  it("stosuje do calories te same granice co tworzenie wpisu", () => {
+    expect(dataOf({ calories: 0 })).toEqual({ calories: 0 });
+    expect(messageFor({ calories: -1 }, "calories")).toBe("Kalorie nie mogą być ujemne");
+    expect(messageFor({ calories: 5001 }, "calories")).toBe("Kalorie nie mogą przekraczać 5000 kcal");
+    expect(messageFor({ calories: 450.5 }, "calories")).toBe("Kalorie muszą być liczbą całkowitą");
+    expect(messageFor({ calories: "450" }, "calories")).toBe("Kalorie muszą być liczbą");
+  });
+});
+
+describe("entryIdSchema", () => {
+  it("zamienia napis z adresu na liczbę", () => {
+    expect(entryIdSchema.safeParse("42")).toEqual({ success: true, data: 42 });
+  });
+
+  it("odrzuca identyfikator z doklejonymi znakami", () => {
+    expect(entryIdSchema.safeParse("12abc").success).toBe(false);
+  });
+
+  it("odrzuca zero", () => {
+    expect(entryIdSchema.safeParse("0").success).toBe(false);
   });
 });

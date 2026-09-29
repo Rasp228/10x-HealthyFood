@@ -25,8 +25,8 @@ export const entryDateSchema = z
   .refine(isExistingDate, "Podana data nie istnieje");
 
 /**
- * Reguła wartości kalorycznej - wspólna dla tworzenia wpisu i dla ręcznego ustawienia liczby
- * w istniejącym wpisie (`set-calories.ts`). Jedna reguła na obie ścieżki: granice i komunikaty
+ * Reguła wartości kalorycznej - wspólna dla tworzenia wpisu i dla edycji istniejącego wpisu
+ * (`update-entry.ts`). Jedna reguła na obie ścieżki: granice i komunikaty
  * rozjeżdżałyby się przy pierwszej zmianie, gdyby każda trasa miała własną kopię.
  *
  * Górne ograniczenie to decyzja produktowa, nie techniczna: pojedynczy wpis powyżej 5000 kcal
@@ -62,6 +62,21 @@ export const portionsSchema = z
   .max(99, "Liczba porcji nie może przekraczać 99")
   .refine(hasAtMostTwoDecimals, "Liczba porcji może mieć najwyżej dwa miejsca po przecinku");
 
+/** Reguła opisu posiłku - wspólna dla tworzenia i edycji wpisu (`update-entry.ts`). */
+export const entryContentSchema = z
+  .string("Opis posiłku jest wymagany")
+  .trim()
+  .min(1, "Opis posiłku jest wymagany")
+  .max(500, "Opis posiłku nie może przekraczać 500 znaków");
+
+/** Reguła tekstu ilości - wspólna dla tworzenia i edycji wpisu (`update-entry.ts`). */
+export const amountTextSchema = z
+  .string()
+  .trim()
+  .max(100, "Ilość nie może przekraczać 100 znaków")
+  // Puste pole formularza to brak ilości, nie pusty napis.
+  .transform((value) => (value === "" ? null : value));
+
 /**
  * Schemat tworzenia wpisu dziennika.
  *
@@ -75,19 +90,8 @@ export const portionsSchema = z
 export const createDiaryEntrySchema = z
   .object({
     entry_date: entryDateSchema,
-    content: z
-      .string("Opis posiłku jest wymagany")
-      .trim()
-      .min(1, "Opis posiłku jest wymagany")
-      .max(500, "Opis posiłku nie może przekraczać 500 znaków"),
-    amount_text: z
-      .string()
-      .trim()
-      .max(100, "Ilość nie może przekraczać 100 znaków")
-      // Puste pole formularza to brak ilości, nie pusty napis.
-      .transform((value) => (value === "" ? null : value))
-      .nullable()
-      .optional(),
+    content: entryContentSchema,
+    amount_text: amountTextSchema.nullable().optional(),
     // Przy tworzeniu wpisu liczba jest opcjonalna: brak wartości to wpis jeszcze niepoliczony.
     calories: caloriesValueSchema.nullable().optional(),
     // Przepis, z którego wpis powstał. Własność przepisu sprawdza serwis - schemat pilnuje kształtu.
