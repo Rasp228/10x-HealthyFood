@@ -5,12 +5,23 @@ import { getTestCredentials } from "./config/test-data";
 /**
  * Dzień-sygnatura: data z odległej przeszłości, której żaden człowiek nie otworzy w dzienniku.
  *
- * Nie ma jeszcze route DELETE dla wpisów dziennika, więc `CleanupService` nie ma czego zawołać
- * i wiersze z tego przebiegu zostają w bazie. Zebrane pod jednym sztucznym dniem nie zaśmiecają
- * żadnego prawdziwego dnia użytkownika, a data z przeszłości spełnia przy tym regułę panelu,
- * który nie pozwala pisać w przyszłość.
+ * Od S-05 wpisy da się usuwać, więc `afterEach` sprząta ten dzień po każdym zdanym teście. Dzień
+ * zostaje sztuczny z dwóch powodów: `deleteDiaryEntriesForDays` kasuje **wszystkie** wpisy dnia,
+ * więc nie może trafić w prawdziwy dzień konta, a test nieudany zostawia swoje wiersze do
+ * obejrzenia - pod dniem, którego nikt nie otwiera. Data z przeszłości spełnia przy tym regułę
+ * panelu, który nie pozwala pisać w przyszłość.
  */
 const SIGNATURE_DAY = "2000-01-01";
+
+/**
+ * Dzień, na który scenariusz zmiany dnia przenosi wpis: dzień **przed** sygnaturą, bo pole dnia
+ * w modalu edycji nie przyjmuje przyszłości, a "przyszłość" liczy się od dziś, nie od sygnatury.
+ * Sprzątany razem z `SIGNATURE_DAY`.
+ */
+const MOVE_TARGET_DAY = "1999-12-31";
+
+/** Wszystkie dni, na których piszą scenariusze - lista dla sprzątania wpisów. */
+const SCENARIO_DAYS = [SIGNATURE_DAY, MOVE_TARGET_DAY];
 
 /** Kalorie na porcję zadeklarowane w bloku poniżej - jedyna liczba, z której liczą się oczekiwania. */
 const CALORIES_PER_PORTION = 250;
@@ -60,19 +71,36 @@ test.describe("Diary Entry", () => {
   /**
    * Czyszczenie danych testowych, skopiowane z `recipe-management.spec.ts`.
    *
-   * Scenariusze z przepisem tworzą go przez UI i bez tego hooka zostawiałyby po każdym przebiegu
-   * kolejny wiersz na koncie testowym. Wpisów dziennika nadal nie ma czym posprzątać - route
-   * DELETE przychodzi dopiero z S-05 - więc jedyne, co tu można oddać, to przepisy.
+   * Dwa kroki, w tej kolejności:
+   * 1. Wpisy dziennika z dni scenariuszy - po każdym zdanym teście, bo każdy scenariusz pisze
+   *    w dzienniku. Idą pierwsze: klucz obcy wpisu na przepis ma `on delete set null`, więc
+   *    usunięcie przepisu przed wpisem zostawiłoby wiersz-sierotę.
+   * 2. Przepisy - tylko po scenariuszach, które je tworzą. Bramka jest podwójna: status
+   *    Playwrighta i własna flaga, bo `deleteAllTestUserRecipes` kasuje **wszystkie** przepisy
+   *    konta, nie tylko te z przebiegu.
    *
-   * Bramka jest podwójna: status Playwrighta i własna flaga. Po nieudanym teście przepis zostaje
-   * na koncie do obejrzenia, a scenariusze, które przepisu nie tworzą, w ogóle nie wołają
-   * czyszczenia - `deleteAllTestUserRecipes` kasuje **wszystkie** przepisy konta, nie tylko te
-   * z przebiegu.
+   * Po nieudanym teście nie sprząta się nic - wpisy i przepis zostają na koncie do obejrzenia.
    *
-   * `test.info()` zamiast drugiego argumentu hooka: ten hook nie potrzebuje żadnej fikstury.
+   * Serwis czyszczenia inicjalizuje się tu od nowa, bo scenariusze bez przepisu go nie zakładają;
+   * żądania `page.request` i tak niosą ciasteczka sesji z kontekstu przeglądarki.
    */
-  test.afterEach(async () => {
-    if (!testPassed || test.info().status !== "passed") {
+  test.afterEach(async ({ baseURL }) => {
+    if (test.info().status !== "passed") {
+      return;
+    }
+
+    try {
+      app.initializeCleanup(baseURL || "http://localhost:3000", testCredentials.userId);
+
+      const diaryResult = await app.cleanupDiaryEntries(SCENARIO_DAYS);
+      if (!diaryResult.success) {
+        console.warn(`⚠️ Nie udało się wyczyścić wpisów dziennika: ${diaryResult.message}`);
+      }
+    } catch (error) {
+      console.warn("⚠️ Błąd podczas czyszczenia wpisów dziennika:", error);
+    }
+
+    if (!testPassed) {
       return;
     }
 
@@ -338,5 +366,200 @@ test.describe("Diary Entry", () => {
 
     // 10. Oznacz test jako zaliczony (umożliwia czyszczenie danych)
     testPassed = true;
+  });
+
+  test("should keep the value and its origin when only the content is edited", async () => {
+    const runId = Date.now();
+    // Nowa treść nie zawiera starej - `entryRow` filtruje po fragmencie tekstu.
+    const originalContent = `E2E jajecznica ${runId}`;
+    const editedContent = `E2E omlet z pomidorem ${runId}`;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const totalBefore = await app.diaryPage.readTotal();
+
+    // 3. Wpis z liczbą wpisaną ręcznie
+    await app.diaryPage.addEntry({ content: originalContent, amount: "3 jajka", calories: "320" });
+    await app.diaryPage.expectEntryOrigin(originalContent, "wpisane ręcznie");
+
+    // 4. Pusty opis modal odrzuca przy polu i zostaje otwarty - nic nie jedzie do serwera
+    await app.diaryPage.editEntry(originalContent, { content: "" });
+    await app.diaryPage.editSaveButton.click();
+    await app.diaryPage.expectEditError("content", "Opis posiłku jest wymagany");
+
+    // 5. Zmiana samej treści i „Zapisz" - liczba w modalu zostaje zasiana z wiersza i nie jedzie
+    await app.diaryPage.editInput("content").fill(editedContent);
+    await app.diaryPage.saveEdit();
+    await app.diaryPage.expectToast("Wpis został zapisany");
+
+    // 6. Wiersz ma nową treść, a wartość i pochodzenie stoją
+    await app.diaryPage.expectEntryVisible(editedContent);
+    await app.diaryPage.expectEntryAbsent(originalContent);
+    await app.diaryPage.expectEntryCalories(editedContent, 320);
+    await app.diaryPage.expectEntryOrigin(editedContent, "wpisane ręcznie");
+    await app.diaryPage.expectTotal(totalBefore + 320);
+  });
+
+  test("should recalculate a recipe entry from the recipe after changing portions", async ({ baseURL }) => {
+    // Przepis z blokiem wartości: przeliczenie rozstrzyga parser po stronie serwera, w tym samym
+    // zapisie, więc wiersz nie trafia do kolejki wyceny i model nie jest wołany.
+    const runId = Date.now();
+    const recipe: RecipeData = {
+      title: `E2E Owsianka do przeliczenia ${runId}`,
+      content: RECIPE_CONTENT_WITH_NUTRITION,
+      additionalParams: "e2e-test",
+    };
+    const newPortions = 2;
+    const expectedCalories = CALORIES_PER_PORTION * newPortions;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Inicjalizuj serwis czyszczenia po zalogowaniu - ten scenariusz zostawia po sobie przepis
+    app.initializeCleanup(baseURL || "http://localhost:3000", testCredentials.userId);
+
+    // 3. Przepis z rozpoznawanym blokiem odżywczym
+    await app.homePage.clickAddRecipe();
+    await app.recipeFormPage.expectAddRecipeModal();
+    await app.recipeFormPage.fillRecipeForm(recipe);
+    await app.recipeFormPage.submitForm();
+    await app.recipeFormPage.expectModalClosed();
+
+    // 4. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const totalBefore = await app.diaryPage.readTotal();
+
+    // 5. Wpis z przepisu przy domyślnej jednej porcji
+    await app.diaryPage.selectRecipe(recipe.title);
+    await app.diaryPage.expectRecipeMode(recipe.title);
+    await app.diaryPage.submitEntry();
+    await app.diaryPage.expectEntryCalories(recipe.title, CALORIES_PER_PORTION);
+
+    // 6. Dwie porcje i „Zapisz i przelicz"
+    await app.diaryPage.editEntry(recipe.title, { portions: String(newPortions) });
+    await app.diaryPage.saveEditAndRecalculate();
+    await app.diaryPage.expectToast("Wpis został zapisany");
+
+    // 7. Nowa wartość z przepisu - liczona od porcji po edycji
+    await app.diaryPage.expectEntryAmount(recipe.title, `${newPortions} porcje`);
+    await app.diaryPage.expectEntryCalories(recipe.title, expectedCalories);
+    await app.diaryPage.expectEntryOrigin(recipe.title, "z przepisu");
+    await app.diaryPage.expectTotal(totalBefore + expectedCalories);
+
+    // 8. Oznacz test jako zaliczony (umożliwia czyszczenie przepisu)
+    testPassed = true;
+  });
+
+  test("should mark an entry as not calculated and change the day total when its value is cleared", async () => {
+    const runId = Date.now();
+    const content = `E2E kotlet schabowy ${runId}`;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const totalBefore = await app.diaryPage.readTotal();
+    const missingBefore = await app.diaryPage.readMissingCount();
+
+    // 3. Wpis z wartością - suma rośnie
+    await app.diaryPage.addEntry({ content, amount: "1 sztuka", calories: "540" });
+    await app.diaryPage.expectTotal(totalBefore + 540);
+
+    // 4. Wyczyszczenie liczby i „Zapisz" - bez przeliczenia, więc wiersz nie idzie do kolejki
+    await app.diaryPage.editEntry(content, { calories: "" });
+    await app.diaryPage.saveEdit();
+    await app.diaryPage.expectToast("Wpis został zapisany");
+
+    // 5. Wpis czyta się jako niepoliczony, suma wraca, a licznik braków rośnie o jeden
+    await app.diaryPage.expectNotCalculated(content);
+    await app.diaryPage.expectTotal(totalBefore);
+    await app.diaryPage.expectMissingCount(missingBefore + 1);
+  });
+
+  test("should move an entry to another day and say where it went", async () => {
+    const runId = Date.now();
+    const content = `E2E zupa pomidorowa ${runId}`;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    // 3. Wpis do przeniesienia
+    await app.diaryPage.addEntry({ content, amount: "1 talerz", calories: "180" });
+    await app.diaryPage.expectEntryVisible(content);
+
+    // 4. Dzień wcześniejszy - zapis przechodzi, wpis znika z bieżącej listy, a toast mówi, dokąd
+    //    trafił. Widok zostaje na dniu, z którego wpis wyszedł.
+    await app.diaryPage.editEntry(content, { date: MOVE_TARGET_DAY });
+    await app.diaryPage.saveEdit();
+    await app.diaryPage.expectToast(`Wpis przeniesiono na ${MOVE_TARGET_DAY}`);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+    await app.diaryPage.expectEntryAbsent(content);
+
+    // 5. Wpis czeka na nowym dniu, z tą samą wartością
+    await app.diaryPage.goto(MOVE_TARGET_DAY);
+    await app.diaryPage.expectDay(MOVE_TARGET_DAY);
+    await app.diaryPage.expectEntryVisible(content);
+    await app.diaryPage.expectEntryCalories(content, 180);
+  });
+
+  test("should delete an entry only after confirmation", async () => {
+    const runId = Date.now();
+    const content = `E2E pączek z różą ${runId}`;
+
+    // 1. Logowanie
+    await app.loginPage.goto();
+    await app.loginPage.login(testCredentials.email, testCredentials.password);
+    await app.loginPage.expectSuccessfulLogin();
+
+    // 2. Dzień-sygnatura
+    await app.diaryPage.goto(SIGNATURE_DAY);
+    await app.diaryPage.expectDay(SIGNATURE_DAY);
+
+    const totalBefore = await app.diaryPage.readTotal();
+
+    // 3. Wpis do usunięcia
+    await app.diaryPage.addEntry({ content, amount: "1 sztuka", calories: "290" });
+    await app.diaryPage.expectTotal(totalBefore + 290);
+
+    // 4. „Anuluj" w dialogu zostawia wpis i sumę
+    await app.diaryPage.cancelDelete(content);
+    await app.diaryPage.expectEntryVisible(content);
+    await app.diaryPage.expectTotal(totalBefore + 290);
+
+    // 5. Potwierdzenie usuwa wpis, a suma dnia wraca do stanu sprzed niego
+    await app.diaryPage.deleteEntry(content);
+    await app.diaryPage.expectToast("Wpis został usunięty");
+    await app.diaryPage.expectEntryAbsent(content);
+
+    if (totalBefore > 0) {
+      await app.diaryPage.expectTotal(totalBefore);
+    } else {
+      // Dzień bez innych policzonych wpisów: po usunięciu podsumowanie albo pokazuje zero, albo
+      // ustępuje pustemu dniowi - `readTotal` czyta oba przypadki jako 0. Dzień jest już ustalony,
+      // bo `deleteEntry` kończy się na świeżej liście.
+      expect(await app.diaryPage.readTotal()).toBe(0);
+    }
   });
 });

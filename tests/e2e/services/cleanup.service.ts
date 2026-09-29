@@ -69,6 +69,61 @@ export class CleanupService {
   }
 
   /**
+   * Usuwa wpisy dziennika testowego użytkownika z podanych dni.
+   *
+   * Dziennik nie ma listy "wszystkich wpisów" - trasa GET zwraca jeden dzień - więc sprzątamy
+   * wyłącznie dni, na których piszą scenariusze. Prawdziwe dni konta testowego zostają nietknięte.
+   * Wołane **przed** `deleteAllTestUserRecipes`: klucz obcy wpisu na przepis ma
+   * `on delete set null`, więc usunięcie przepisu najpierw zostawiłoby wiersze-sieroty.
+   */
+  async deleteDiaryEntriesForDays(days: string[]): Promise<{ deleted: number; errors: string[] }> {
+    const errors: string[] = [];
+    let deletedCount = 0;
+
+    for (const day of days) {
+      try {
+        const response = await this.page.request.get(`${this.baseUrl}/api/diary-entries?date=${day}`);
+
+        if (!response.ok()) {
+          const responseText = await response.text();
+          errors.push(`Nie udało się pobrać wpisów z dnia ${day}: ${response.status()} - ${responseText}`);
+          continue;
+        }
+
+        const responseData = await response.json();
+        const entries: { id: number; content: string }[] = responseData.data ?? [];
+
+        for (const entry of entries) {
+          try {
+            // Ten sam powód co przy przepisach: bez nagłówka Origin Astro odrzuca DELETE
+            // (security.checkOrigin), a APIRequestContext Playwrighta go nie dokłada.
+            const deleteResponse = await this.page.request.delete(`${this.baseUrl}/api/diary-entries/${entry.id}`, {
+              headers: { Origin: this.baseUrl },
+            });
+
+            if (deleteResponse.ok()) {
+              deletedCount++;
+            } else {
+              const errorText = await deleteResponse.text();
+              errors.push(`Nie udało się usunąć wpisu ${entry.id}: ${deleteResponse.status()} - ${errorText}`);
+            }
+          } catch (error) {
+            errors.push(`Błąd przy usuwaniu wpisu ${entry.id}: ${error}`);
+          }
+        }
+      } catch (error) {
+        errors.push(`Błąd przy czyszczeniu dnia ${day}: ${error}`);
+      }
+    }
+
+    if (deletedCount > 0) {
+      console.log(`Usunięto wpisy dziennika: ${deletedCount} (dni: ${days.join(", ")})`);
+    }
+
+    return { deleted: deletedCount, errors };
+  }
+
+  /**
    * Sprawdza czy użytkownik jest testowym użytkownikiem
    * Dodatkowe zabezpieczenie przed przypadkowym usunięciem danych produkcyjnych
    */

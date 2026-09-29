@@ -7,6 +7,21 @@ export interface DiaryEntryData {
 }
 
 /**
+ * Zmiany wpisywane w modalu edycji. Pole pominięte zostaje z wartością zasianą z wiersza;
+ * pusty napis w `calories` czyści liczbę.
+ */
+export interface DiaryEntryChanges {
+  content?: string;
+  amount?: string;
+  portions?: string;
+  calories?: string;
+  date?: string;
+}
+
+/** Końcówki `data-testid` pól modalu edycji - te same, których używa `DiaryEntryEditModal`. */
+export type DiaryEditField = "content" | "amount" | "portions" | "calories" | "date";
+
+/**
  * Stałe uprzedzenie o wysyłce treści do dostawcy modelu.
  *
  * Kopia `AI_NOTICE` z `src/lib/utils/diary-estimation.ts` - suita E2E nie importuje z `src`,
@@ -55,6 +70,10 @@ export class DiaryPage {
   readonly dayTotal: Locator;
   readonly dayMissing: Locator;
   readonly dayCount: Locator;
+  readonly editModal: Locator;
+  readonly editSaveButton: Locator;
+  readonly editSaveRecalculateButton: Locator;
+  readonly deleteConfirm: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -93,6 +112,10 @@ export class DiaryPage {
     this.dayTotal = page.getByTestId("diary-day-total");
     this.dayMissing = page.getByTestId("diary-day-missing");
     this.dayCount = page.getByTestId("diary-day-count");
+    this.editModal = page.getByTestId("diary-edit-modal");
+    this.editSaveButton = page.getByTestId("diary-edit-save-button");
+    this.editSaveRecalculateButton = page.getByTestId("diary-edit-save-recalculate-button");
+    this.deleteConfirm = page.getByTestId("diary-delete-confirm");
   }
 
   /**
@@ -219,8 +242,9 @@ export class DiaryPage {
   /**
    * Suma dnia widoczna w panelu; `0` dla dnia bez wpisów, w którym podsumowanie się nie rysuje.
    *
-   * Testy czytają ją przed dodaniem wpisów i liczą przyrost, bo bez route DELETE wiersze
-   * z poprzednich przebiegów zostają w bazie pod tym samym dniem-sygnaturą.
+   * Testy czytają ją przed dodaniem wpisów i liczą przyrost. Po zdanym teście `afterEach` sprząta
+   * dzień-sygnaturę, ale test nieudany zostawia swoje wiersze do obejrzenia - i te siedzą w sumie
+   * do następnego sprzątania.
    */
   async readTotal(): Promise<number> {
     if (!(await this.dayTotal.isVisible())) return 0;
@@ -271,8 +295,9 @@ export class DiaryPage {
    * Wiersz wpisu o podanej treści.
    *
    * Wpis ma `data-testid="diary-entry-<id>"`, ale identyfikatora z bazy test nie zna, więc wiersz
-   * wybiera się po treści. Treść musi być unikalna w obrębie dnia - bez route DELETE wpisy
-   * z poprzednich przebiegów zostają pod dniem-sygnaturą i trafiłyby w ten sam lokator.
+   * wybiera się po treści. Treść musi być unikalna w obrębie dnia - wpisy po nieudanym przebiegu
+   * zostają pod dniem-sygnaturą do następnego sprzątania i trafiłyby w ten sam lokator. Filtr
+   * `hasText` dopasowuje fragment, więc nowa treść po edycji nie może zawierać starej.
    */
   entryRow(content: string): Locator {
     return this.entryList.locator("li").filter({ hasText: content });
@@ -355,5 +380,134 @@ export class DiaryPage {
     const field = this.entryRow(content).getByTestId("diary-entry-calories-input");
 
     await expect(field).toBeEnabled();
+  }
+
+  /** Pole modalu edycji po końcówce jego `data-testid`. */
+  editInput(field: DiaryEditField): Locator {
+    return this.editModal.getByTestId(`diary-edit-${field}-input`);
+  }
+
+  /** Otwiera modal edycji wpisu; kończy się na formularzu zasianym treścią wiersza. */
+  async openEdit(content: string) {
+    await this.entryRow(content).getByTestId("diary-entry-edit-button").click();
+
+    await expect(this.editModal).toBeVisible();
+    await expect(this.editInput("content")).toHaveValue(content);
+  }
+
+  /**
+   * Otwiera edycję wpisu i wpisuje zmiany - bez zapisu, bo ten wybiera test: `saveEdit` albo
+   * `saveEditAndRecalculate`.
+   */
+  async editEntry(content: string, changes: DiaryEntryChanges) {
+    await this.openEdit(content);
+
+    if (changes.content !== undefined) await this.editInput("content").fill(changes.content);
+    if (changes.amount !== undefined) await this.editInput("amount").fill(changes.amount);
+    if (changes.portions !== undefined) await this.editInput("portions").fill(changes.portions);
+    if (changes.calories !== undefined) await this.editInput("calories").fill(changes.calories);
+    if (changes.date !== undefined) await this.editInput("date").fill(changes.date);
+  }
+
+  /**
+   * „Zapisz". Modal zamyka się dopiero po odpowiedzi 200, więc jego zniknięcie potwierdza zapis,
+   * a nie samo kliknięcie.
+   */
+  async saveEdit() {
+    await this.editSaveButton.click();
+
+    await expect(this.editModal).toBeHidden({ timeout: 15000 });
+  }
+
+  /**
+   * „Zapisz i przelicz". Ten sam warunek zakończenia co w `saveEdit`. Przycisk gaśnie, gdy w modalu
+   * wpisano liczbę, więc najpierw sprawdzamy, że w ogóle da się go kliknąć.
+   */
+  async saveEditAndRecalculate() {
+    await expect(this.editSaveRecalculateButton).toBeEnabled();
+    await this.editSaveRecalculateButton.click();
+
+    await expect(this.editModal).toBeHidden({ timeout: 15000 });
+  }
+
+  /** Komunikat pod polem modalu edycji; modal zostaje otwarty, bo zapis nie poszedł. */
+  async expectEditError(field: DiaryEditField, message?: string) {
+    const error = this.editModal.getByTestId(`diary-edit-${field}-error`);
+
+    await expect(error).toBeVisible();
+    if (message !== undefined) await expect(error).toHaveText(message);
+    await expect(this.editModal).toBeVisible();
+  }
+
+  /**
+   * Dokłada nagłówek `Origin` do `DELETE` wpisu wysyłanego przez wyspę.
+   *
+   * Chromium uruchomiony z `--disable-web-security` (`playwright.config.ts`) nie wysyła `Origin`
+   * nawet przy żądaniach z tej samej domeny. `PATCH` przechodzi, bo niesie `application/json`,
+   * ale `DELETE` bez ciała i bez `Content-Type` `security.checkOrigin` odrzuca wtedy z 403 - czego
+   * zwykła przeglądarka nie robi. Nagłówek jest ten sam, który `CleanupService` wysyła jawnie.
+   *
+   * `route.fetch` + `route.fulfill`, a nie `route.fallback({ headers })`: Chromium po cichu gubi
+   * nadpisany `Origin` przy kontynuacji żądania, a `route.fetch` wysyła je przez APIRequestContext,
+   * który ten nagłówek przepuszcza.
+   */
+  private async ensureOriginOnEntryDelete() {
+    const origin = new URL(this.page.url()).origin;
+
+    await this.page.route(/\/api\/diary-entries\/\d+$/, async (route) => {
+      const request = route.request();
+
+      if (request.method() !== "DELETE") {
+        await route.fallback();
+        return;
+      }
+
+      const response = await route.fetch({ headers: { ...request.headers(), origin } });
+
+      await route.fulfill({ response });
+    });
+  }
+
+  /** Usuwa wpis przez dialog potwierdzenia; kończy się, gdy wiersz zniknął z listy. */
+  async deleteEntry(content: string) {
+    await this.ensureOriginOnEntryDelete();
+    await this.entryRow(content).getByTestId("diary-entry-delete-button").click();
+
+    await expect(this.deleteConfirm).toBeVisible();
+    await this.deleteConfirm.getByTestId("diary-delete-confirm-confirm").click();
+    await expect(this.deleteConfirm).toBeHidden();
+
+    await this.expectEntryAbsent(content);
+  }
+
+  /** Otwiera dialog usunięcia i wycofuje się z niego - wpis ma zostać na liście. */
+  async cancelDelete(content: string) {
+    await this.entryRow(content).getByTestId("diary-entry-delete-button").click();
+
+    await expect(this.deleteConfirm).toBeVisible();
+    await this.deleteConfirm.getByTestId("diary-delete-confirm-cancel").click();
+    await expect(this.deleteConfirm).toBeHidden();
+  }
+
+  /**
+   * Wpisu o tej treści nie ma na liście dnia - także wtedy, gdy lista ustąpiła pustemu dniu.
+   *
+   * Asercja jest podwójna, bo po mutacji `refetch()` na chwilę zastępuje listę spinnerem, a pod
+   * spinnerem wpisu też "nie ma". Druga próba idzie dopiero po ustaleniu dnia, na świeżej liście.
+   */
+  async expectEntryAbsent(content: string) {
+    const rows = this.entryContents.filter({ hasText: content });
+
+    await expect(rows).toHaveCount(0, { timeout: 15000 });
+    await this.waitForDaySettled();
+    await expect(rows).toHaveCount(0);
+  }
+
+  /**
+   * Toast o podanej treści. Toast nie ma własnego `data-testid`, więc lokator idzie po tekście -
+   * komunikaty dziennika są na ekranie jedyne w swoim rodzaju.
+   */
+  async expectToast(message: string) {
+    await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 15000 });
   }
 }

@@ -43,6 +43,28 @@ export class Application {
     }
   }
 
+  // Czyszczenie wpisów dziennika z dni scenariuszy - wołane przed `cleanupTestData`,
+  // żeby usunięcie przepisów nie zostawiło po sobie wierszy-sierot
+  async cleanupDiaryEntries(days: string[]): Promise<{ success: boolean; message: string }> {
+    if (!this.cleanupService) {
+      return {
+        success: false,
+        message: "Serwis czyszczenia nie został zainicjalizowany",
+      };
+    }
+
+    const result = await this.cleanupService.deleteDiaryEntriesForDays(days);
+
+    if (result.errors.length > 0) {
+      return {
+        success: false,
+        message: `Częściowe czyszczenie dziennika: usunięto ${result.deleted} wpisów, błędy: ${result.errors.join("; ")}`,
+      };
+    }
+
+    return { success: true, message: `Usunięto ${result.deleted} wpisów dziennika` };
+  }
+
   // Bezpieczne czyszczenie danych testowych (tylko po udanym teście)
   async cleanupTestData(): Promise<{ success: boolean; message: string }> {
     if (!this.cleanupService) {

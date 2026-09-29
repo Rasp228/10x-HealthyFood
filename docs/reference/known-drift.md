@@ -78,6 +78,11 @@ Od S-04 ta sama trasa wycenia też wpisy z przepisu, wysyłając do modelu cał�
 jednego zdania opisu — prompt jest o rząd wielkości większy, więc niekontrolowana pętla kosztuje
 teraz odpowiednio więcej. Luka jest ta sama, urosła tylko jej cena.
 
+Od S-05 do modelu prowadzi też ścieżka „Zapisz i przelicz": `PATCH /api/diary-entries/:id`
+z `recalculate: true` zeruje wartość i znacznik, a gdy parser przepisu nic nie ustali, przeglądarka
+kolejkuje to samo `POST /estimate`. Wpis z wartością można więc wyzerować i wycenić ponownie
+dowolną liczbę razy, bez żadnego limitu po stronie serwera.
+
 Przyjęte świadomie (przegląd wdrożenia `ai-estimate-for-free-text`, ustalenie F2; podtrzymane
 w planie `ai-estimate-from-recipe`, decyzja D6): model jest darmowy, użytkowników jest kilku,
 a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej w trasie wyceny to warunek
@@ -96,23 +101,18 @@ i `source_recipe_id = NULL` — w stanie, którego trasa tworząca nigdy by nie 
 poprawny merytorycznie (użytkownik zjadł dwie porcje, a wartość i suma dnia mają zostać bez zmian —
 to kryterium akceptacji US-02), tylko nieodtwarzalny przez własny schemat.
 
-Nie jest to przypadek brzegowy: `tests/e2e/diary-entry.spec.ts` kasuje po każdym zdanym teście
-wszystkie przepisy konta testowego, a wpisów dziennika nic nie sprząta, bo trasa `DELETE` przychodzi
-dopiero z S-05.
+Od S-05 sierota nie jest już ślepym zaułkiem. `updateDiaryEntrySchema`
+(`src/lib/validations/diary/update-entry.ts`) pilnuje tylko kształtu pól, a regułę kształtu ilości
+`DiaryService.updateEntry` sprawdza względem zapisanego wiersza: wiersz z `portions` przyjmuje nowe
+porcje bez względu na `source_recipe_id`, więc edycja sieroty nie kończy się 400. „Zapisz
+i przelicz" nie znajduje dla niej treści przepisu i zostawia ją bez wartości, a trasa
+`src/pages/api/diary-entries/[id]/estimate.ts` na gałęzi opisowej wysyła do modelu jej porcje jako
+ilość (`formatPortions(entry.portions)` zamiast pustego `amount_text`). Wynik opisuje cały posiłek
+i nie jest mnożony, a pochodzenie zostaje `ai_from_description`. Wiersz z „2 porcjami" nie dostaje
+już wartości oszacowanej dla jednej.
 
-Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F3): domknięcie
-wymagałoby migracji, którą plan tej zmiany wprost wyklucza. **S-05 (`edit-and-delete-entry`) musi to
-przewidzieć** — schemat edycji nie może odrzucać wiersza z `portions` i pustym `source_recipe_id`,
-bo inaczej użytkownik dostanie 400 na wpisie, którego nie tknął.
-
-Od S-04 ta sama sierota ma drugi skutek, przy wycenie. Wiersz bez `source_recipe_id`, który nie
-dostał jeszcze wartości, trasa `src/pages/api/diary-entries/[id]/estimate.ts` kieruje na gałąź
-opisową. Do modelu idzie wtedy `content` — zwykle sam tytuł przepisu — i `amount_text = null`,
-a `portions` pomija się zupełnie: nie trafia do promptu i niczego nie mnoży. Wiersz pokazuje więc
-„2 porcje" obok wartości oszacowanej dla jednej. To objaw zamkniętego w S-04 znaleziska „wycena
-ignoruje liczbę porcji", tylko ograniczony do wierszy po usuniętym przepisie.
-
-Przyjęte świadomie (plan `ai-estimate-from-recipe`, decyzja D3, podtrzymana w przeglądzie wdrożenia,
-ustalenie F1): sierota zostaje na dzisiejszej ścieżce opisowej, bez nowego kodu. Naprawa, np.
-przekazanie `portions` jako ilości na gałęzi opisowej, łamie zasadę „ścieżka opisowa bez zmian".
-Najlepiej rozstrzygnąć ją w S-05, razem ze schematem edycji tego samego wiersza.
+Zostaje sama luka w bazie: żaden check nie wiąże `portions` z `source_recipe_id`, więc sierota
+wciąż powstaje przy każdym usunięciu przepisu i wciąż nie przeszłaby przez schemat tworzenia.
+Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F3; plan
+`edit-and-delete-entry`, „What We're NOT Doing"): domknięcie wymaga migracji, którą oba plany
+wprost wykluczają.

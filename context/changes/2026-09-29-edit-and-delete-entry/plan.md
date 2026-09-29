@@ -559,33 +559,33 @@ i przeliczyć z uwzględnieniem porcji.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą: `npm run test`
-- [x] 2.2 Typy bez błędów: `npm run typecheck`
-- [x] 2.3 Lint, w tym reguły React Compiler, przechodzi: `npm run lint`
-- [x] 2.4 Formatowanie zgodne: `npm run format:check`
-- [x] 2.5 Build przechodzi: `npm run build`
+- [x] 2.1 Testy jednostkowe przechodzą: `npm run test` — 989c838
+- [x] 2.2 Typy bez błędów: `npm run typecheck` — 989c838
+- [x] 2.3 Lint, w tym reguły React Compiler, przechodzi: `npm run lint` — 989c838
+- [x] 2.4 Formatowanie zgodne: `npm run format:check` — 989c838
+- [x] 2.5 Build przechodzi: `npm run build` — 989c838
 
 #### Manual
 
-- [x] 2.6 Edycja samej treści zostawia liczbę i etykietę pochodzenia
-- [x] 2.7 Zmiana porcji i „Zapisz i przelicz” daje wartość „z przepisu” bez modelu
-- [x] 2.8 „Zapisz i przelicz” na wpisie opisowym przechodzi przez kolejkę do nowej wartości AI
-- [x] 2.9 Wyczyszczenie liczby daje „Nie policzono” i zmienia sumę dnia
-- [x] 2.10 Zmiana dnia usuwa wpis z listy, pokazuje toast i wpis jest na nowym dniu
-- [x] 2.11 Usunięcie wymaga potwierdzenia, „Anuluj” zostawia wpis
-- [x] 2.12 Modal i dialog działają z klawiatury i na szerokości telefonu
+- [x] 2.6 Edycja samej treści zostawia liczbę i etykietę pochodzenia — 989c838
+- [x] 2.7 Zmiana porcji i „Zapisz i przelicz” daje wartość „z przepisu” bez modelu — 989c838
+- [x] 2.8 „Zapisz i przelicz” na wpisie opisowym przechodzi przez kolejkę do nowej wartości AI — 989c838
+- [x] 2.9 Wyczyszczenie liczby daje „Nie policzono” i zmienia sumę dnia — 989c838
+- [x] 2.10 Zmiana dnia usuwa wpis z listy, pokazuje toast i wpis jest na nowym dniu — 989c838
+- [x] 2.11 Usunięcie wymaga potwierdzenia, „Anuluj” zostawia wpis — 989c838
+- [x] 2.12 Modal i dialog działają z klawiatury i na szerokości telefonu — 989c838
 
 ### Phase 3: E2E i porządki
 
 #### Automated
 
-- [ ] 3.1 Scenariusze E2E dziennika przechodzą: `npm run test:e2e -- tests/e2e/diary-entry.spec.ts`
-- [ ] 3.2 Testy jednostkowe przechodzą: `npm run test`
-- [ ] 3.3 Typy bez błędów: `npm run typecheck`
-- [ ] 3.4 Lint przechodzi: `npm run lint`
-- [ ] 3.5 Formatowanie zgodne: `npm run format:check`
+- [x] 3.1 Scenariusze E2E dziennika przechodzą: `npm run test:e2e -- tests/e2e/diary-entry.spec.ts`
+- [x] 3.2 Testy jednostkowe przechodzą: `npm run test`
+- [x] 3.3 Typy bez błędów: `npm run typecheck`
+- [x] 3.4 Lint przechodzi: `npm run lint`
+- [x] 3.5 Formatowanie zgodne: `npm run format:check`
 
 #### Manual
 
-- [ ] 3.6 Po E2E konto testowe nie ma wpisów pod dniami scenariuszy
-- [ ] 3.7 `known-drift.md` opisuje stan sieroty i F2 zgodnie z kodem
+- [x] 3.6 Po E2E konto testowe nie ma wpisów pod dniami scenariuszy
+- [x] 3.7 `known-drift.md` opisuje stan sieroty i F2 zgodnie z kodem
