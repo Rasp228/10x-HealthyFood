@@ -3,6 +3,7 @@ export { LoginPage } from "./LoginPage";
 export { HomePage } from "./HomePage";
 export { RecipeFormPage } from "./RecipeFormPage";
 export { DiaryPage } from "./DiaryPage";
+export { ProfilePage } from "./ProfilePage";
 export { Application } from "./Application";
 
 // Serwisy

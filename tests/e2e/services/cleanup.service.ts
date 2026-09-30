@@ -124,6 +124,34 @@ export class CleanupService {
   }
 
   /**
+   * Czyści dzienny cel kaloryczny testowego użytkownika (`PUT /api/user-settings` z `null`).
+   *
+   * Cel jest jeden na konto, więc nie ma czego wyszukiwać - jedno żądanie i gotowe. Wyczyszczenie
+   * celu, którego nie ma, też kończy się 200, więc metoda jest bezpieczna także "na zapas".
+   */
+  async clearDailyGoal(): Promise<{ errors: string[] }> {
+    const errors: string[] = [];
+
+    try {
+      // Bez nagłówka Origin Astro odrzuca PUT (security.checkOrigin), a APIRequestContext
+      // Playwrighta go nie dokłada - tak samo jak przy DELETE przepisów i wpisów.
+      const response = await this.page.request.put(`${this.baseUrl}/api/user-settings`, {
+        headers: { Origin: this.baseUrl },
+        data: { daily_calorie_goal: null },
+      });
+
+      if (!response.ok()) {
+        const responseText = await response.text();
+        errors.push(`Nie udało się wyczyścić celu dziennego: ${response.status()} - ${responseText}`);
+      }
+    } catch (error) {
+      errors.push(`Błąd przy czyszczeniu celu dziennego: ${error}`);
+    }
+
+    return { errors };
+  }
+
+  /**
    * Sprawdza czy użytkownik jest testowym użytkownikiem
    * Dodatkowe zabezpieczenie przed przypadkowym usunięciem danych produkcyjnych
    */

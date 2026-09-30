@@ -70,6 +70,8 @@ export class DiaryPage {
   readonly dayTotal: Locator;
   readonly dayMissing: Locator;
   readonly dayCount: Locator;
+  readonly goalProgress: Locator;
+  readonly goalText: Locator;
   readonly editModal: Locator;
   readonly editSaveButton: Locator;
   readonly editSaveRecalculateButton: Locator;
@@ -112,6 +114,8 @@ export class DiaryPage {
     this.dayTotal = page.getByTestId("diary-day-total");
     this.dayMissing = page.getByTestId("diary-day-missing");
     this.dayCount = page.getByTestId("diary-day-count");
+    this.goalProgress = page.getByTestId("diary-goal-progress");
+    this.goalText = page.getByTestId("diary-goal-text");
     this.editModal = page.getByTestId("diary-edit-modal");
     this.editSaveButton = page.getByTestId("diary-edit-save-button");
     this.editSaveRecalculateButton = page.getByTestId("diary-edit-save-recalculate-button");
@@ -237,6 +241,26 @@ export class DiaryPage {
 
   async expectMissingCount(missing: number) {
     await expect(this.dayMissing).toContainText(`Bez policzonych kalorii: ${missing} z `, { timeout: 15000 });
+  }
+
+  /**
+   * Opis paska celu pod sumą dnia, np. `450 / 2000 kcal · zostało 1550 kcal`.
+   *
+   * Cel dociera do dziennika z SSR, więc po zmianie celu w profilu dziennik trzeba otworzyć na
+   * nowo (`goto`) - pasek nie odświeża się sam.
+   */
+  async expectGoalText(text: string) {
+    await expect(this.goalProgress).toBeVisible({ timeout: 15000 });
+    await expect(this.goalText).toHaveText(text, { timeout: 15000 });
+  }
+
+  /**
+   * Paska celu nie ma. Asercja ma sens tylko na dniu z wpisami - pusty dzień nie rysuje
+   * podsumowania wcale, więc brak paska niczego by tam nie dowodził. Stąd najpierw podsumowanie.
+   */
+  async expectNoGoalProgress() {
+    await expect(this.daySummary).toBeVisible({ timeout: 15000 });
+    await expect(this.goalProgress).toHaveCount(0);
   }
 
   /**

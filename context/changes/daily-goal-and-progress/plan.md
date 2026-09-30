@@ -615,25 +615,25 @@ Wycofanie: `drop table user_settings` usuwa tylko cele i nie rusza żadnych inny
 
 #### Automated
 
-- [x] 4.1 Testy `goalProgress` i reszta suite przechodzą: `npm run test`
-- [x] 4.2 Typecheck bez błędów: `npm run typecheck`
-- [x] 4.3 Lint i format przechodzą: `npm run lint` oraz `npm run format:check`
-- [x] 4.4 Audyt zależności przechodzi bez nowego wpisu w allowliście: `npm run test:security`
-- [x] 4.5 Istniejące E2E dziennika przechodzą bez zmian asercji: `npm run test:e2e -- diary-entry`
+- [x] 4.1 Testy `goalProgress` i reszta suite przechodzą: `npm run test` — 1f9f29e
+- [x] 4.2 Typecheck bez błędów: `npm run typecheck` — 1f9f29e
+- [x] 4.3 Lint i format przechodzą: `npm run lint` oraz `npm run format:check` — 1f9f29e
+- [x] 4.4 Audyt zależności przechodzi bez nowego wpisu w allowliście: `npm run test:security` — 1f9f29e
+- [x] 4.5 Istniejące E2E dziennika przechodzą bez zmian asercji: `npm run test:e2e -- diary-entry` — 1f9f29e
 
 #### Manual
 
-- [ ] 4.6 Zrzuty `/dev/diary-goal-states` w jasnym i ciemnym motywie: przekroczenie nie wygląda jak błąd, pasek i opis czytelne na szerokości telefonu (375 px)
-- [ ] 4.7 Dziennik z celem 2000 i wpisem 450 kcal pokazuje pasek i `450 / 2000 kcal · zostało 1550 kcal`
-- [ ] 4.8 Dziennik bez celu wygląda jak przed zmianą
-- [ ] 4.9 `/dev/diary-goal-states` zwraca 404 w buildzie produkcyjnym (`npm run build` + `npm run preview`)
+- [x] 4.6 Zrzuty `/dev/diary-goal-states` w jasnym i ciemnym motywie: przekroczenie nie wygląda jak błąd, pasek i opis czytelne na szerokości telefonu (375 px) — 1f9f29e
+- [x] 4.7 Dziennik z celem 2000 i wpisem 450 kcal pokazuje pasek i `450 / 2000 kcal · zostało 1550 kcal` — 1f9f29e
+- [x] 4.8 Dziennik bez celu wygląda jak przed zmianą — 1f9f29e
+- [x] 4.9 `/dev/diary-goal-states` zwraca 404 w buildzie produkcyjnym (`npm run build` + `npm run preview`) — 1f9f29e
 
 ### Phase 5: E2E celu
 
 #### Automated
 
-- [ ] 5.1 Cały zestaw E2E przechodzi: `npm run test:e2e`
-- [ ] 5.2 Lint i typecheck przechodzą: `npm run lint` oraz `npm run typecheck`
+- [x] 5.1 Cały zestaw E2E przechodzi: `npm run test:e2e`
+- [x] 5.2 Lint i typecheck przechodzą: `npm run lint` oraz `npm run typecheck`
 
 #### Manual
 
