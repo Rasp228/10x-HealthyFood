@@ -632,9 +632,9 @@ Wycofanie: `drop table user_settings` usuwa tylko cele i nie rusza żadnych inny
 
 #### Automated
 
-- [x] 5.1 Cały zestaw E2E przechodzi: `npm run test:e2e`
-- [x] 5.2 Lint i typecheck przechodzą: `npm run lint` oraz `npm run typecheck`
+- [x] 5.1 Cały zestaw E2E przechodzi: `npm run test:e2e` — 3ff376d
+- [x] 5.2 Lint i typecheck przechodzą: `npm run lint` oraz `npm run typecheck` — 3ff376d
 
 #### Manual
 
-- [ ] 5.3 Po przebiegu E2E konto testowe nie ma ustawionego celu (`GET /api/user-settings` zwraca `null`)
+- [x] 5.3 Po przebiegu E2E konto testowe nie ma ustawionego celu (`GET /api/user-settings` zwraca `null`) — 3ff376d
