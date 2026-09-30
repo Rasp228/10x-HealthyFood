@@ -574,23 +574,23 @@ Wycofanie: `drop table user_settings` usuwa tylko cele i nie rusza żadnych inny
 
 #### Automated
 
-- [x] 1.1 Migracja aplikuje się bez błędów: `npm run supabase:push`
-- [x] 1.2 Typy zregenerowane i zawierają `user_settings`: `npm run supabase:gen`
-- [x] 1.3 Typecheck bez błędów: `npm run typecheck`
-- [x] 1.4 Lint i format przechodzą: `npm run lint` oraz `npm run format:check`
+- [x] 1.1 Migracja aplikuje się bez błędów: `npm run supabase:push` — fdb55d0
+- [x] 1.2 Typy zregenerowane i zawierają `user_settings`: `npm run supabase:gen` — fdb55d0
+- [x] 1.3 Typecheck bez błędów: `npm run typecheck` — fdb55d0
+- [x] 1.4 Lint i format przechodzą: `npm run lint` oraz `npm run format:check` — fdb55d0
 
 #### Manual
 
-- [x] 1.5 `supabase/checks/user-settings-rls.sql` uruchomiony w edytorze SQL z dwoma prawdziwymi UUID kończy się `[PASS]`
-- [x] 1.6 Tabela `preferences` i jej polityki bez zmian (porównanie `pg_policies` przed i po)
+- [x] 1.5 `supabase/checks/user-settings-rls.sql` uruchomiony w edytorze SQL z dwoma prawdziwymi UUID kończy się `[PASS]` — fdb55d0
+- [x] 1.6 Tabela `preferences` i jej polityki bez zmian (porównanie `pg_policies` przed i po) — fdb55d0
 
 ### Phase 2: Serwis i trasa celu
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą: `npm run test`
-- [ ] 2.2 Typecheck bez błędów: `npm run typecheck`
-- [ ] 2.3 Lint przechodzi: `npm run lint`
+- [x] 2.1 Testy jednostkowe przechodzą: `npm run test`
+- [x] 2.2 Typecheck bez błędów: `npm run typecheck`
+- [x] 2.3 Lint przechodzi: `npm run lint`
 
 #### Manual
 
