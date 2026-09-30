@@ -63,13 +63,18 @@ const getNowTick = () => Math.floor(Date.now() / TICK_MS) * TICK_MS;
 /** Serwer nie zna chwili przeglądarki - zero, tak jak `useSelectedDay` oddaje `null`. */
 const getServerNowTick = () => 0;
 
+interface DiaryPageProps {
+  /** Cel z SSR (`diary.astro`); `null`, gdy celu nie ustawiono albo odczyt się nie udał. */
+  dailyGoal: number | null;
+}
+
 /**
  * Wyspa dziennika: spina wybór dnia z listą wpisów, trzyma żądania wyceny i powierzchnię toastów.
  *
  * `<ToastContainer />` renderuje się tutaj, a nie w layoucie - wyspy Astro to osobne drzewa
  * Reacta, więc komponent wołający `showToast` bez kontenera po prostu nie ma czym go narysować.
  */
-export default function DiaryPage() {
+export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
   const { day, today, setDay } = useSelectedDay();
   const { entries, isLoading, error, refetch } = useDiaryEntries(day);
   const { showToast } = useToast();
@@ -262,7 +267,7 @@ export default function DiaryPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <DiaryDaySummary entries={entries} />
+            <DiaryDaySummary entries={entries} dailyGoal={dailyGoal} />
             <DiaryEntryList
               entries={entries}
               entryState={entryState}

@@ -600,26 +600,26 @@ Wycofanie: `drop table user_settings` usuwa tylko cele i nie rusza żadnych inny
 
 #### Automated
 
-- [x] 3.1 Typecheck bez błędów: `npm run typecheck`
-- [x] 3.2 Lint (w tym reguły React Compiler) przechodzi: `npm run lint`
-- [x] 3.3 Testy jednostkowe przechodzą: `npm run test`
+- [x] 3.1 Typecheck bez błędów: `npm run typecheck` — 78c22bd
+- [x] 3.2 Lint (w tym reguły React Compiler) przechodzi: `npm run lint` — 78c22bd
+- [x] 3.3 Testy jednostkowe przechodzą: `npm run test` — 78c22bd
 
 #### Manual
 
-- [ ] 3.4 Ustawienie 2000 w profilu i odświeżenie strony pokazuje 2000
-- [ ] 3.5 „Usuń cel” czyści pole i po odświeżeniu pole jest puste
-- [ ] 3.6 Wpisanie 300 albo 20000 pokazuje komunikat walidacji i nie zapisuje
-- [ ] 3.7 Dodawanie, edycja i usuwanie preferencji działa jak przed zmianą
+- [x] 3.4 Ustawienie 2000 w profilu i odświeżenie strony pokazuje 2000 — 78c22bd
+- [x] 3.5 „Usuń cel” czyści pole i po odświeżeniu pole jest puste — 78c22bd
+- [x] 3.6 Wpisanie 300 albo 20000 pokazuje komunikat walidacji i nie zapisuje — 78c22bd
+- [x] 3.7 Dodawanie, edycja i usuwanie preferencji działa jak przed zmianą — 78c22bd
 
 ### Phase 4: Pasek postępu w dzienniku
 
 #### Automated
 
-- [ ] 4.1 Testy `goalProgress` i reszta suite przechodzą: `npm run test`
-- [ ] 4.2 Typecheck bez błędów: `npm run typecheck`
-- [ ] 4.3 Lint i format przechodzą: `npm run lint` oraz `npm run format:check`
-- [ ] 4.4 Audyt zależności przechodzi bez nowego wpisu w allowliście: `npm run test:security`
-- [ ] 4.5 Istniejące E2E dziennika przechodzą bez zmian asercji: `npm run test:e2e -- diary-entry`
+- [x] 4.1 Testy `goalProgress` i reszta suite przechodzą: `npm run test`
+- [x] 4.2 Typecheck bez błędów: `npm run typecheck`
+- [x] 4.3 Lint i format przechodzą: `npm run lint` oraz `npm run format:check`
+- [x] 4.4 Audyt zależności przechodzi bez nowego wpisu w allowliście: `npm run test:security`
+- [x] 4.5 Istniejące E2E dziennika przechodzą bez zmian asercji: `npm run test:e2e -- diary-entry`
 
 #### Manual
 

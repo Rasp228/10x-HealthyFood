@@ -1,16 +1,21 @@
 import React from "react";
 import { summarizeDay } from "@/lib/utils/diary-totals";
+import DailyGoalProgress from "./DailyGoalProgress";
 import type { DiaryEntryDto } from "../../types";
 
 interface DiaryDaySummaryProps {
   entries: DiaryEntryDto[];
+  /** Dzienny cel w kcal; `null` albo brak - pasek się nie rysuje. */
+  dailyGoal?: number | null;
 }
 
 /**
  * Liczba dnia razem z klauzulą uczciwości: jeśli część wpisów nie ma kalorii, suma nigdy nie
  * pokazuje się sama, bo udawałaby pełny bilans.
+ *
+ * Pasek celu stoi pod liczbą, ale poza `diary-day-total` - tekst sumy zostaje dokładnie `N kcal`.
  */
-export default function DiaryDaySummary({ entries }: DiaryDaySummaryProps) {
+export default function DiaryDaySummary({ entries, dailyGoal = null }: DiaryDaySummaryProps) {
   const { calorieTotal, missingCount, entryCount } = summarizeDay(entries);
 
   return (
@@ -19,6 +24,9 @@ export default function DiaryDaySummary({ entries }: DiaryDaySummaryProps) {
       <p className="text-2xl font-semibold" data-testid="diary-day-total">
         {calorieTotal} kcal
       </p>
+      {dailyGoal !== null && (
+        <DailyGoalProgress calorieTotal={calorieTotal} goal={dailyGoal} missingCount={missingCount} />
+      )}
       {missingCount > 0 ? (
         <p className="mt-1 text-xs text-muted-foreground" data-testid="diary-day-missing">
           Bez policzonych kalorii: {missingCount} z {entryCount}. Suma ich nie obejmuje.

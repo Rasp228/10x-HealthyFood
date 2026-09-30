@@ -1,4 +1,4 @@
-import { summarizeDay } from "@/lib/utils/diary-totals";
+import { goalProgress, summarizeDay } from "@/lib/utils/diary-totals";
 import type { DiaryEntryDto } from "@/types";
 
 /**
@@ -95,5 +95,31 @@ describe("summarizeDay", () => {
       expect(withoutValues.calorieTotal).toBe(empty.calorieTotal);
       expect(withoutValues.missingCount).not.toBe(empty.missingCount);
     });
+  });
+});
+
+describe("goalProgress", () => {
+  it("pusty dzień to zero procent i cały cel przed sobą", () => {
+    expect(goalProgress(0, 2000)).toEqual({ percent: 0, status: "under", remaining: 2000, excess: 0 });
+  });
+
+  it("poniżej celu zwraca procent wypełnienia i zapas", () => {
+    expect(goalProgress(1500, 2000)).toEqual({ percent: 75, status: "under", remaining: 500, excess: 0 });
+  });
+
+  it("dokładnie cel to jedyny przypadek `reached`", () => {
+    expect(goalProgress(2000, 2000)).toEqual({ percent: 100, status: "reached", remaining: 0, excess: 0 });
+  });
+
+  it("powyżej celu obcina procent do 100 i raportuje nadwyżkę", () => {
+    expect(goalProgress(2300, 2000)).toEqual({ percent: 100, status: "over", remaining: 0, excess: 300 });
+  });
+
+  it("zaokrąglony procent nie decyduje o statusie - 1999/2000 to wciąż `under`", () => {
+    const progress = goalProgress(1999, 2000);
+
+    expect(progress.status).toBe("under");
+    expect(progress.remaining).toBe(1);
+    expect(progress.percent).toBe(100);
   });
 });

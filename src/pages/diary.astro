@@ -2,9 +2,24 @@
 import MainLayout from "../layouts/MainLayout.astro";
 import DiaryPage from "../components/diary/DiaryPage";
 import SecurityGuard from "../components/common/SecurityGuard";
+import { UserSettingsService } from "../lib/services/user-settings.service";
+
+// Cel czytamy na serwerze, żeby pasek był w pierwszym renderze wyspy. Błąd odczytu nie może
+// zablokować dziennika - wtedy strona rysuje się tak, jakby celu nie było.
+// Bez `prerender = true`: strona czyta `locals.user`.
+const { user } = Astro.locals;
+let dailyGoal: number | null = null;
+
+if (user) {
+  try {
+    dailyGoal = await new UserSettingsService(Astro.locals.supabase).getDailyGoal(user.id);
+  } catch (error) {
+    console.error("Error reading daily goal:", error);
+  }
+}
 ---
 
 <MainLayout title="HealthyMeal - Dziennik posiłków">
   <SecurityGuard client:load />
-  <DiaryPage client:load />
+  <DiaryPage client:load dailyGoal={dailyGoal} />
 </MainLayout>

@@ -1,0 +1,58 @@
+---
+/**
+ * Kitchen-sink paska dziennego celu - bramka wizualna do zrzutów w jasnym i ciemnym motywie.
+ *
+ * Strona wyłącznie deweloperska: poza `astro dev` odpowiada 404. Nie jest w `PUBLIC_PATHS`, więc
+ * wymaga sesji jak każda inna. Bez `prerender = true` - sprawdzenie `DEV` ma działać per żądanie,
+ * a layout czyta `locals.user`.
+ */
+import MainLayout from "../../layouts/MainLayout.astro";
+import DiaryDaySummary from "../../components/diary/DiaryDaySummary";
+import type { DiaryEntryDto } from "../../types";
+
+if (!import.meta.env.DEV) {
+  return new Response(null, { status: 404 });
+}
+
+let nextId = 1;
+
+const entry = (calories: number | null): DiaryEntryDto => ({
+  id: nextId++,
+  user_id: "kitchen-sink",
+  entry_date: "2026-09-30",
+  content: "Wpis przykładowy",
+  amount_text: null,
+  calories,
+  calorie_origin: calories === null ? null : "manual",
+  estimation_requested_at: null,
+  portions: null,
+  source_recipe_id: null,
+  created_at: "2026-09-30T08:00:00.000Z",
+  updated_at: "2026-09-30T08:00:00.000Z",
+});
+
+const states: { title: string; entries: DiaryEntryDto[]; dailyGoal: number | null }[] = [
+  { title: "Bez celu", entries: [entry(900), entry(600)], dailyGoal: null },
+  { title: "0 / 2000", entries: [entry(0)], dailyGoal: 2000 },
+  { title: "1500 / 2000", entries: [entry(900), entry(600)], dailyGoal: 2000 },
+  { title: "2000 / 2000 - cel osiągnięty", entries: [entry(1200), entry(800)], dailyGoal: 2000 },
+  { title: "2300 / 2000 - ponad cel", entries: [entry(1500), entry(800)], dailyGoal: 2000 },
+  {
+    title: "1500 / 2000 z dwoma wpisami bez wartości",
+    entries: [entry(900), entry(600), entry(null), entry(null)],
+    dailyGoal: 2000,
+  },
+];
+---
+
+<MainLayout title="HealthyMeal - Stany paska celu (dev)">
+  <h1 class="mb-6 text-2xl font-semibold">Stany paska dziennego celu</h1>
+  <div class="grid max-w-xl gap-6">
+    {states.map((state) => (
+      <section class="flex flex-col gap-2">
+        <h2 class="text-sm font-medium text-muted-foreground">{state.title}</h2>
+        <DiaryDaySummary entries={state.entries} dailyGoal={state.dailyGoal} />
+      </section>
+    ))}
+  </div>
+</MainLayout>
