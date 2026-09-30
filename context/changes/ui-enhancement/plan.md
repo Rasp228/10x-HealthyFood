@@ -520,18 +520,18 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [x] 3.1 `grep -rn "inputClass\|<input\|<textarea" src/components/diary` — tylko wewnątrz prymitywów, czyli 0 trafień w `diary/`
-- [x] 3.2 `npm run lint` przechodzi
-- [x] 3.3 `npm run typecheck` — 0 błędów
-- [x] 3.4 `npm run format:check` przechodzi
-- [x] 3.5 `npm run test` przechodzi
-- [x] 3.6 `npm run test:e2e` przechodzi (`diary-entry.spec.ts`, `daily-goal.spec.ts`) bez zmian w specach i page objects
+- [x] 3.1 `grep -rn "inputClass\|<input\|<textarea" src/components/diary` — tylko wewnątrz prymitywów, czyli 0 trafień w `diary/` — b5c7b81
+- [x] 3.2 `npm run lint` przechodzi — b5c7b81
+- [x] 3.3 `npm run typecheck` — 0 błędów — b5c7b81
+- [x] 3.4 `npm run format:check` przechodzi — b5c7b81
+- [x] 3.5 `npm run test` przechodzi — b5c7b81
+- [x] 3.6 `npm run test:e2e` przechodzi (`diary-entry.spec.ts`, `daily-goal.spec.ts`) bez zmian w specach i page objects — b5c7b81
 
 #### Manual
 
-- [x] 3.7 Tab przez nawigator dnia, formularz i wiersz wpisu: każde pole i przycisk ma widoczny pierścień fokusu w kolorze marki, w obu motywach
-- [x] 3.8 Na 375 px suma dnia z paskiem jest na pierwszym ekranie nad formularzem
-- [x] 3.9 Twarde przeładowanie `/diary` pokazuje szkielet z nagłówkiem, bez samotnego spinnera
+- [x] 3.7 Tab przez nawigator dnia, formularz i wiersz wpisu: każde pole i przycisk ma widoczny pierścień fokusu w kolorze marki, w obu motywach — b5c7b81
+- [x] 3.8 Na 375 px suma dnia z paskiem jest na pierwszym ekranie nad formularzem — b5c7b81
+- [x] 3.9 Twarde przeładowanie `/diary` pokazuje szkielet z nagłówkiem, bez samotnego spinnera — b5c7b81
 
 ### Phase 4: TopNav na 375 px
 
