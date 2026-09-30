@@ -9,7 +9,7 @@ main_goal: speed
 top_blocker: time
 milestone_id: calorie-diary-v1
 milestone_seq: 1
-milestone_status: open
+milestone_status: done
 ---
 
 # Roadmap: 10x-HealthyFood — moduł dziennika kalorycznego
@@ -20,7 +20,7 @@ milestone_status: open
 
 ## Milestone
 
-**M-1: Dziennik kaloryczny v1** — Status: open
+**M-1: Dziennik kaloryczny v1** — Status: done
 
 - **Intent:** doprowadzić moduł dziennika do stanu, w którym użytkownik zapisuje co zjadł — opisem albo wybierając własny przepis — dostaje wartość kaloryczną z kaskady źródeł i widzi sumę dnia względem opcjonalnego celu, bez naruszenia czegokolwiek, co działa dzisiaj.
 - **Source materials:** `context/foundation/prd.md` (v1)
@@ -202,7 +202,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 
 ## Milestone History
 
-(Pusta — `M-1` jest pierwszym kamieniem milowym.)
+- **M-1: Dziennik kaloryczny v1** (`calorie-diary-v1`) — closed 2026-09-30. Moduł dziennika dostarczony w całości: wpis opisowy i z własnego przepisu, kaskada wartości (figury przepisu → AI z przepisu → AI z opisu → ręcznie), edycja i usuwanie, suma dnia względem opcjonalnego celu; pokrycie FR-001–FR-016, US-01, US-02.
 
 ## Done
 
