@@ -57,11 +57,11 @@ the code does not yet follow the conventions below.
   misplaced in `ui/` are listed in @docs/reference/known-drift.md — do not add to that set.
 - Every new table needs RLS and per-user policies, matching
   @supabase/migrations/20250427130913_healthymeal_schema.sql. Existing tables: `preferences`,
-  `recipes`, `logs`, `diary_entries`. Start a migration with
+  `recipes`, `logs`, `diary_entries`, `user_settings`. Start a migration with
   `npm run supabase:new-migration <name>`. Re-runnable proofs that those policies actually isolate
-  users live in `supabase/checks/<table>-rls.sql` — so far only `diary-entries-rls.sql`, so write
-  one alongside any new table and re-run it after any migration touching that table. They
-  impersonate two subjects via `request.jwt.claims`, because the Supabase SQL editor's own role
+  users live in `supabase/checks/<table>-rls.sql` — so far `diary-entries-rls.sql` and
+  `user-settings-rls.sql`, so write one alongside any new table and re-run it after any migration
+  touching that table. They impersonate two subjects via `request.jwt.claims`, because the Supabase SQL editor's own role
   bypasses RLS and a plain cross-user `select` would pass against a table with RLS switched off.
   Substitute the `<uuid-a>` / `<uuid-b>` placeholders, run the whole file, and read the verdict from
   the deliberate `[PASS]`/`[FAIL]` exception the assertion block raises — the exception is what both

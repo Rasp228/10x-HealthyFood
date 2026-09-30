@@ -16,6 +16,9 @@ export type LogDto = Tables<"logs">;
 // Typ wpisu dziennika z bazy danych
 export type DiaryEntryDto = Tables<"diary_entries">;
 
+// Typ wiersza ustawień użytkownika z bazy danych
+export type UserSettingsDto = Tables<"user_settings">;
+
 /**
  * Parametry sortowania
  */
@@ -141,6 +144,18 @@ export interface UpdateDiaryEntryCommand {
   portions?: number;
   calories?: number | null;
   recalculate?: true;
+}
+
+// Dzienny cel kaloryczny zwracany przez GET /api/user-settings. `null` = brak celu - także wtedy,
+// gdy użytkownik nie ma jeszcze wiersza w `user_settings`.
+export interface DailyGoalDto {
+  daily_calorie_goal: number | null;
+}
+
+// Command do ustawienia albo wyczyszczenia (`null`) dziennego celu kalorycznego.
+// Bez `user_id` - tożsamość podróżuje osobnym argumentem serwisu.
+export interface UpdateDailyGoalCommand {
+  daily_calorie_goal: number | null;
 }
 
 /**

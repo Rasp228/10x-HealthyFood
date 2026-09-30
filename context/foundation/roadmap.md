@@ -3,7 +3,7 @@ project: 10x-HealthyFood
 version: 1
 status: draft
 created: 2026-09-21
-updated: 2026-09-29
+updated: 2026-09-30
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -51,7 +51,7 @@ Moduł jest dobudową w działającej aplikacji. Przepisy są czytane i nigdy za
 | S-03 | `recipe-entry-with-portions` | wyszukać własny przepis po nazwie, podać liczbę zjedzonych porcji i dostać wartość z bloku odżywczego przepisu | S-01 | US-02, FR-002, FR-007, FR-008, FR-009, FR-014, FR-015 | done |
 | S-04 | `ai-estimate-from-recipe` | poprosić o oszacowanie kalorii z samej treści przepisu, gdy przepis nie ma użytecznych figur odżywczych | S-02, S-03 | US-02, FR-010, FR-011, FR-014 | done |
 | S-05 | `edit-and-delete-entry` | poprawić dowolną część zapisanego wpisu i usunąć wpis po potwierdzeniu | S-01, S-02 | US-01, FR-005, FR-006 | done |
-| S-06 | `daily-goal-and-progress` | ustawić w profilu opcjonalny dzienny cel kaloryczny i widzieć sumę dnia względem niego | S-01 | FR-012, FR-013, FR-015 | proposed |
+| S-06 | `daily-goal-and-progress` | ustawić w profilu opcjonalny dzienny cel kaloryczny i widzieć sumę dnia względem niego | S-01 | FR-012, FR-013, FR-015 | in-progress |
 
 ## Streams
 
@@ -167,7 +167,7 @@ Testy w repo: dwa unit (`ThemeToggle`, `validation-errors`) i jeden zestaw E2E (
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** to jedyne miejsce, w którym moduł pisze do danych istniejących przed zmianą — jedno opcjonalne pole na rekordzie profilu. Preferencje żywieniowe leżą na tym samym rekordzie i muszą przetrwać nietknięte; PRD nazywa ich uszkodzenie jedyną nieodwracalną awarią w całej zmianie, więc cała waga ryzyka tego kawałka siedzi w jednym zapisie. Cel jest liczbą wpisywaną wprost, bez wyliczania z wagi czy aktywności — najmniejsza możliwa zmiana profilu. Przekroczenie celu musi być zaprojektowane tak, żeby nie czytało się jako stan błędu.
-- **Status:** proposed
+- **Status:** in-progress
 
 ## Backlog Handoff
 
