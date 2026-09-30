@@ -537,17 +537,17 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [ ] 4.1 `npm run lint` przechodzi
-- [ ] 4.2 `npm run typecheck` — 0 błędów
-- [ ] 4.3 `npm run format:check` przechodzi
-- [ ] 4.4 `npm run test` przechodzi (w tym `ThemeToggle.test.tsx`)
-- [ ] 4.5 `npm run test:e2e` przechodzi
+- [x] 4.1 `npm run lint` przechodzi
+- [x] 4.2 `npm run typecheck` — 0 błędów
+- [x] 4.3 `npm run format:check` przechodzi
+- [x] 4.4 `npm run test` przechodzi (w tym `ThemeToggle.test.tsx`)
+- [x] 4.5 `npm run test:e2e` przechodzi
 
 #### Manual
 
-- [ ] 4.6 Na 375 px wszystkie cztery pozycje nawigacji są osiągalne (widoczne lub po przewinięciu paska), a dokument nie przewija się w poziomie
-- [ ] 4.7 Na `/diary`, `/` i `/profile` aktywna pozycja jest wyróżniona i ma `aria-current="page"`
-- [ ] 4.8 „Wyloguj” wylogowuje jak dotąd
+- [x] 4.6 Na 375 px wszystkie cztery pozycje nawigacji są osiągalne (widoczne lub po przewinięciu paska), a dokument nie przewija się w poziomie
+- [x] 4.7 Na `/diary`, `/` i `/profile` aktywna pozycja jest wyróżniona i ma `aria-current="page"`
+- [x] 4.8 „Wyloguj” wylogowuje jak dotąd
 
 ### Phase 5: Kitchen sink i bramka wizualna
 
