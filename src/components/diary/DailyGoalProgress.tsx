@@ -24,12 +24,15 @@ export default function DailyGoalProgress({ calorieTotal, goal, missingCount }: 
       : status === "over"
         ? `${excess} kcal ponad cel`
         : `zostało ${remaining} kcal`;
+  const description = `${calorieTotal} / ${goal} kcal · ${relation}`;
 
   return (
     <div className="mt-3 flex flex-col gap-1.5" data-testid="diary-goal-progress">
-      <Progress value={percent} aria-label="Postęp względem dziennego celu" />
+      {/* Domyślne `aria-valuetext` to „N%”, a procent jest obcięty do 100 - czytnik ekranu
+          nie odróżniłby celu osiągniętego od przekroczonego. */}
+      <Progress value={percent} aria-label="Postęp względem dziennego celu" getValueLabel={() => description} />
       <p className="text-xs text-muted-foreground" data-testid="diary-goal-text">
-        {calorieTotal} / {goal} kcal · {relation}
+        {description}
       </p>
       {missingCount > 0 && <p className="text-xs text-muted-foreground">Pasek nie obejmuje wpisów bez wartości.</p>}
     </div>

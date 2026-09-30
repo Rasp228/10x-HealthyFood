@@ -106,6 +106,8 @@ declare
   b_zmienia_obcy  bigint;
   b_usuwa_obcy    bigint;
   b_zmienia_wlasny bigint;
+  b_upsert_za_a    text;
+  b_upsert_wlasny  bigint;
   a_nietkniety bigint;
   anon_widzi   bigint;
   werdykt  text;
@@ -204,6 +206,26 @@ begin
    where user_id = '<uuid-b>'::uuid;
   get diagnostics b_zmienia_wlasny = row_count;
 
+  -- Upsert - jedyna ścieżka zapisu `UserSettingsService.setDailyGoal` (`onConflict: "user_id"`).
+  -- Wiersz A istnieje (3e), więc próba B trafia w konflikt i idzie gałęzią DO UPDATE. RLS ma ją
+  -- zatrzymać błędem 42501 - `with check` INSERT na proponowanym wierszu albo `using` UPDATE na
+  -- wierszu, którego B nie widzi. Każdy inny wynik oblewa asercję.
+  begin
+    insert into user_settings (user_id, daily_calorie_goal)
+    values ('<uuid-a>'::uuid, 9999)
+    on conflict (user_id) do update set daily_calorie_goal = excluded.daily_calorie_goal;
+    b_upsert_za_a := 'przepuszczone';
+  exception
+    when insufficient_privilege then
+      b_upsert_za_a := 'odrzucone';
+  end;
+
+  -- Kontrola pozytywna upsertu: B zmienia WŁASNY istniejący cel tą samą ścieżką co PUT.
+  insert into user_settings (user_id, daily_calorie_goal)
+  values ('<uuid-b>'::uuid, 3500)
+  on conflict (user_id) do update set daily_calorie_goal = excluded.daily_calorie_goal;
+  get diagnostics b_upsert_wlasny = row_count;
+
   -- 3g. Wiersz A nadal istnieje z pierwotną wartością - drugi dowód, że próby B niczego nie
   -- ruszyły. Czytane jako A, bo B go nie widzi.
   perform set_config('request.jwt.claims', '{"sub":"<uuid-a>","role":"authenticated"}', true);
@@ -238,6 +260,8 @@ begin
      and b_zmienia_obcy = 0
      and b_usuwa_obcy = 0
      and b_zmienia_wlasny = 1
+     and b_upsert_za_a = 'odrzucone'
+     and b_upsert_wlasny = 1
      and a_nietkniety = 1
      and anon_widzi = 0
     then 'PASS'
@@ -263,7 +287,9 @@ begin
     E'  B zmienia cel A      : %s   (wymagane: 0)\n'
     E'  B usuwa cel A        : %s   (wymagane: 0)\n'
     E'  B zmienia wlasny     : %s   (wymagane: 1)\n'
-    E'  cel A nietkniety     : %s   (wymagane: 1)\n'
+    E'  B upsert za A        : %s   (wymagane: odrzucone)\n'
+    E'  B upsert wlasny      : %s   (wymagane: 1)\n'
+    E'  cel A nietkniety    : %s   (wymagane: 1)\n'
     E'  rola anon            : %s   (wymagane: anon)\n'
     E'  anon widzi wierszy   : %s   (wymagane: 0)',
     werdykt,
@@ -283,6 +309,8 @@ begin
     b_zmienia_obcy,
     b_usuwa_obcy,
     b_zmienia_wlasny,
+    b_upsert_za_a,
+    b_upsert_wlasny,
     a_nietkniety,
     rola_anon,
     anon_widzi

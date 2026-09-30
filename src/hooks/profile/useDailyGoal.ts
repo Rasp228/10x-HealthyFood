@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { DailyGoalDto, UpdateDailyGoalCommand } from "../../types";
 import type { ValidationIssue } from "../../lib/utils/validation-errors";
+import { useToast } from "../common/useToast";
 
 interface UseDailyGoalResult {
   goal: number | null;
@@ -31,7 +32,10 @@ async function errorMessageFrom(response: Response, fallback: string): Promise<s
 
 // Hook dziennego celu kalorycznego: pobiera go przy montowaniu i zapisuje przez `PUT`.
 // Stan ustawiamy wyłącznie w callbacku fetcha (po `await`), tak jak `useDiaryEntries`.
+// Błędy sieci i serwera zgłasza toastem sam hook - to on zna komunikat, a pole formularza
+// zostaje dla błędów walidacji. Toast rysuje `<ToastContainer />` z `ProfilePage`.
 export function useDailyGoal(): UseDailyGoalResult {
+  const { showToast } = useToast();
   const [goal, setGoal] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -59,7 +63,9 @@ export function useDailyGoal(): UseDailyGoalResult {
       } catch (err) {
         if (!isCurrent) return;
 
-        setError(err instanceof Error ? err : new Error("Błąd podczas pobierania celu kalorycznego"));
+        const fetchError = err instanceof Error ? err : new Error("Błąd podczas pobierania celu kalorycznego");
+        setError(fetchError);
+        showToast(fetchError.message, "error");
         console.error("Error fetching daily goal:", err);
       } finally {
         if (isCurrent) {
@@ -73,40 +79,45 @@ export function useDailyGoal(): UseDailyGoalResult {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [showToast]);
 
-  const saveGoal = useCallback(async (nextGoal: number | null): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
+  const saveGoal = useCallback(
+    async (nextGoal: number | null): Promise<boolean> => {
+      setIsSaving(true);
+      setError(null);
 
-    try {
-      const command: UpdateDailyGoalCommand = { daily_calorie_goal: nextGoal };
-      const response = await fetch("/api/user-settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(command),
-      });
+      try {
+        const command: UpdateDailyGoalCommand = { daily_calorie_goal: nextGoal };
+        const response = await fetch("/api/user-settings", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(command),
+        });
 
-      if (!response.ok) {
-        throw new Error(await errorMessageFrom(response, "Błąd podczas zapisywania celu kalorycznego"));
+        if (!response.ok) {
+          throw new Error(await errorMessageFrom(response, "Błąd podczas zapisywania celu kalorycznego"));
+        }
+
+        const result: DailyGoalDto = await response.json();
+        setGoal(result.daily_calorie_goal);
+
+        return true;
+      } catch (err) {
+        const saveError = err instanceof Error ? err : new Error("Błąd podczas zapisywania celu kalorycznego");
+        setError(saveError);
+        showToast(saveError.message, "error");
+        console.error("Error saving daily goal:", err);
+
+        return false;
+      } finally {
+        setIsSaving(false);
       }
-
-      const result: DailyGoalDto = await response.json();
-      setGoal(result.daily_calorie_goal);
-
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Błąd podczas zapisywania celu kalorycznego"));
-      console.error("Error saving daily goal:", err);
-
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+    },
+    [showToast]
+  );
 
   return {
     goal,

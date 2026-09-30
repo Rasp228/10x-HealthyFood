@@ -22,8 +22,15 @@ function parseGoal(raw: string, hasSavedGoal: boolean): { value: number } | { er
     };
   }
 
-  // `Number` zwraca NaN dla tekstu nieliczbowego - schemat odrzuca je komunikatem "Cel musi być liczbą".
-  const result = dailyGoalValueSchema.safeParse(Number(trimmed));
+  // Pole jest tekstowe: `type="number"` oddaje "" dla `1e`, `2 000` czy `2000,5`, więc użytkownik
+  // widziałby „Wpisz cel”, choć coś wpisał, a `1e3` przechodziło jako 1000. Tu przepuszczamy tylko
+  // cyfry z opcjonalną częścią ułamkową (kropka albo przecinek) - ułamek odrzuci schemat komunikatem
+  // o liczbie całkowitej.
+  if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) {
+    return { error: "Cel musi być liczbą" };
+  }
+
+  const result = dailyGoalValueSchema.safeParse(Number(trimmed.replace(",", ".")));
 
   if (!result.success) {
     return { error: result.error.issues[0]?.message ?? "Nieprawidłowy cel" };
@@ -33,7 +40,7 @@ function parseGoal(raw: string, hasSavedGoal: boolean): { value: number } | { er
 }
 
 export default function DailyGoalCard() {
-  const { goal, isLoading, isSaving, error, saveGoal } = useDailyGoal();
+  const { goal, isLoading, isSaving, saveGoal } = useDailyGoal();
   const { showToast } = useToast();
 
   const [inputValue, setInputValue] = useState<string>(() => (goal === null ? "" : String(goal)));
@@ -50,7 +57,8 @@ export default function DailyGoalCard() {
     setValidationError(null);
   }
 
-  const displayedError = validationError ?? error?.message ?? null;
+  // Przy polu tylko walidacja - błędy pobrania i zapisu zgłasza toastem `useDailyGoal`.
+  const displayedError = validationError;
   const isBusy = isLoading || isSaving;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,10 +96,10 @@ export default function DailyGoalCard() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <input
-              type="number"
+              type="text"
               id={INPUT_ID}
               inputMode="numeric"
-              step={1}
+              autoComplete="off"
               value={inputValue}
               onChange={(e) => {
                 setInputValue(e.target.value);
