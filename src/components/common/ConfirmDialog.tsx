@@ -31,15 +31,15 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   const severityConfig = {
     warning: {
-      iconClass: "text-amber-600 dark:text-amber-400",
+      iconClass: "text-warning",
       confirmButtonVariant: "default" as const,
     },
     danger: {
-      iconClass: "text-red-600 dark:text-red-400",
+      iconClass: "text-destructive",
       confirmButtonVariant: "destructive" as const,
     },
     info: {
-      iconClass: "text-blue-600 dark:text-blue-400",
+      iconClass: "text-info",
       confirmButtonVariant: "default" as const,
     },
   };

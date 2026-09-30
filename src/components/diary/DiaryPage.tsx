@@ -241,14 +241,14 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
       <div className="mt-6">
         {error ? (
           <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-center dark:border-red-800 dark:bg-red-950"
+            className="rounded-lg border border-destructive/30 bg-card p-4 text-center"
             data-testid="diary-error-state"
           >
-            <h3 className="mb-2 text-lg font-semibold text-red-600 dark:text-red-400">Wystąpił błąd</h3>
-            <p className="text-red-600 dark:text-red-400">{error.message}</p>
+            <h3 className="mb-2 text-lg font-semibold text-destructive">Wystąpił błąd</h3>
+            <p className="text-destructive">{error.message}</p>
             <Button
               variant="outline"
-              className="mt-4 border-red-200 text-red-600 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900"
+              className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => refetch()}
               data-testid="diary-retry-button"
             >

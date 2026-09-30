@@ -20,13 +20,15 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
-  // Style w zależności od typu
+  // Style w zależności od typu. Kolor roli niesie ikona i ramka; tekst zostaje w `text-foreground`.
+  // Tryb ciemny wynika z tokenów (`--success` / `--destructive` / `--warning` / `--info`).
   const getTypeStyles = () => {
     switch (type) {
       case "success":
         return {
-          containerClass: "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950",
-          iconClass: "text-green-600 dark:text-green-400",
+          borderClass: "border-success/30",
+          tintClass: "bg-success/10",
+          iconClass: "text-success",
           icon: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -46,8 +48,9 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
         };
       case "error":
         return {
-          containerClass: "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950",
-          iconClass: "text-red-600 dark:text-red-400",
+          borderClass: "border-destructive/30",
+          tintClass: "bg-destructive/10",
+          iconClass: "text-destructive",
           icon: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -68,8 +71,9 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
         };
       case "warning":
         return {
-          containerClass: "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950",
-          iconClass: "text-amber-600 dark:text-amber-400",
+          borderClass: "border-warning/30",
+          tintClass: "bg-warning/10",
+          iconClass: "text-warning",
           icon: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -91,8 +95,9 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
       case "info":
       default:
         return {
-          containerClass: "border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950",
-          iconClass: "text-blue-600 dark:text-blue-400",
+          borderClass: "border-info/30",
+          tintClass: "bg-info/10",
+          iconClass: "text-info",
           icon: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -120,15 +125,19 @@ export default function Toast({ message, type, duration = 5000, onClose }: Toast
     <div
       className={`fixed right-4 top-4 z-50 transition-opacity duration-300 ${isVisible ? "opacity-100" : "opacity-0"}`}
     >
-      <div className={`flex items-center space-x-3 rounded-md border p-4 shadow-md ${styles.containerClass}`}>
-        <div className={styles.iconClass}>{styles.icon}</div>
-        <div className="flex-1">{message}</div>
-        <CloseButton
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(onClose, 300);
-          }}
-        />
+      {/* Nieprzezroczysta karta pod półprzezroczystym odcieniem roli - toast leży nad dowolną treścią
+          strony, więc samo `bg-success/10` przepuszczałoby ją pod tekst. */}
+      <div className={`overflow-hidden rounded-md border bg-card shadow-md ${styles.borderClass}`}>
+        <div className={`flex items-center space-x-3 p-4 text-foreground ${styles.tintClass}`}>
+          <div className={styles.iconClass}>{styles.icon}</div>
+          <div className="flex-1">{message}</div>
+          <CloseButton
+            onClick={() => {
+              setIsVisible(false);
+              setTimeout(onClose, 300);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

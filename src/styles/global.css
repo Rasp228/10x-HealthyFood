@@ -11,8 +11,12 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Rola marki. Źródło: odcień własnego `--chart-2` repo (h 184.704), ten sam co `--progress`,
+     więc przyciski, logo, spinner i fokus mówią jednym kolorem z paskiem postępu. Chroma 0.085
+     trzyma wartość w gamucie sRGB (maks. dla L 0.5 to ~0.088). Kontrast `--primary-foreground`
+     na `--primary` ~5.5:1 (WCAG 1.4.3, tekst przycisku); `--primary` na tle/karcie ~5.7:1. */
+  --primary: oklch(0.5 0.085 184.704);
+  --primary-foreground: oklch(0.985 0.01 184.704);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -22,7 +26,22 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Fokus w kolorze marki (= `--primary`). Pełny `--ring` ~5.7:1 względem tła i karty
+     (WCAG 1.4.11). Uwaga: prymitywy rysują go jako `ring-ring/50` - po złożeniu 50% na białym
+     wychodzi ~2.2:1, poniżej 3:1; wyróżnienie niesie wtedy grubość pierścienia (3 px). */
+  --ring: oklch(0.5 0.085 184.704);
+  /* Role stanów - jeden token na rolę, bez `-foreground`; tło i ramka powstają
+     z przezroczystości (`bg-success/10 border-success/30 text-success`), jak przy `destructive`.
+     Kontrasty liczone względem karty (= tła) i złożenia `/10` na karcie (tło toastu).
+     `--success`: odcień `--chart-2` motywu ciemnego repo (h 162.48), odróżniony od marki.
+     ~5.2:1 na karcie, ~4.5:1 na `success/10`; tekst toastu (`--foreground`) ~17.3:1. */
+  --success: oklch(0.52 0.11 162.48);
+  /* `--warning`: odcień `--chart-5` repo (h 70.08). ~5.0:1 na karcie, ~4.4:1 na `warning/10`
+     (ikona, cel 3:1); tekst toastu ~17.4:1. */
+  --warning: oklch(0.55 0.115 70.08);
+  /* `--info`: odcień `--chart-3` repo (h 227.392). ~5.9:1 na karcie, ~5.1:1 na `info/10`;
+     tekst toastu ~17.1:1. */
+  --info: oklch(0.5 0.095 227.392);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -51,8 +70,11 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Rola marki, motyw ciemny. Źródło: h 184.704 jak w `:root`; jasny turkus na ciemnym tle,
+     ciemny tekst przycisku. Kontrast `--primary-foreground` na `--primary` ~9.5:1 (WCAG 1.4.3);
+     `--primary` ~10.4:1 na tle i ~9.4:1 na karcie. */
+  --primary: oklch(0.78 0.12 184.704);
+  --primary-foreground: oklch(0.2 0.03 184.704);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -62,7 +84,17 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Fokus = `--primary`. Pełny `--ring` ~10.4:1 na tle i ~9.4:1 na karcie; także złożony
+     jako `ring-ring/50` trzyma ~3.3:1 na tle i karcie (WCAG 1.4.11). */
+  --ring: oklch(0.78 0.12 184.704);
+  /* Role stanów, motyw ciemny - te same odcienie co w `:root`, jaśniejsze pod ciemną kartę.
+     `--success` (h 162.48, `--chart-2` tego motywu): ~7.7:1 na karcie, ~6.6:1 na `success/10`.
+     `--warning` (h 70.08, `--chart-5`): ~9.3:1 na karcie, ~7.8:1 na `warning/10`.
+     `--info` (h 227.392, `--chart-3` motywu jasnego): ~7.4:1 na karcie, ~6.3:1 na `info/10`.
+     Tekst toastu (`--foreground`) na każdym z tych teł >= 14.3:1. */
+  --success: oklch(0.72 0.15 162.48);
+  --warning: oklch(0.8 0.15 70.08);
+  --info: oklch(0.72 0.1 227.392);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -105,6 +137,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

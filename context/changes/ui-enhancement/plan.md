@@ -490,31 +490,31 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [x] 1.1 Pięć plików prymitywów istnieje w `src/components/ui/`
-- [x] 1.2 `git diff` nie pokazuje zmian w `src/styles/global.css`, `button.tsx` ani `progress.tsx`
-- [x] 1.3 `npm run lint` przechodzi
-- [x] 1.4 `npm run typecheck` — 0 błędów
-- [x] 1.5 `npm run test:security` przechodzi (nowa zależność radix nie łamie progu `moderate`)
+- [x] 1.1 Pięć plików prymitywów istnieje w `src/components/ui/` — ad233ba
+- [x] 1.2 `git diff` nie pokazuje zmian w `src/styles/global.css`, `button.tsx` ani `progress.tsx` — ad233ba
+- [x] 1.3 `npm run lint` przechodzi — ad233ba
+- [x] 1.4 `npm run typecheck` — 0 błędów — ad233ba
+- [x] 1.5 `npm run test:security` przechodzi (nowa zależność radix nie łamie progu `moderate`) — ad233ba
 
 #### Manual
 
-- [x] 1.6 Cztery zrzuty „przed” `/diary` i zrzut TopNav 375 px leżą w `screenshots/` z README
+- [x] 1.6 Cztery zrzuty „przed” `/diary` i zrzut TopNav 375 px leżą w `screenshots/` z README — ad233ba
 
 ### Phase 2: Tokeny globalne — marka i stany
 
 #### Automated
 
-- [ ] 2.1 `grep -rnE "(red|green|amber|blue)-[0-9]" src/components/diary src/components/feedback/Toast.tsx src/components/common/ConfirmDialog.tsx` — 0 trafień
-- [ ] 2.2 Każdy nowy lub zmieniony token w `global.css` ma komentarz ze źródłem i kontrastem
-- [ ] 2.3 `npm run lint` przechodzi
-- [ ] 2.4 `npm run typecheck` — 0 błędów
-- [ ] 2.5 `npm run format:check` przechodzi
-- [ ] 2.6 `npm run test` przechodzi
+- [x] 2.1 `grep -rnE "(red|green|amber|blue)-[0-9]" src/components/diary src/components/feedback/Toast.tsx src/components/common/ConfirmDialog.tsx` — 0 trafień
+- [x] 2.2 Każdy nowy lub zmieniony token w `global.css` ma komentarz ze źródłem i kontrastem
+- [x] 2.3 `npm run lint` przechodzi
+- [x] 2.4 `npm run typecheck` — 0 błędów
+- [x] 2.5 `npm run format:check` przechodzi
+- [x] 2.6 `npm run test` przechodzi
 
 #### Manual
 
-- [ ] 2.7 Na `/diary` i `/profile` w obu motywach przyciski główne, logo „Healthy” i pierścień fokusu mają kolor marki, a tekst przycisku jest czytelny
-- [ ] 2.8 Toast sukcesu i błędu oraz dialog usuwania mają kolory z tokenów w obu motywach
+- [x] 2.7 Na `/diary` i `/profile` w obu motywach przyciski główne, logo „Healthy” i pierścień fokusu mają kolor marki, a tekst przycisku jest czytelny
+- [x] 2.8 Toast sukcesu i błędu oraz dialog usuwania mają kolory z tokenów w obu motywach
 
 ### Phase 3: Widok `/diary` na prymitywach, nowy układ i stany wydzielone
 
