@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Textarea } from "@/components/ui/textarea";
 import { parseCalories } from "@/lib/utils/diary-calories";
 import { AI_NOTICE, AI_NOTICE_RECIPE } from "@/lib/utils/diary-estimation";
 import { formatPortions, parsePortions } from "@/lib/utils/diary-portions";
@@ -269,276 +273,255 @@ export default function DiaryEntryForm({ day, onCreated }: DiaryEntryFormProps) 
   const aiNotice = selectedRecipe !== null ? AI_NOTICE_RECIPE : AI_NOTICE;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border bg-card p-4 shadow-sm"
-      data-testid="diary-entry-form"
-      aria-label="Dodaj wpis do dziennika"
-    >
-      <div className="mb-4 space-y-2">
-        {selectedRecipe !== null ? (
-          <>
-            <p className="text-sm font-medium">{RECIPE_FIELD_LABEL}</p>
-            <div
-              className="flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2"
-              data-testid="diary-recipe-selected"
-            >
-              <span className="truncate text-sm">{selectedRecipe.title}</span>
+    <Card className="gap-0 p-4">
+      <form onSubmit={handleSubmit} data-testid="diary-entry-form" aria-label="Dodaj wpis do dziennika">
+        <div className="mb-4 space-y-2">
+          {selectedRecipe !== null ? (
+            <>
+              <p className="text-sm font-medium">{RECIPE_FIELD_LABEL}</p>
+              <div
+                className="flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2"
+                data-testid="diary-recipe-selected"
+              >
+                <span className="truncate text-sm">{selectedRecipe.title}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearRecipe}
+                  disabled={isSubmitting}
+                  data-testid="diary-recipe-clear-button"
+                >
+                  Usuń wybór
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Label htmlFor="diary-recipe-search">{RECIPE_FIELD_LABEL}</Label>
+              <Input
+                type="search"
+                id="diary-recipe-search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Zacznij pisać nazwę przepisu"
+                autoComplete="off"
+                disabled={isSubmitting}
+                data-testid="diary-recipe-search-input"
+              />
+              {isSearching && <p className="text-xs text-muted-foreground">Szukam przepisów…</p>}
+              {searchError && (
+                <p role="alert" className="text-xs text-destructive">
+                  {searchError.message}
+                </p>
+              )}
+              {recipes.length > 0 && (
+                <ul className="divide-y rounded-md border border-input">
+                  {recipes.map((recipe) => (
+                    <li key={recipe.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRecipe(recipe)}
+                        className="w-full truncate px-3 py-2 text-left text-sm hover:bg-muted"
+                        data-testid={`diary-recipe-result-${recipe.id}`}
+                      >
+                        {recipe.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {total > recipes.length && (
+                <p className="text-xs text-muted-foreground">
+                  Pokazano {recipes.length} z {total} pasujących przepisów - doprecyzuj nazwę.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="flex-1 space-y-2">
+            <Label htmlFor="diary-content">
+              Co zjadłeś? <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="diary-content"
+              name="content"
+              value={values.content}
+              onChange={handleChange}
+              className="h-20"
+              maxLength={500}
+              placeholder="Np. owsianka z bananem"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.content}
+              aria-describedby={errors.content ? "diary-content-error" : undefined}
+              data-testid="diary-content-input"
+            />
+            {errors.content && (
+              <p
+                id="diary-content-error"
+                role="alert"
+                className="text-xs text-destructive"
+                data-testid="diary-content-error"
+              >
+                {errors.content}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">{values.content.length}/500</p>
+          </div>
+
+          {selectedRecipe === null ? (
+            <>
+              <div className="space-y-2 sm:w-40">
+                <Label htmlFor="diary-amount">Ilość</Label>
+                <Input
+                  type="text"
+                  id="diary-amount"
+                  name="amount_text"
+                  value={values.amount_text}
+                  onChange={handleChange}
+                  maxLength={100}
+                  placeholder="Np. 1 talerz"
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.amount_text}
+                  aria-describedby={errors.amount_text ? "diary-amount-error" : undefined}
+                  data-testid="diary-amount-input"
+                />
+                {errors.amount_text && (
+                  <p
+                    id="diary-amount-error"
+                    role="alert"
+                    className="text-xs text-destructive"
+                    data-testid="diary-amount-error"
+                  >
+                    {errors.amount_text}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 sm:w-32">
+                <Label htmlFor="diary-calories">Kalorie</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  id="diary-calories"
+                  name="calories"
+                  value={values.calories}
+                  onChange={handleChange}
+                  placeholder="kcal"
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.calories}
+                  aria-describedby={errors.calories ? "diary-calories-error" : undefined}
+                  data-testid="diary-calories-input"
+                />
+                {errors.calories && (
+                  <p
+                    id="diary-calories-error"
+                    role="alert"
+                    className="text-xs text-destructive"
+                    data-testid="diary-calories-error"
+                  >
+                    {errors.calories}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2 sm:w-32">
+              <Label htmlFor="diary-portions">
+                Liczba porcji <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                id="diary-portions"
+                name="portions"
+                value={values.portions}
+                onChange={handleChange}
+                placeholder="Np. 1,5"
+                disabled={isSubmitting}
+                aria-invalid={!!errors.portions}
+                aria-describedby={errors.portions ? "diary-portions-error" : undefined}
+                data-testid="diary-portions-input"
+              />
+              {errors.portions && (
+                <p
+                  id="diary-portions-error"
+                  role="alert"
+                  className="text-xs text-destructive"
+                  data-testid="diary-portions-error"
+                >
+                  {errors.portions}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Informacja, nie błąd - stąd barwy tła i tekstu inne niż w komunikatach walidacji. */}
+        {previewText && (
+          <p
+            className="mt-4 rounded-md border border-input bg-muted px-3 py-2 text-xs text-muted-foreground"
+            data-testid="diary-recipe-preview"
+          >
+            {previewText}
+          </p>
+        )}
+
+        {formErrors.length > 0 && (
+          <div
+            role="alert"
+            className="mt-4 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            data-testid="diary-form-error"
+          >
+            {formErrors.map(([key, message]) => (
+              <p key={key}>{message}</p>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            {selectedRecipe === null
+              ? "Kalorie możesz zostawić puste - wpis zapisze się bez wartości."
+              : "Kalorie policzy przepis - własną liczbę możesz wpisać przy wpisie na liście."}
+          </p>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={isSubmitting} className="gap-2" data-testid="diary-submit-button">
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Dodawanie...
+                  </>
+                ) : (
+                  "Dodaj wpis"
+                )}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={handleClearRecipe}
-                disabled={isSubmitting}
-                data-testid="diary-recipe-clear-button"
+                // Wpisana liczba wyklucza wycenę: trasa `/estimate` i tak nie tknęłaby wartości, która
+                // już jest, więc przycisk aktywny przy wypełnionym polu tylko obiecywałby coś,
+                // czego nie zrobi. Przy wybranym przepisie pole jest puste, więc oba przyciski
+                // zostają - wpis z przepisu bez rozpoznanego bloku ma tę samą ścieżkę wyceny co
+                // wpis opisowy. Gdy jednak podgląd już policzył wartość z bloku, wycena jest tak samo
+                // pusta jak przy wpisanej ręcznie liczbie - i przycisk gaśnie z tego samego powodu.
+                disabled={isSubmitting || values.calories.trim() !== "" || recipeAlreadyCounted}
+                onClick={() => void submitEntry(true)}
+                className="gap-2"
+                data-testid="diary-submit-estimate-button"
               >
-                Usuń wybór
+                Zapisz i policz kalorie
               </Button>
             </div>
-          </>
-        ) : (
-          <>
-            <label htmlFor="diary-recipe-search" className="block text-sm font-medium">
-              {RECIPE_FIELD_LABEL}
-            </label>
-            <input
-              type="search"
-              id="diary-recipe-search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="Zacznij pisać nazwę przepisu"
-              autoComplete="off"
-              disabled={isSubmitting}
-              data-testid="diary-recipe-search-input"
-            />
-            {isSearching && <p className="text-xs text-muted-foreground">Szukam przepisów…</p>}
-            {searchError && (
-              <p role="alert" className="text-xs text-destructive">
-                {searchError.message}
-              </p>
-            )}
-            {recipes.length > 0 && (
-              <ul className="divide-y rounded-md border border-input">
-                {recipes.map((recipe) => (
-                  <li key={recipe.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectRecipe(recipe)}
-                      className="w-full truncate px-3 py-2 text-left text-sm hover:bg-muted"
-                      data-testid={`diary-recipe-result-${recipe.id}`}
-                    >
-                      {recipe.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {total > recipes.length && (
-              <p className="text-xs text-muted-foreground">
-                Pokazano {recipes.length} z {total} pasujących przepisów - doprecyzuj nazwę.
-              </p>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="flex-1 space-y-2">
-          <label htmlFor="diary-content" className="block text-sm font-medium">
-            Co zjadłeś? <span className="text-destructive">*</span>
-          </label>
-          <textarea
-            id="diary-content"
-            name="content"
-            value={values.content}
-            onChange={handleChange}
-            className={`h-20 w-full rounded-md border px-3 py-2 text-sm ${
-              errors.content ? "border-destructive bg-destructive/10" : "border-input bg-background"
-            }`}
-            maxLength={500}
-            placeholder="Np. owsianka z bananem"
-            disabled={isSubmitting}
-            aria-invalid={!!errors.content}
-            aria-describedby={errors.content ? "diary-content-error" : undefined}
-            data-testid="diary-content-input"
-          />
-          {errors.content && (
-            <p
-              id="diary-content-error"
-              role="alert"
-              className="text-xs text-destructive"
-              data-testid="diary-content-error"
-            >
-              {errors.content}
+            <p className="text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
+              {aiNotice}
             </p>
-          )}
-          <p className="text-xs text-muted-foreground">{values.content.length}/500</p>
-        </div>
-
-        {selectedRecipe === null ? (
-          <>
-            <div className="space-y-2 sm:w-40">
-              <label htmlFor="diary-amount" className="block text-sm font-medium">
-                Ilość
-              </label>
-              <input
-                type="text"
-                id="diary-amount"
-                name="amount_text"
-                value={values.amount_text}
-                onChange={handleChange}
-                className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  errors.amount_text ? "border-destructive bg-destructive/10" : "border-input bg-background"
-                }`}
-                maxLength={100}
-                placeholder="Np. 1 talerz"
-                disabled={isSubmitting}
-                aria-invalid={!!errors.amount_text}
-                aria-describedby={errors.amount_text ? "diary-amount-error" : undefined}
-                data-testid="diary-amount-input"
-              />
-              {errors.amount_text && (
-                <p
-                  id="diary-amount-error"
-                  role="alert"
-                  className="text-xs text-destructive"
-                  data-testid="diary-amount-error"
-                >
-                  {errors.amount_text}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 sm:w-32">
-              <label htmlFor="diary-calories" className="block text-sm font-medium">
-                Kalorie
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                id="diary-calories"
-                name="calories"
-                value={values.calories}
-                onChange={handleChange}
-                className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  errors.calories ? "border-destructive bg-destructive/10" : "border-input bg-background"
-                }`}
-                placeholder="kcal"
-                disabled={isSubmitting}
-                aria-invalid={!!errors.calories}
-                aria-describedby={errors.calories ? "diary-calories-error" : undefined}
-                data-testid="diary-calories-input"
-              />
-              {errors.calories && (
-                <p
-                  id="diary-calories-error"
-                  role="alert"
-                  className="text-xs text-destructive"
-                  data-testid="diary-calories-error"
-                >
-                  {errors.calories}
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="space-y-2 sm:w-32">
-            <label htmlFor="diary-portions" className="block text-sm font-medium">
-              Liczba porcji <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              id="diary-portions"
-              name="portions"
-              value={values.portions}
-              onChange={handleChange}
-              className={`w-full rounded-md border px-3 py-2 text-sm ${
-                errors.portions ? "border-destructive bg-destructive/10" : "border-input bg-background"
-              }`}
-              placeholder="Np. 1,5"
-              disabled={isSubmitting}
-              aria-invalid={!!errors.portions}
-              aria-describedby={errors.portions ? "diary-portions-error" : undefined}
-              data-testid="diary-portions-input"
-            />
-            {errors.portions && (
-              <p
-                id="diary-portions-error"
-                role="alert"
-                className="text-xs text-destructive"
-                data-testid="diary-portions-error"
-              >
-                {errors.portions}
-              </p>
-            )}
           </div>
-        )}
-      </div>
-
-      {/* Informacja, nie błąd - stąd barwy tła i tekstu inne niż w komunikatach walidacji. */}
-      {previewText && (
-        <p
-          className="mt-4 rounded-md border border-input bg-muted px-3 py-2 text-xs text-muted-foreground"
-          data-testid="diary-recipe-preview"
-        >
-          {previewText}
-        </p>
-      )}
-
-      {formErrors.length > 0 && (
-        <div
-          role="alert"
-          className="mt-4 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-xs text-destructive"
-          data-testid="diary-form-error"
-        >
-          {formErrors.map(([key, message]) => (
-            <p key={key}>{message}</p>
-          ))}
         </div>
-      )}
-
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          {selectedRecipe === null
-            ? "Kalorie możesz zostawić puste - wpis zapisze się bez wartości."
-            : "Kalorie policzy przepis - własną liczbę możesz wpisać przy wpisie na liście."}
-        </p>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={isSubmitting} className="gap-2" data-testid="diary-submit-button">
-              {isSubmitting ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  Dodawanie...
-                </>
-              ) : (
-                "Dodaj wpis"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              // Wpisana liczba wyklucza wycenę: trasa `/estimate` i tak nie tknęłaby wartości, która
-              // już jest, więc przycisk aktywny przy wypełnionym polu tylko obiecywałby coś,
-              // czego nie zrobi. Przy wybranym przepisie pole jest puste, więc oba przyciski
-              // zostają - wpis z przepisu bez rozpoznanego bloku ma tę samą ścieżkę wyceny co
-              // wpis opisowy. Gdy jednak podgląd już policzył wartość z bloku, wycena jest tak samo
-              // pusta jak przy wpisanej ręcznie liczbie - i przycisk gaśnie z tego samego powodu.
-              disabled={isSubmitting || values.calories.trim() !== "" || recipeAlreadyCounted}
-              onClick={() => void submitEntry(true)}
-              className="gap-2"
-              data-testid="diary-submit-estimate-button"
-            >
-              Zapisz i policz kalorie
-            </Button>
-          </div>
-          <p className="text-right text-xs text-muted-foreground" data-testid="diary-ai-notice">
-            {aiNotice}
-          </p>
-        </div>
-      </div>
-    </form>
+      </form>
+    </Card>
   );
 }

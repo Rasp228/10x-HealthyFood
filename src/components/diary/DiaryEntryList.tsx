@@ -1,6 +1,7 @@
 import React from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import DiaryEntryCalories from "./DiaryEntryCalories";
 import type { EstimationState } from "@/lib/utils/diary-estimation";
 import { formatPortions } from "@/lib/utils/diary-portions";
@@ -61,12 +62,8 @@ export default function DiaryEntryList({
         const isLocked = isInFlight || deletingId === entry.id;
 
         return (
-          <li
-            key={entry.id}
-            className="rounded-lg border bg-card p-4 shadow-sm"
-            data-testid={`diary-entry-${entry.id}`}
-          >
-            <div className="flex items-start justify-between gap-4">
+          <li key={entry.id} data-testid={`diary-entry-${entry.id}`}>
+            <Card className="flex-row items-start justify-between gap-4 p-4">
               <div className="min-w-0">
                 <p className="text-sm font-medium break-words" data-testid="diary-entry-content">
                   {entry.content}
@@ -114,7 +111,7 @@ export default function DiaryEntryList({
                 onCancel={onCancel}
                 onSetCalories={onSetCalories}
               />
-            </div>
+            </Card>
           </li>
         );
       })}

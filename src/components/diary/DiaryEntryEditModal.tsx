@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import BaseModal from "@/components/ui/BaseModal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCalories, parseCalories } from "@/lib/utils/diary-calories";
 import { isAfter } from "@/lib/utils/diary-day";
 import { AI_NOTICE, AI_NOTICE_RECIPE } from "@/lib/utils/diary-estimation";
@@ -267,17 +270,11 @@ export default function DiaryEntryEditModal({ entry, isOpen, today, onClose, onS
   const aiNotice = entry.source_recipe_id !== null ? AI_NOTICE_RECIPE : AI_NOTICE;
   const hasPortions = entry.portions !== null;
 
-  const inputClass = (field: EditField) =>
-    `w-full rounded-md border px-3 py-2 text-sm ${
-      errors[field] ? "border-destructive bg-destructive/10" : "border-input bg-background"
-    }`;
-
   const fieldProps = (field: EditField) => ({
     id: `diary-edit-${TESTID_SUFFIX[field]}`,
     name: field,
     value: values[field],
     onChange: handleChange,
-    className: inputClass(field),
     disabled: isSubmitting,
     "aria-invalid": !!errors[field],
     "aria-describedby": errors[field] ? `diary-edit-${TESTID_SUFFIX[field]}-error` : undefined,
@@ -300,10 +297,10 @@ export default function DiaryEntryEditModal({ entry, isOpen, today, onClose, onS
     <BaseModal isOpen={isOpen} onClose={handleClose} title="Edytuj wpis" maxWidth="2xl" data-testid="diary-edit-modal">
       <form onSubmit={handleSubmit} className="space-y-4" aria-label="Edytuj wpis dziennika">
         <div className="space-y-2">
-          <label htmlFor="diary-edit-content" className="block text-sm font-medium">
+          <Label htmlFor="diary-edit-content">
             Co zjadłeś? <span className="text-destructive">*</span>
-          </label>
-          <textarea {...fieldProps("content")} className={`h-20 ${inputClass("content")}`} maxLength={500} />
+          </Label>
+          <Textarea {...fieldProps("content")} className="h-20" maxLength={500} />
           {fieldError("content")}
           <p className="text-xs text-muted-foreground">{values.content.length}/500</p>
         </div>
@@ -311,35 +308,29 @@ export default function DiaryEntryEditModal({ entry, isOpen, today, onClose, onS
         <div className="grid gap-4 sm:grid-cols-3">
           {hasPortions ? (
             <div className="space-y-2">
-              <label htmlFor="diary-edit-portions" className="block text-sm font-medium">
+              <Label htmlFor="diary-edit-portions">
                 Liczba porcji <span className="text-destructive">*</span>
-              </label>
-              <input type="text" inputMode="decimal" placeholder="Np. 1,5" {...fieldProps("portions")} />
+              </Label>
+              <Input type="text" inputMode="decimal" placeholder="Np. 1,5" {...fieldProps("portions")} />
               {fieldError("portions")}
             </div>
           ) : (
             <div className="space-y-2">
-              <label htmlFor="diary-edit-amount" className="block text-sm font-medium">
-                Ilość
-              </label>
-              <input type="text" maxLength={100} placeholder="Np. 1 talerz" {...fieldProps("amount_text")} />
+              <Label htmlFor="diary-edit-amount">Ilość</Label>
+              <Input type="text" maxLength={100} placeholder="Np. 1 talerz" {...fieldProps("amount_text")} />
               {fieldError("amount_text")}
             </div>
           )}
 
           <div className="space-y-2">
-            <label htmlFor="diary-edit-calories" className="block text-sm font-medium">
-              Kalorie
-            </label>
-            <input type="text" inputMode="numeric" placeholder="kcal" {...fieldProps("calories")} />
+            <Label htmlFor="diary-edit-calories">Kalorie</Label>
+            <Input type="text" inputMode="numeric" placeholder="kcal" {...fieldProps("calories")} />
             {fieldError("calories")}
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="diary-edit-date" className="block text-sm font-medium">
-              Dzień
-            </label>
-            <input type="date" max={today} {...fieldProps("entry_date")} />
+            <Label htmlFor="diary-edit-date">Dzień</Label>
+            <Input type="date" max={today} {...fieldProps("entry_date")} />
             {fieldError("entry_date")}
           </div>
         </div>

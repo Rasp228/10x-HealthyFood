@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useSyncExternalStore } from "react";
-import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
 import DayNavigator from "./DayNavigator";
 import DiaryDaySummary from "./DiaryDaySummary";
+import DiaryEmptyState from "./DiaryEmptyState";
 import DiaryEntryEditModal from "./DiaryEntryEditModal";
 import DiaryEntryForm from "./DiaryEntryForm";
 import DiaryEntryList from "./DiaryEntryList";
+import DiaryErrorState from "./DiaryErrorState";
+import DiaryPageSkeleton from "./DiaryPageSkeleton";
 import ToastContainer from "../feedback/ToastContainer";
 import {
   ESTIMATION_TIMEOUT_MS,
@@ -226,8 +228,12 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
   // Dzień rozstrzyga przeglądarka, więc do czasu pierwszej migawki klienckiej nie mamy czego
   // pokazać. Policzenie "dzisiaj" na serwerze dałoby dzień serwera i rozjechałoby hydratację.
   if (day === null || today === null) {
-    return <LoadingSpinner className="py-8" message="Ładowanie dziennika..." />;
+    return <DiaryPageSkeleton />;
   }
+
+  // Suma stoi nad formularzem - to liczba, dla której otwiera się dziennik. Warunek jak dotąd:
+  // pusty dzień nie rysuje ani karty sumy, ani paska.
+  const showSummary = !error && !isLoading && entries.length > 0;
 
   return (
     <div data-testid="diary-page">
@@ -236,51 +242,30 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
         <DayNavigator day={day} today={today} onChange={setDay} />
       </div>
 
-      <DiaryEntryForm day={day} onCreated={handleCreated} />
+      <div className="flex flex-col gap-6">
+        {showSummary && <DiaryDaySummary entries={entries} dailyGoal={dailyGoal} />}
 
-      <div className="mt-6">
+        <DiaryEntryForm day={day} onCreated={handleCreated} />
+
         {error ? (
-          <div
-            className="rounded-lg border border-destructive/30 bg-card p-4 text-center"
-            data-testid="diary-error-state"
-          >
-            <h3 className="mb-2 text-lg font-semibold text-destructive">Wystąpił błąd</h3>
-            <p className="text-destructive">{error.message}</p>
-            <Button
-              variant="outline"
-              className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => refetch()}
-              data-testid="diary-retry-button"
-            >
-              Spróbuj ponownie
-            </Button>
-          </div>
+          <DiaryErrorState message={error.message} onRetry={() => refetch()} />
         ) : isLoading ? (
           <LoadingSpinner className="py-8" message="Ładowanie wpisów..." />
         ) : entries.length === 0 ? (
-          <div
-            className="rounded-lg border-2 border-dashed border-muted p-12 text-center"
-            data-testid="diary-empty-state"
-          >
-            <h3 className="mb-2 text-xl font-medium">Brak wpisów</h3>
-            <p className="text-muted-foreground">Ten dzień nie ma jeszcze żadnych wpisów.</p>
-          </div>
+          <DiaryEmptyState />
         ) : (
-          <div className="flex flex-col gap-4">
-            <DiaryDaySummary entries={entries} dailyGoal={dailyGoal} />
-            <DiaryEntryList
-              entries={entries}
-              entryState={entryState}
-              inFlightId={inFlightId}
-              deletingId={deletingId}
-              queuedIds={queuedIds}
-              onEstimate={estimate}
-              onCancel={cancel}
-              onSetCalories={handleSetCalories}
-              onEdit={handleEdit}
-              onDelete={setEntryToDelete}
-            />
-          </div>
+          <DiaryEntryList
+            entries={entries}
+            entryState={entryState}
+            inFlightId={inFlightId}
+            deletingId={deletingId}
+            queuedIds={queuedIds}
+            onEstimate={estimate}
+            onCancel={cancel}
+            onSetCalories={handleSetCalories}
+            onEdit={handleEdit}
+            onDelete={setEntryToDelete}
+          />
         )}
       </div>
 

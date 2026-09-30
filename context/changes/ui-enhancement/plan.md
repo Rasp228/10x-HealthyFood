@@ -504,34 +504,34 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [x] 2.1 `grep -rnE "(red|green|amber|blue)-[0-9]" src/components/diary src/components/feedback/Toast.tsx src/components/common/ConfirmDialog.tsx` — 0 trafień
-- [x] 2.2 Każdy nowy lub zmieniony token w `global.css` ma komentarz ze źródłem i kontrastem
-- [x] 2.3 `npm run lint` przechodzi
-- [x] 2.4 `npm run typecheck` — 0 błędów
-- [x] 2.5 `npm run format:check` przechodzi
-- [x] 2.6 `npm run test` przechodzi
+- [x] 2.1 `grep -rnE "(red|green|amber|blue)-[0-9]" src/components/diary src/components/feedback/Toast.tsx src/components/common/ConfirmDialog.tsx` — 0 trafień — 8205f00
+- [x] 2.2 Każdy nowy lub zmieniony token w `global.css` ma komentarz ze źródłem i kontrastem — 8205f00
+- [x] 2.3 `npm run lint` przechodzi — 8205f00
+- [x] 2.4 `npm run typecheck` — 0 błędów — 8205f00
+- [x] 2.5 `npm run format:check` przechodzi — 8205f00
+- [x] 2.6 `npm run test` przechodzi — 8205f00
 
 #### Manual
 
-- [x] 2.7 Na `/diary` i `/profile` w obu motywach przyciski główne, logo „Healthy” i pierścień fokusu mają kolor marki, a tekst przycisku jest czytelny
-- [x] 2.8 Toast sukcesu i błędu oraz dialog usuwania mają kolory z tokenów w obu motywach
+- [x] 2.7 Na `/diary` i `/profile` w obu motywach przyciski główne, logo „Healthy” i pierścień fokusu mają kolor marki, a tekst przycisku jest czytelny — 8205f00
+- [x] 2.8 Toast sukcesu i błędu oraz dialog usuwania mają kolory z tokenów w obu motywach — 8205f00
 
 ### Phase 3: Widok `/diary` na prymitywach, nowy układ i stany wydzielone
 
 #### Automated
 
-- [ ] 3.1 `grep -rn "inputClass\|<input\|<textarea" src/components/diary` — tylko wewnątrz prymitywów, czyli 0 trafień w `diary/`
-- [ ] 3.2 `npm run lint` przechodzi
-- [ ] 3.3 `npm run typecheck` — 0 błędów
-- [ ] 3.4 `npm run format:check` przechodzi
-- [ ] 3.5 `npm run test` przechodzi
-- [ ] 3.6 `npm run test:e2e` przechodzi (`diary-entry.spec.ts`, `daily-goal.spec.ts`) bez zmian w specach i page objects
+- [x] 3.1 `grep -rn "inputClass\|<input\|<textarea" src/components/diary` — tylko wewnątrz prymitywów, czyli 0 trafień w `diary/`
+- [x] 3.2 `npm run lint` przechodzi
+- [x] 3.3 `npm run typecheck` — 0 błędów
+- [x] 3.4 `npm run format:check` przechodzi
+- [x] 3.5 `npm run test` przechodzi
+- [x] 3.6 `npm run test:e2e` przechodzi (`diary-entry.spec.ts`, `daily-goal.spec.ts`) bez zmian w specach i page objects
 
 #### Manual
 
-- [ ] 3.7 Tab przez nawigator dnia, formularz i wiersz wpisu: każde pole i przycisk ma widoczny pierścień fokusu w kolorze marki, w obu motywach
-- [ ] 3.8 Na 375 px suma dnia z paskiem jest na pierwszym ekranie nad formularzem
-- [ ] 3.9 Twarde przeładowanie `/diary` pokazuje szkielet z nagłówkiem, bez samotnego spinnera
+- [x] 3.7 Tab przez nawigator dnia, formularz i wiersz wpisu: każde pole i przycisk ma widoczny pierścień fokusu w kolorze marki, w obu motywach
+- [x] 3.8 Na 375 px suma dnia z paskiem jest na pierwszym ekranie nad formularzem
+- [x] 3.9 Twarde przeładowanie `/diary` pokazuje szkielet z nagłówkiem, bez samotnego spinnera
 
 ### Phase 4: TopNav na 375 px
 

@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { formatCalories, parseCalories } from "@/lib/utils/diary-calories";
 import { AI_NOTICE, AI_NOTICE_RECIPE, type EstimationState } from "@/lib/utils/diary-estimation";
@@ -120,35 +123,28 @@ export default function DiaryEntryCalories({
           )}
         </div>
       ) : state === "estimating" ? (
-        <span
-          className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"
-          data-testid="diary-entry-estimating"
-        >
+        <Badge variant="outline" className="border-info/30 bg-info/10 text-info" data-testid="diary-entry-estimating">
           {isQueued && !isInFlight ? "W kolejce…" : "Liczę…"}
-        </span>
+        </Badge>
       ) : (
-        <span
-          className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"
-          data-testid="diary-entry-calories-missing"
-        >
+        <Badge variant="secondary" className="text-muted-foreground" data-testid="diary-entry-calories-missing">
           Nie policzono
-        </span>
+        </Badge>
       )}
 
       <div className="flex items-center gap-2">
-        <label htmlFor={inputId} className="sr-only">
+        <Label htmlFor={inputId} className="sr-only">
           Kalorie wpisu: {entry.content}
-        </label>
-        <input
+        </Label>
+        {/* Kompaktowy rozmiar, żeby pasował do przycisku `sm` obok. */}
+        <Input
           type="text"
           inputMode="numeric"
           id={inputId}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           disabled={isFieldDisabled}
-          className={`w-24 rounded-md border px-2 py-1 text-sm ${
-            error ? "border-destructive bg-destructive/10" : "border-input bg-background"
-          } disabled:opacity-50`}
+          className="h-8 w-24 px-2"
           placeholder="kcal"
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
