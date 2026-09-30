@@ -1,9 +1,10 @@
 ---
 change_id: daily-goal-and-progress
 title: Dzienny cel kaloryczny i postęp
-status: impl_reviewed
+status: archived
 created: 2026-09-30
 updated: 2026-09-30
+archived_at: 2026-09-30T09:50:14Z
 ---
 
 ## Notes
