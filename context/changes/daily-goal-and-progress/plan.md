@@ -588,21 +588,21 @@ Wycofanie: `drop table user_settings` usuwa tylko cele i nie rusza żadnych inny
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą: `npm run test`
-- [x] 2.2 Typecheck bez błędów: `npm run typecheck`
-- [x] 2.3 Lint przechodzi: `npm run lint`
+- [x] 2.1 Testy jednostkowe przechodzą: `npm run test` — dfbea9e
+- [x] 2.2 Typecheck bez błędów: `npm run typecheck` — dfbea9e
+- [x] 2.3 Lint przechodzi: `npm run lint` — dfbea9e
 
 #### Manual
 
-- [ ] 2.4 `GET /api/user-settings` w zalogowanej przeglądarce zwraca `{"daily_calorie_goal":null}` dla konta bez celu
+- [x] 2.4 `GET /api/user-settings` w zalogowanej przeglądarce zwraca `{"daily_calorie_goal":null}` dla konta bez celu — dfbea9e
 
 ### Phase 3: Cel w profilu
 
 #### Automated
 
-- [ ] 3.1 Typecheck bez błędów: `npm run typecheck`
-- [ ] 3.2 Lint (w tym reguły React Compiler) przechodzi: `npm run lint`
-- [ ] 3.3 Testy jednostkowe przechodzą: `npm run test`
+- [x] 3.1 Typecheck bez błędów: `npm run typecheck`
+- [x] 3.2 Lint (w tym reguły React Compiler) przechodzi: `npm run lint`
+- [x] 3.3 Testy jednostkowe przechodzą: `npm run test`
 
 #### Manual
 

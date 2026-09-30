@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PreferenceChip from "./PreferenceChip";
+import DailyGoalCard from "./DailyGoalCard";
 import ToastContainer from "../feedback/ToastContainer";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { useToast } from "../../hooks/common/useToast";
@@ -296,6 +297,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Dzienny cel kaloryczny */}
+      <DailyGoalCard />
 
       {/* Lista preferencji */}
       <div className="mt-8">
