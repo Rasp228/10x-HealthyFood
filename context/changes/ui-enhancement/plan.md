@@ -553,15 +553,15 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [x] 5.1 `npm run lint` przechodzi
-- [x] 5.2 `npm run typecheck` — 0 błędów
-- [x] 5.3 `npm run format:check` przechodzi
-- [x] 5.4 `npm run test` przechodzi
-- [x] 5.5 `npm run test:security` przechodzi
-- [x] 5.6 `npm run test:e2e` przechodzi
+- [x] 5.1 `npm run lint` przechodzi — 08eca40
+- [x] 5.2 `npm run typecheck` — 0 błędów — 08eca40
+- [x] 5.3 `npm run format:check` przechodzi — 08eca40
+- [x] 5.4 `npm run test` przechodzi — 08eca40
+- [x] 5.5 `npm run test:security` przechodzi — 08eca40
+- [x] 5.6 `npm run test:e2e` przechodzi — 08eca40
 
 #### Manual
 
-- [x] 5.7 `/dev/diary-states` pokazuje wszystkie wymienione stany w obu motywach, na desktopie i na 375 px
-- [x] 5.8 README zrzutów opisuje deltę dla każdego z Z1–Z8, a stany pola (focus, disabled, error) są widoczne na zrzutach
-- [x] 5.9 Checklista `.claude/skills/10x-ui/references/ui-quality-checklist.md` przejrzana punkt po punkcie
+- [x] 5.7 `/dev/diary-states` pokazuje wszystkie wymienione stany w obu motywach, na desktopie i na 375 px — 08eca40
+- [x] 5.8 README zrzutów opisuje deltę dla każdego z Z1–Z8, a stany pola (focus, disabled, error) są widoczne na zrzutach — 08eca40
+- [x] 5.9 Checklista `.claude/skills/10x-ui/references/ui-quality-checklist.md` przejrzana punkt po punkcie — 08eca40
