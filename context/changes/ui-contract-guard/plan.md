@@ -76,6 +76,11 @@ Wzorzec, wynik przed/po z rozbiciem na pliki i zarzuty, sposób odtworzenia, wer
 - Sprawdzian w nowej sesji: drobna zmiana w `/diary` zrobiona na tokenach i prymitywach
   (wynik dopisany do `literal-scan.md`)
 
+## Addendum (impl-review F1)
+
+- `CLAUDE.md`: blok `@przeprogramowani/10x-cli` przepisany w `2b0a25b` to synchronizacja toolkitu
+  (10x-cli), nie część tej zmiany — wyjątek od „What We're NOT Doing”, wniesiony tym samym commitem.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

@@ -72,7 +72,7 @@ const reactConfig = tseslint.config({
 // `bg-success/10`), nie z hex/oklch, palety Tailwinda ani wartości `-[13px]`. Ten sam wzorzec co grep
 // w skillu. Kolejny widok przeniesiony na tokeny dopisz do `files`.
 const UI_LITERAL =
-  "/#[0-9a-fA-F]{3}[0-9a-fA-F]*\\b|rgba?\\(|hsla?\\(|oklch\\(|-\\[[0-9.]+(px|rem)\\]|\\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\\b/";
+  "/#[0-9a-fA-F]{3}[0-9a-fA-F]*\\b|rgba?\\(|hsla?\\(|oklch\\(|-\\[[0-9.]+(px|rem|em|%|vh|vw|ch)\\]|\\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\\b/";
 const UI_LITERAL_MESSAGE =
   "Literał koloru/odstępu w widoku na kontrakcie design-systemu. Użyj tokenu z src/styles/global.css " +
   "(np. bg-primary, text-destructive, bg-success/10) albo prymitywu z src/components/ui - AGENTS.md, „Styling & UI”.";

@@ -57,6 +57,11 @@ Różnica wobec grepu: w selektorze ESLint `#[0-9a-fA-F]{3,8}` jest zapisane jak
 `#[0-9a-fA-F]{3}[0-9a-fA-F]*` (bez przecinka w kwantyfikatorze, który mógłby się kłócić
 z listą selektorów esquery). Łapie te same literały hex, także dłuższe niż 8 znaków.
 
+Druga różnica (przegląd wdrożenia, ustalenie F2): ESLint łapie wartości arbitralne w jednostkach
+`px|rem|em|%|vh|vw|ch`, a grep ze skilla tylko `px|rem`. Liczby przed/po wyżej pochodzą z grepu;
+w plikach widoku nie ma dziś żadnej wartości `-[…]`, więc szerszy wzorzec ich nie zmienia.
+`bg-[var(--x)]` dalej przechodzi.
+
 ## Sprawdzian w nowej sesji
 
 2026-10-01: użytkownik zlecił agentowi w świeżej sesji drobną zmianę w `/diary`. Agent użył tokenów

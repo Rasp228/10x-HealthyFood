@@ -44,7 +44,7 @@ Only `login`, `register` and `reset-password` have been extracted so far.
 `label.tsx`, `progress.tsx` and `textarea.tsx` belong there.
 `ActionButtons.tsx`, `BaseModal.tsx`, `IconButton.tsx`, `LoadingSpinner.tsx` and `RecipeContent.tsx`
 are application components. Do not add to that set; new application components go in
-`src/components/{ai,auth,common,feedback,layout,pages,profile,recipe}/`.
+`src/components/{ai,auth,common,diary,feedback,layout,pages,profile,recipe}/`.
 
 ## Trasy przepisów
 

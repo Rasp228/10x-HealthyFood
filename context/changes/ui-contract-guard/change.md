@@ -1,7 +1,7 @@
 ---
 change_id: ui-contract-guard
 title: Utrwalenie kontraktu design-systemu dla widoku dziennika (/diary)
-status: implemented
+status: impl_reviewed
 created: 2026-10-01
 updated: 2026-10-01
 archived_at: null
