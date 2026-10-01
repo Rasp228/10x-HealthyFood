@@ -84,10 +84,10 @@ Wzorzec, wynik przed/po z rozbiciem na pliki i zarzuty, sposób odtworzenia, wer
 
 #### Automated
 
-- [x] 1.1 `npm run lint` przechodzi (0 błędów na obecnym drzewie)
-- [x] 1.2 Stan `4ea756e` plików widoku puszczony przez ESLint daje 15 błędów `no-restricted-syntax`
-- [x] 1.3 `npx prettier --check` na zmienionych plikach przechodzi
+- [x] 1.1 `npm run lint` przechodzi (0 błędów na obecnym drzewie) — 2b0a25b
+- [x] 1.2 Stan `4ea756e` plików widoku puszczony przez ESLint daje 15 błędów `no-restricted-syntax` — 2b0a25b
+- [x] 1.3 `npx prettier --check` na zmienionych plikach przechodzi — 2b0a25b
 
 #### Manual
 
-- [ ] 1.4 Sprawdzian w nowej sesji: drobna zmiana w `/diary` zrobiona na tokenach i prymitywach
+- [x] 1.4 Sprawdzian w nowej sesji: drobna zmiana w `/diary` zrobiona na tokenach i prymitywach

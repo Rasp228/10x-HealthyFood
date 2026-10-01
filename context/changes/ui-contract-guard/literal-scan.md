@@ -56,3 +56,9 @@ Sprawdzenie reguły:
 Różnica wobec grepu: w selektorze ESLint `#[0-9a-fA-F]{3,8}` jest zapisane jako
 `#[0-9a-fA-F]{3}[0-9a-fA-F]*` (bez przecinka w kwantyfikatorze, który mógłby się kłócić
 z listą selektorów esquery). Łapie te same literały hex, także dłuższe niż 8 znaków.
+
+## Sprawdzian w nowej sesji
+
+2026-10-01: użytkownik zlecił agentowi w świeżej sesji drobną zmianę w `/diary`. Agent użył tokenów
+i prymitywów z kontraktu i bez podpowiedzi stosował reguły z `AGENTS.md` („Design-system contract”).
+Wynik potwierdzony przez użytkownika, bez zapisu samego diffu.
