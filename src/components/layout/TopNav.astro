@@ -17,16 +17,15 @@ const isActive = (href: string) =>
 ---
 
 <header class="border-b">
-  <!-- Poniżej `sm` linki schodzą do drugiej linii i przewijają się same, nie cała strona. -->
+  <!-- Poniżej `sm` linki schodzą do drugiej linii (`order-last`) i przewijają się same, nie cała
+       strona. "Wyloguj" stoi przy przełączniku motywu, więc na telefonie zawsze jest na ekranie.
+       Kolejność w DOM to kolejność desktopu - po niej idzie Tab. -->
   <div class="container mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:h-16 sm:flex-nowrap sm:py-0">
     <a href="/" class="flex items-center font-bold text-xl">
       <span class="text-primary">Healthy</span>
       <span>Meal</span>
     </a>
-    <div class="ml-auto">
-      <ThemeToggle client:load />
-    </div>
-    <nav class="flex w-full min-w-0 items-center gap-2 overflow-x-auto p-1 sm:w-auto sm:gap-4 sm:overflow-visible sm:p-0">
+    <nav class="order-last flex w-full min-w-0 items-center gap-2 overflow-x-auto p-1 sm:order-none sm:w-auto sm:gap-4 sm:overflow-visible sm:p-0">
       {links.map(({ href, label }) => {
         const active = isActive(href);
         return (
@@ -39,10 +38,13 @@ const isActive = (href: string) =>
           </a>
         );
       })}
+    </nav>
+    <div class="ml-auto flex items-center gap-2 sm:gap-4">
+      <ThemeToggle client:load />
       <button id="logout-button" class={buttonVariants({ variant: "outline" })}>
         Wyloguj
       </button>
-    </nav>
+    </div>
   </div>
 </header>
 

@@ -5,6 +5,8 @@ interface UseDiaryEntriesResult {
   entries: DiaryEntryDto[];
   entryCount: number;
   isLoading: boolean;
+  /** Dzień, którego wpisy są teraz w `entries` (`null` przed pierwszą odpowiedzią). */
+  loadedDay: string | null;
   error: Error | null;
   refetch: () => void;
 }
@@ -17,6 +19,7 @@ export function useDiaryEntries(day: string | null): UseDiaryEntriesResult {
   const [entries, setEntries] = useState<DiaryEntryDto[]>([]);
   const [entryCount, setEntryCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadedDay, setLoadedDay] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<number>(0);
 
@@ -49,6 +52,7 @@ export function useDiaryEntries(day: string | null): UseDiaryEntriesResult {
 
         setEntries(result.data);
         setEntryCount(result.total);
+        setLoadedDay(day);
       } catch (err) {
         if (!isCurrent) return;
 
@@ -59,6 +63,7 @@ export function useDiaryEntries(day: string | null): UseDiaryEntriesResult {
         // W przypadku błędu ustawiamy pusty dzień
         setEntries([]);
         setEntryCount(0);
+        setLoadedDay(day);
       } finally {
         if (isCurrent) {
           setIsLoading(false);
@@ -79,6 +84,7 @@ export function useDiaryEntries(day: string | null): UseDiaryEntriesResult {
     entries,
     entryCount,
     isLoading,
+    loadedDay,
     error,
     refetch,
   };

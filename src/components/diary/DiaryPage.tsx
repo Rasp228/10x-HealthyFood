@@ -78,7 +78,7 @@ interface DiaryPageProps {
  */
 export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
   const { day, today, setDay } = useSelectedDay();
-  const { entries, isLoading, error, refetch } = useDiaryEntries(day);
+  const { entries, isLoading, loadedDay, error, refetch } = useDiaryEntries(day);
   const { showToast } = useToast();
   // Wyspa jest właścicielem żądania w locie, bo to ona trzyma listę: po każdym zakończeniu wycena
   // każe odświeżyć wiersze i stan wpisu bierze się z danych, a nie z pamięci komponentu.
@@ -231,9 +231,15 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
     return <DiaryPageSkeleton />;
   }
 
+  // Spinner i ukrycie sumy tylko przy ładowaniu innego dnia niż ten na ekranie. `refetch()` po
+  // mutacji albo po wycenie zostawia stare wpisy do czasu odpowiedzi: karta sumy stoi nad
+  // formularzem, więc jej zniknięcie przesuwałoby formularz pod kursorem, a odmontowana lista
+  // gubiłaby szkice kalorii w wierszach.
+  const isInitialLoad = isLoading && loadedDay !== day;
+
   // Suma stoi nad formularzem - to liczba, dla której otwiera się dziennik. Warunek jak dotąd:
   // pusty dzień nie rysuje ani karty sumy, ani paska.
-  const showSummary = !error && !isLoading && entries.length > 0;
+  const showSummary = !error && !isInitialLoad && entries.length > 0;
 
   return (
     <div data-testid="diary-page">
@@ -249,7 +255,7 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
 
         {error ? (
           <DiaryErrorState message={error.message} onRetry={() => refetch()} />
-        ) : isLoading ? (
+        ) : isInitialLoad ? (
           <LoadingSpinner className="py-8" message="Ładowanie wpisów..." />
         ) : entries.length === 0 ? (
           <DiaryEmptyState />

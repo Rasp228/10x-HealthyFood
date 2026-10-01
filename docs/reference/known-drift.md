@@ -117,3 +117,19 @@ wciąż powstaje przy każdym usunięciu przepisu i wciąż nie przeszłaby prze
 Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F3; plan
 `edit-and-delete-entry`, „What We're NOT Doing"): domknięcie wymaga migracji, którą oba plany
 wprost wykluczają.
+
+## Prymitywy UI
+
+### Pierścień fokusu w jasnym motywie poniżej 3:1
+
+Prymitywy shadcn (`src/components/ui/button.tsx`, `input.tsx`, `textarea.tsx`, `badge.tsx`) rysują
+fokus jako `focus-visible:ring-[3px] ring-ring/50`. W jasnym motywie `--ring` to kolor marki
+`oklch(0.5 0.085 184.704)` (`src/styles/global.css`), a złożony w połowie na białym daje ~2.2:1,
+poniżej 3:1 z WCAG 1.4.11. Pola mają przy fokusie także pełną ramkę `border-ring` (~5.7:1),
+przyciski `default` i `ghost` — tylko pierścień. Ciemny motyw trzyma ~3.3:1.
+
+Samym tokenem tego nie da się naprawić bez utraty koloru marki: `/50` na białym przekracza 3:1
+dopiero przy `--ring` ≲ `oklch(0.28 0.045 184.704)`, prawie czarnym. Przyjęte świadomie (przegląd
+wdrożenia `ui-enhancement`, ustalenie F2). Naprawa — krycie albo grubość pierścienia
+w prymitywach, ewentualnie `ring-offset` — czeka na własną zmianę i dotyczy wszystkich widoków,
+nie tylko dziennika.

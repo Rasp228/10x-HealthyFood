@@ -1,5 +1,12 @@
 # Zrzuty — `/diary` przed i po zmianie `ui-enhancement`
 
+> **W repo zostały trzy zrzuty**: `before-diary-light-375.png`, `after-diary-light-375.png`
+> i `after-states-light-desktop.png` (przegląd wdrożenia, ustalenie F10). Repo nie ma testów
+> zrzutów, więc PNG to dokumentacja, nie baseline. Odtwarzalną bramką jest `/dev/diary-states`
+> razem z opisaną niżej metodą. Pozostałe pliki z list poniżej są w historii gita:
+> `git show 6bce2c8:context/changes/ui-enhancement/screenshots/<plik>`. Po poprawkach z przeglądu
+> (F1, F3, F4) zrzuty „po” nie pokazują już tła karty sumy `/3` ani nowego układu TopNav.
+
 ## Przed (faza 1)
 
 Stan sprzed jakiejkolwiek zmiany wizualnej, zrobiony 2026-09-30 na `master` (`4ea756e`),

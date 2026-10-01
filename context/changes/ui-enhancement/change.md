@@ -1,7 +1,7 @@
 ---
 change_id: ui-enhancement
 title: Audyt i poprawa UI widoku dziennika (/diary) na tokenach design-systemu
-status: implemented
+status: impl_reviewed
 created: 2026-09-30
 updated: 2026-10-01
 archived_at: null

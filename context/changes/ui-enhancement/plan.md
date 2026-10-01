@@ -482,6 +482,30 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 - Decyzje archiwalne: `context/archive/2026-09-30-daily-goal-and-progress/plan.md:46-57`, `…/screenshots/README.md`
 - Kontrakt E2E: `tests/e2e/page-objects/DiaryPage.ts:82-122,201-206,327,366-498,535`
 
+## Addendum — przegląd wdrożenia (2026-10-01)
+
+Odejścia od planu, przyjęte w `/10x-impl-review` (`reviews/impl-review.md`):
+
+- **F5 — zależność.** Faza 1 zakładała `@radix-ui/react-label`, a `npx shadcn add` dodało zbiorczy
+  `radix-ui` (`package.json`), z którego importują `label.tsx` i `badge.tsx`. `button.tsx`
+  i `progress.tsx` dalej importują pojedyncze `@radix-ui/react-slot` i `@radix-ui/react-progress`.
+  W runtime nie ma duplikatów, a `test:security` przechodzi. Ujednolicenie importów to osobna zmiana.
+- **F6 — panel błędu.** `DiaryErrorState` ma `border-destructive/30 bg-card` bez tła
+  `bg-destructive/10`. „Spróbuj ponownie” to `ghost` z ramką, bo wariant `outline` niesie własne
+  nadpisania `dark:` (komentarz w pliku).
+- **F7 — dodatkowy plik.** `src/components/diary/dev/DiaryStateDemos.tsx` to wyspy kitchen sinka,
+  które odgrywają stany trzymane w `useState` (błąd walidacji formularza, błąd pola kalorii).
+  Importuje je wyłącznie `src/pages/dev/diary-states.astro`.
+
+Poprawki z triage, poza pierwotnym zakresem faz:
+
+- F1: `useDiaryEntries` zwraca `loadedDay`. `DiaryPage` chowa sumę i listę tylko przy ładowaniu
+  innego dnia, więc `refetch()` nie przesuwa już formularza.
+- F3: tło karty sumy `bg-primary/3`.
+- F4: „Wyloguj” obok przełącznika motywu.
+- F8: `role="status"` w szkielecie.
+- F2 odłożone do `docs/reference/known-drift.md`.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

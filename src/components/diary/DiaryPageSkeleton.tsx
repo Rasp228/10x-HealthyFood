@@ -10,7 +10,7 @@ import React from "react";
 export default function DiaryPageSkeleton() {
   return (
     <div data-testid="diary-page-skeleton" aria-busy="true">
-      <span className="sr-only" aria-live="polite">
+      <span className="sr-only" role="status">
         Ładowanie dziennika…
       </span>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
