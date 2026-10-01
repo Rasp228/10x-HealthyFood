@@ -40,7 +40,8 @@ Only `login`, `register` and `reset-password` have been extracted so far.
 
 ### Application components sitting in `src/components/ui/`
 
-`src/components/ui/` is shadcn primitives only — `button.tsx` is the only file there that belongs.
+`src/components/ui/` is shadcn primitives only — `badge.tsx`, `button.tsx`, `card.tsx`, `input.tsx`,
+`label.tsx`, `progress.tsx` and `textarea.tsx` belong there.
 `ActionButtons.tsx`, `BaseModal.tsx`, `IconButton.tsx`, `LoadingSpinner.tsx` and `RecipeContent.tsx`
 are application components. Do not add to that set; new application components go in
 `src/components/{ai,auth,common,feedback,layout,pages,profile,recipe}/`.

@@ -108,6 +108,24 @@ Add shadcn primitives with `npx shadcn@latest add <component>` (@components.json
 `cssVariables`, lucide). Import primitives from `@/components/ui` and `cn` from `@/lib/utils/utils`;
 build variant APIs with `class-variance-authority`, following @src/components/ui/button.tsx.
 
+### Design-system contract
+
+- **Tokens**: values live under `:root` / `.dark` in @src/styles/global.css and reach Tailwind
+  through `@theme inline`. Use them by role — `bg-primary`, `text-muted-foreground`,
+  `text-destructive`, and for states `bg-success/10 border-success/30 text-success` (likewise
+  `warning`, `info`). A new value is a new token in both `:root` and `.dark`, with a comment naming
+  its source and contrast — never a raw colour in `@theme inline`.
+- **Components**: check `src/components/ui/` before writing markup — `badge`, `button`, `card`,
+  `input`, `label`, `progress`, `textarea`. Add a missing primitive with
+  `npx shadcn@latest add <name>`; never hand-build a second button, card or form field.
+- **No literals in views**: no hex/rgb/oklch, Tailwind palette classes (`bg-red-50`,
+  `text-gray-500`, `text-white`), arbitrary values (`p-[13px]`) or colour `dark:` overrides in
+  components and pages — dark mode comes from the token. `uiTokensConfig` in @eslint.config.js
+  enforces this for the `/diary` view; add a view to its `files` once it is on tokens.
+- **States**: every visible state of `/diary` (loading, empty, error, disabled, validation errors,
+  toasts, delete dialog) renders on the DEV-only kitchen sink @src/pages/dev/diary-states.astro.
+  A new state of that view gets a frame there.
+
 ## Code style
 
 TypeScript strict via `astro/tsconfigs/strict`; `src/` currently has zero `: any` — keep it that way.

@@ -67,6 +67,34 @@ const reactConfig = tseslint.config({
   },
 });
 
+// Skan literałów z /10x-ui dla widoku `/diary` (zmiana `ui-contract-guard`): w tych plikach kolory
+// i odstępy biorą się z tokenów `src/styles/global.css` (`bg-primary`, `text-destructive`,
+// `bg-success/10`), nie z hex/oklch, palety Tailwinda ani wartości `-[13px]`. Ten sam wzorzec co grep
+// w skillu. Kolejny widok przeniesiony na tokeny dopisz do `files`.
+const UI_LITERAL =
+  "/#[0-9a-fA-F]{3}[0-9a-fA-F]*\\b|rgba?\\(|hsla?\\(|oklch\\(|-\\[[0-9.]+(px|rem)\\]|\\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\\b/";
+const UI_LITERAL_MESSAGE =
+  "Literał koloru/odstępu w widoku na kontrakcie design-systemu. Użyj tokenu z src/styles/global.css " +
+  "(np. bg-primary, text-destructive, bg-success/10) albo prymitywu z src/components/ui - AGENTS.md, „Styling & UI”.";
+
+const uiTokensConfig = tseslint.config({
+  files: [
+    "src/pages/diary.astro",
+    "src/pages/dev/diary-states.astro",
+    "src/components/diary/**/*.{ts,tsx}",
+    "src/components/feedback/Toast.tsx",
+    "src/components/common/ConfirmDialog.tsx",
+    "src/components/layout/TopNav.astro",
+  ],
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      { selector: `Literal[value=${UI_LITERAL}]`, message: UI_LITERAL_MESSAGE },
+      { selector: `TemplateElement[value.raw=${UI_LITERAL}]`, message: UI_LITERAL_MESSAGE },
+    ],
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   {
@@ -79,5 +107,6 @@ export default tseslint.config(
   jsxA11yConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
+  uiTokensConfig,
   eslintPluginPrettier
 );
