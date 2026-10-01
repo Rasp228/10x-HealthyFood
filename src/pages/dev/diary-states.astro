@@ -1,0 +1,278 @@
+---
+/**
+ * Kitchen sink widoku dziennika - bramka wizualna zmiany `ui-enhancement`: każdy nazwany stan
+ * `/diary` naraz, do zrzutów w obu motywach, na desktopie i na 375 px.
+ *
+ * Strona wyłącznie deweloperska, na wzór `diary-goal-states.astro`: poza `astro dev` odpowiada
+ * 404, nie jest w `PUBLIC_PATHS`, więc wymaga sesji, i nie ma `prerender = true` - sprawdzenie
+ * `DEV` ma działać per żądanie, a layout czyta `locals.user`.
+ *
+ * Komponenty bez stanu własnego renderują się tu tylko po stronie serwera (bez dyrektywy
+ * `client:*`), więc przyjmują no-opy jako handlery. Stany trzymane w `useState` komponentu
+ * (błąd walidacji formularza, błąd pola kalorii) odgrywają wyspy z `components/diary/dev/`.
+ * Toasty i dialog leżą w ramkach z `transform`, które zamykają ich `position: fixed` w sobie,
+ * zamiast przykrywać całą stronę.
+ */
+import MainLayout from "../../layouts/MainLayout.astro";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import Toast from "../../components/feedback/Toast";
+import DiaryDaySummary from "../../components/diary/DiaryDaySummary";
+import DiaryEmptyState from "../../components/diary/DiaryEmptyState";
+import DiaryEntryList from "../../components/diary/DiaryEntryList";
+import DiaryErrorState from "../../components/diary/DiaryErrorState";
+import DiaryPageSkeleton from "../../components/diary/DiaryPageSkeleton";
+import {
+  DiaryEntryFieldErrorDemo,
+  DiaryFormDefaultDemo,
+  DiaryFormDisabledDemo,
+  DiaryFormValidationErrorDemo,
+} from "../../components/diary/dev/DiaryStateDemos";
+import type { EstimationState } from "../../lib/utils/diary-estimation";
+import type { DiaryEntryDto } from "../../types";
+
+if (!import.meta.env.DEV) {
+  return new Response(null, { status: 404 });
+}
+
+const noop = () => undefined;
+const noopAsync = async () => undefined;
+
+let nextId = 1;
+
+const entry = (overrides: Partial<DiaryEntryDto>): DiaryEntryDto => ({
+  id: nextId++,
+  user_id: "kitchen-sink",
+  entry_date: "2000-01-05",
+  content: "Wpis przykładowy",
+  amount_text: null,
+  calories: null,
+  calorie_origin: null,
+  estimation_requested_at: null,
+  portions: null,
+  source_recipe_id: null,
+  created_at: "2000-01-05T08:00:00.000Z",
+  updated_at: "2000-01-05T08:00:00.000Z",
+  ...overrides,
+});
+
+const summaryEntries = [
+  entry({ content: "Owsianka z bananem", calories: 420, calorie_origin: "manual" }),
+  entry({ content: "Kanapka z serem", calories: 380, calorie_origin: "manual" }),
+  entry({ content: "Jabłko" }),
+  entry({ content: "Zupa pomidorowa", calories: 200, calorie_origin: "ai_from_description" }),
+];
+
+interface RowState {
+  title: string;
+  entry: DiaryEntryDto;
+  state: EstimationState;
+  inFlight?: boolean;
+  queued?: boolean;
+  deleting?: boolean;
+}
+
+const rows: RowState[] = [
+  {
+    title: "Wartość - wpisane ręcznie",
+    entry: entry({ content: "Owsianka z bananem", amount_text: "1 miska", calories: 420, calorie_origin: "manual" }),
+    state: "valued",
+  },
+  {
+    title: "Wartość - z przepisu",
+    entry: entry({
+      content: "Makaron z warzywami",
+      portions: 2,
+      source_recipe_id: 1,
+      calories: 700,
+      calorie_origin: "recipe_nutrition",
+    }),
+    state: "valued",
+  },
+  {
+    title: "Wartość - oszacowane z przepisu",
+    entry: entry({
+      content: "Curry z ciecierzycą",
+      portions: 1,
+      source_recipe_id: 2,
+      calories: 560,
+      calorie_origin: "ai_from_recipe",
+    }),
+    state: "valued",
+  },
+  {
+    title: "Wartość - oszacowane z opisu",
+    entry: entry({
+      content: "Zupa pomidorowa z makaronem",
+      amount_text: "1 talerz",
+      calories: 200,
+      calorie_origin: "ai_from_description",
+    }),
+    state: "valued",
+  },
+  {
+    title: "Wycena w locie (pole i akcje zablokowane)",
+    entry: entry({ content: "Sałatka grecka", amount_text: "1 miska" }),
+    state: "estimating",
+    inFlight: true,
+  },
+  {
+    title: "W kolejce (pole aktywne)",
+    entry: entry({ content: "Jogurt naturalny", amount_text: "1 kubek" }),
+    state: "estimating",
+    queued: true,
+  },
+  {
+    title: "Świeży znacznik po przeładowaniu (bez „Anuluj”)",
+    entry: entry({
+      content: "Kasza z warzywami",
+      amount_text: "1 talerz",
+      estimation_requested_at: "2000-01-05T08:00:00.000Z",
+    }),
+    state: "estimating",
+  },
+  {
+    title: "Stale - wycena przepadła",
+    entry: entry({
+      content: "Pierogi ruskie",
+      amount_text: "8 sztuk",
+      estimation_requested_at: "2000-01-05T07:00:00.000Z",
+    }),
+    state: "stale",
+  },
+  {
+    title: "Bez wartości (idle)",
+    entry: entry({ content: "Jabłko", amount_text: "1 sztuka" }),
+    state: "idle",
+  },
+  {
+    title: "Usuwanie w drodze (akcje zablokowane)",
+    entry: entry({ content: "Kanapka z serem", amount_text: "2 kromki", calories: 380, calorie_origin: "manual" }),
+    state: "valued",
+    deleting: true,
+  },
+];
+
+const fieldErrorEntry = entry({ content: "Makaron carbonara", amount_text: "1 talerz" });
+
+const toasts = [
+  { type: "success", message: "Wpis został dodany" },
+  { type: "error", message: "Wystąpił błąd podczas dodawania wpisu" },
+  { type: "warning", message: "Ostrzeżenie - przykładowy komunikat" },
+  { type: "info", message: "Informacja - przykładowy komunikat" },
+] as const;
+
+const sectionTitle = "mb-3 text-lg font-semibold";
+const stateTitle = "text-sm font-medium text-muted-foreground";
+// `transform` robi z ramki blok zawierający dla potomków `position: fixed` (toast, tło dialogu).
+const fixedFrame = "relative overflow-hidden rounded-lg border border-dashed [transform:translateZ(0)]";
+---
+
+<MainLayout title="HealthyMeal - Stany dziennika (dev)">
+  <h1 class="mb-6 text-2xl font-semibold">Stany widoku dziennika</h1>
+
+  <div class="flex max-w-3xl flex-col gap-10">
+    <section>
+      <h2 class={sectionTitle}>Ładowanie, błąd, pusty dzień</h2>
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Szkielet do hydratacji</h3>
+          <DiaryPageSkeleton />
+        </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Błąd ładowania wpisów</h3>
+          <DiaryErrorState message="Nie udało się pobrać wpisów (HTTP 500)" onRetry={noop} />
+        </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Pusty dzień (bez karty sumy i paska)</h3>
+          <DiaryEmptyState />
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Karta sumy dnia</h2>
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Z celem 2000 kcal, jeden wpis bez wartości</h3>
+          <DiaryDaySummary entries={summaryEntries} dailyGoal={2000} />
+        </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Bez celu, wszystkie wpisy policzone</h3>
+          <DiaryDaySummary entries={summaryEntries.filter((item) => item.calories !== null)} dailyGoal={null} />
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Formularz wpisu</h2>
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Domyślny</h3>
+          <DiaryFormDefaultDemo client:load />
+        </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Błąd walidacji (pusty opis, kalorie „abc”)</h3>
+          <DiaryFormValidationErrorDemo client:load />
+        </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Nieaktywny (na czas zapisu)</h3>
+          <DiaryFormDisabledDemo client:load />
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Wiersz wpisu</h2>
+      <div class="flex flex-col gap-6">
+        {rows.map((row) => (
+          <div class="flex flex-col gap-2">
+            <h3 class={stateTitle}>{row.title}</h3>
+            <DiaryEntryList
+              entries={[row.entry]}
+              entryState={() => row.state}
+              inFlightId={row.inFlight ? row.entry.id : null}
+              deletingId={row.deleting ? row.entry.id : null}
+              queuedIds={row.queued ? [row.entry.id] : []}
+              onEstimate={noop}
+              onCancel={noop}
+              onSetCalories={noopAsync}
+              onEdit={noop}
+              onDelete={noop}
+            />
+          </div>
+        ))}
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Błąd pola kalorii (6000 kcal)</h3>
+          <DiaryEntryFieldErrorDemo client:load entry={fieldErrorEntry} />
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Toasty</h2>
+      <div class="flex flex-col gap-3">
+        {toasts.map((toast) => (
+          <div class={`${fixedFrame} h-32`}>
+            <Toast message={toast.message} type={toast.type} duration={600_000} onClose={noop} />
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Dialog usuwania (danger)</h2>
+      <div class={`${fixedFrame} h-80`}>
+        <ConfirmDialog
+          isOpen
+          title="Usuń wpis"
+          message="Czy na pewno chcesz usunąć wpis „Owsianka z bananem”? Tej operacji nie można cofnąć."
+          confirmLabel="Usuń"
+          cancelLabel="Anuluj"
+          onConfirm={noop}
+          onCancel={noop}
+          severity="danger"
+        />
+      </div>
+    </section>
+  </div>
+</MainLayout>

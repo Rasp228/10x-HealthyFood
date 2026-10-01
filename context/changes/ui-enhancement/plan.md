@@ -537,31 +537,31 @@ widoki spoza zakresu zmieniają kolor akcji i fokusu. Sprawdź to na `/profile` 
 
 #### Automated
 
-- [x] 4.1 `npm run lint` przechodzi
-- [x] 4.2 `npm run typecheck` — 0 błędów
-- [x] 4.3 `npm run format:check` przechodzi
-- [x] 4.4 `npm run test` przechodzi (w tym `ThemeToggle.test.tsx`)
-- [x] 4.5 `npm run test:e2e` przechodzi
+- [x] 4.1 `npm run lint` przechodzi — 2a93f42
+- [x] 4.2 `npm run typecheck` — 0 błędów — 2a93f42
+- [x] 4.3 `npm run format:check` przechodzi — 2a93f42
+- [x] 4.4 `npm run test` przechodzi (w tym `ThemeToggle.test.tsx`) — 2a93f42
+- [x] 4.5 `npm run test:e2e` przechodzi — 2a93f42
 
 #### Manual
 
-- [x] 4.6 Na 375 px wszystkie cztery pozycje nawigacji są osiągalne (widoczne lub po przewinięciu paska), a dokument nie przewija się w poziomie
-- [x] 4.7 Na `/diary`, `/` i `/profile` aktywna pozycja jest wyróżniona i ma `aria-current="page"`
-- [x] 4.8 „Wyloguj” wylogowuje jak dotąd
+- [x] 4.6 Na 375 px wszystkie cztery pozycje nawigacji są osiągalne (widoczne lub po przewinięciu paska), a dokument nie przewija się w poziomie — 2a93f42
+- [x] 4.7 Na `/diary`, `/` i `/profile` aktywna pozycja jest wyróżniona i ma `aria-current="page"` — 2a93f42
+- [x] 4.8 „Wyloguj” wylogowuje jak dotąd — 2a93f42
 
 ### Phase 5: Kitchen sink i bramka wizualna
 
 #### Automated
 
-- [ ] 5.1 `npm run lint` przechodzi
-- [ ] 5.2 `npm run typecheck` — 0 błędów
-- [ ] 5.3 `npm run format:check` przechodzi
-- [ ] 5.4 `npm run test` przechodzi
-- [ ] 5.5 `npm run test:security` przechodzi
-- [ ] 5.6 `npm run test:e2e` przechodzi
+- [x] 5.1 `npm run lint` przechodzi
+- [x] 5.2 `npm run typecheck` — 0 błędów
+- [x] 5.3 `npm run format:check` przechodzi
+- [x] 5.4 `npm run test` przechodzi
+- [x] 5.5 `npm run test:security` przechodzi
+- [x] 5.6 `npm run test:e2e` przechodzi
 
 #### Manual
 
-- [ ] 5.7 `/dev/diary-states` pokazuje wszystkie wymienione stany w obu motywach, na desktopie i na 375 px
-- [ ] 5.8 README zrzutów opisuje deltę dla każdego z Z1–Z8, a stany pola (focus, disabled, error) są widoczne na zrzutach
-- [ ] 5.9 Checklista `.claude/skills/10x-ui/references/ui-quality-checklist.md` przejrzana punkt po punkcie
+- [x] 5.7 `/dev/diary-states` pokazuje wszystkie wymienione stany w obu motywach, na desktopie i na 375 px
+- [x] 5.8 README zrzutów opisuje deltę dla każdego z Z1–Z8, a stany pola (focus, disabled, error) są widoczne na zrzutach
+- [x] 5.9 Checklista `.claude/skills/10x-ui/references/ui-quality-checklist.md` przejrzana punkt po punkcie
