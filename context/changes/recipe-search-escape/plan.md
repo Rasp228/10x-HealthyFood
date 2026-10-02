@@ -256,13 +256,13 @@ dosłowny wynik.
 
 #### Automated
 
-- [x] 2.1 W `known-drift.md` nie ma nagłówka „Trasy przepisów"
-- [x] 2.2 `parallel-check.md` leży w `context/changes/recipe-search-escape/`
-- [x] 2.3 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 W `known-drift.md` nie ma nagłówka „Trasy przepisów" — a02a30d
+- [x] 2.2 `parallel-check.md` leży w `context/changes/recipe-search-escape/` — a02a30d
+- [x] 2.3 Formatowanie zgodne: `npm run format:check` — a02a30d
 
 #### Manual
 
-- [x] 2.4 Ekran przepisów: `(pomidorowy),` i `100%` znajdują przepis, bez 500
-- [x] 2.5 Ekran przepisów: `100%` nie zwraca `1000 g`; `a_b` nie zwraca `axb`
-- [x] 2.6 Ekran przepisów: termin z `"` i `\` nie kończy się błędem
-- [x] 2.7 Dziennik: wyszukiwarka znajduje tytuł z `%`, a `*` nie wywołuje błędu
+- [x] 2.4 Ekran przepisów: `(pomidorowy),` i `100%` znajdują przepis, bez 500 — a02a30d
+- [x] 2.5 Ekran przepisów: `100%` nie zwraca `1000 g`; `a_b` nie zwraca `axb` — a02a30d
+- [x] 2.6 Ekran przepisów: termin z `"` i `\` nie kończy się błędem — a02a30d
+- [x] 2.7 Dziennik: wyszukiwarka znajduje tytuł z `%`, a `*` nie wywołuje błędu — a02a30d
