@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
+import { buildIlikeOrFilter, toContainsPattern } from "../../../lib/utils/recipe-search";
 import { zodIssues } from "../../../lib/utils/validation-errors";
 import { listRecipesSchema } from "../../../lib/validations/recipe/list-recipes";
 
@@ -53,14 +54,15 @@ export const GET: APIRoute = async ({ locals, url }) => {
     if (search && search.trim() !== "") {
       const searchTerm = search.trim();
 
+      // Obie gałęzie uciekają wieloznaczniki LIKE w `toContainsPattern`; gałąź ogólna dodatkowo
+      // cytuje wartość w gramatyce `or()` - oba poziomy opisuje `lib/utils/recipe-search.ts`.
+      const pattern = toContainsPattern(searchTerm);
+
       if (searchField === "title") {
-        // `.ilike()` parametryzuje wartość po stronie klienta Supabase, więc ta ścieżka omija
-        // problem surowej interpolacji w łańcuchu `or()` poniżej (patrz docs/reference/known-drift.md).
-        query = query.ilike("title", `%${searchTerm}%`);
+        // `.ilike()` przekazuje wartość osobnym parametrem, więc wystarcza sam poziom LIKE.
+        query = query.ilike("title", pattern);
       } else {
-        query = query.or(
-          `title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,additional_params.ilike.%${searchTerm}%`
-        );
+        query = query.or(buildIlikeOrFilter(["title", "content", "additional_params"], pattern));
       }
     }
 
