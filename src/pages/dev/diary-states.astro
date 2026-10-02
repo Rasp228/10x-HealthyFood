@@ -12,6 +12,12 @@
  * (błąd walidacji formularza, błąd pola kalorii) odgrywają wyspy z `components/diary/dev/`.
  * Toasty i dialog leżą w ramkach z `transform`, które zamykają ich `position: fixed` w sobie,
  * zamiast przykrywać całą stronę.
+ *
+ * Ostatnia sekcja, „Fokus klawiatury” (zmiana `ui-focus-ring`), stawia obok siebie warianty fokusu
+ * prymitywów: przyciski `default`, `outline`, `ghost`, `destructive`, pole, pole z błędem
+ * (`aria-invalid`) i textarea, na karcie - żeby w ciemnym motywie było widać szczelinę na `--card`.
+ * `:focus-visible` nie da się wymusić klasą, więc stan pojawia się dopiero po Tab; kontrolki mają
+ * `data-testid="focus-demo-<nazwa>"` dla skryptu zrzutów.
  */
 import MainLayout from "../../layouts/MainLayout.astro";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
@@ -21,6 +27,11 @@ import DiaryEmptyState from "../../components/diary/DiaryEmptyState";
 import DiaryEntryList from "../../components/diary/DiaryEntryList";
 import DiaryErrorState from "../../components/diary/DiaryErrorState";
 import DiaryPageSkeleton from "../../components/diary/DiaryPageSkeleton";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 import {
   DiaryEntryFieldErrorDemo,
   DiaryFormDefaultDemo,
@@ -161,6 +172,13 @@ const toasts = [
   { type: "info", message: "Informacja - przykładowy komunikat" },
 ] as const;
 
+const focusButtons = [
+  { variant: "default", label: "Dodaj wpis" },
+  { variant: "outline", label: "Poprzedni dzień" },
+  { variant: "ghost", label: "Edytuj" },
+  { variant: "destructive", label: "Usuń" },
+] as const;
+
 const sectionTitle = "mb-3 text-lg font-semibold";
 const stateTitle = "text-sm font-medium text-muted-foreground";
 // `transform` robi z ramki blok zawierający dla potomków `position: fixed` (toast, tło dialogu).
@@ -273,6 +291,67 @@ const fixedFrame = "relative overflow-hidden rounded-lg border border-dashed [tr
           severity="danger"
         />
       </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Fokus klawiatury</h2>
+      <p class="mb-3 text-sm text-muted-foreground">
+        Obrys fokusu pojawia się dopiero po przejściu klawiszem Tab - stanu fokusu klawiatury nie da się wymusić klasą.
+      </p>
+      <Card>
+        <CardContent className="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <h3 class={stateTitle}>Przyciski: default, outline, ghost, destructive</h3>
+            <div class="flex flex-wrap gap-3">
+              {focusButtons.map((button) => (
+                <Button
+                  type="button"
+                  variant={button.variant}
+                  aria-label={`${button.label} (wariant ${button.variant})`}
+                  data-testid={`focus-demo-${button.variant}`}
+                >
+                  {button.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <h3 class={stateTitle}>Pole</h3>
+            <Label htmlFor="focus-demo-input">Co zjadłeś?</Label>
+            <Input
+              id="focus-demo-input"
+              aria-label="Co zjadłeś?"
+              defaultValue="Owsianka z bananem"
+              data-testid="focus-demo-input"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <h3 class={stateTitle}>Pole z błędem (aria-invalid)</h3>
+            <Label htmlFor="focus-demo-invalid">Kalorie</Label>
+            <Input
+              id="focus-demo-invalid"
+              aria-label="Kalorie"
+              aria-invalid="true"
+              aria-describedby="focus-demo-invalid-error"
+              defaultValue="abc"
+              data-testid="focus-demo-invalid"
+            />
+            <p id="focus-demo-invalid-error" class="text-sm text-destructive">
+              Podaj liczbę kalorii
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <h3 class={stateTitle}>Textarea</h3>
+            <Label htmlFor="focus-demo-textarea">Notatka</Label>
+            <Textarea
+              id="focus-demo-textarea"
+              aria-label="Notatka"
+              defaultValue="Zjedzone po treningu"
+              data-testid="focus-demo-textarea"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </section>
   </div>
 </MainLayout>

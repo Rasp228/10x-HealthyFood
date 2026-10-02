@@ -70,7 +70,9 @@ const reactConfig = tseslint.config({
 // Skan literałów z /10x-ui dla widoku `/diary` (zmiana `ui-contract-guard`): w tych plikach kolory
 // i odstępy biorą się z tokenów `src/styles/global.css` (`bg-primary`, `text-destructive`,
 // `bg-success/10`), nie z hex/oklch, palety Tailwinda ani wartości `-[13px]`. Ten sam wzorzec co grep
-// w skillu. Kolejny widok przeniesiony na tokeny dopisz do `files`.
+// w skillu. Kolejny widok przeniesiony na tokeny dopisz do `files`. Prymitywy pól (`input`, `textarea`)
+// są tu od zmiany `ui-focus-ring`, żeby nie wrócił `ring-[3px]`; `button.tsx` i `badge.tsx` czekają
+// na token dla `text-white` w wariancie `destructive` (docs/reference/known-drift.md, „Prymitywy UI”).
 const UI_LITERAL =
   "/#[0-9a-fA-F]{3}[0-9a-fA-F]*\\b|rgba?\\(|hsla?\\(|oklch\\(|-\\[[0-9.]+(px|rem|em|%|vh|vw|ch)\\]|\\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\\b/";
 const UI_LITERAL_MESSAGE =
@@ -85,6 +87,8 @@ const uiTokensConfig = tseslint.config({
     "src/components/feedback/Toast.tsx",
     "src/components/common/ConfirmDialog.tsx",
     "src/components/layout/TopNav.astro",
+    "src/components/ui/input.tsx",
+    "src/components/ui/textarea.tsx",
   ],
   rules: {
     "no-restricted-syntax": [

@@ -104,16 +104,18 @@ wprost wykluczają.
 
 ## Prymitywy UI
 
-### Pierścień fokusu w jasnym motywie poniżej 3:1
+### `text-white` w wariancie `destructive`, bez strażnika na `button.tsx`
 
-Prymitywy shadcn (`src/components/ui/button.tsx`, `input.tsx`, `textarea.tsx`, `badge.tsx`) rysują
-fokus jako `focus-visible:ring-[3px] ring-ring/50`. W jasnym motywie `--ring` to kolor marki
-`oklch(0.5 0.085 184.704)` (`src/styles/global.css`), a złożony w połowie na białym daje ~2.2:1,
-poniżej 3:1 z WCAG 1.4.11. Pola mają przy fokusie także pełną ramkę `border-ring` (~5.7:1),
-przyciski `default` i `ghost` — tylko pierścień. Ciemny motyw trzyma ~3.3:1.
+Warianty `destructive` w `src/components/ui/button.tsx` i `badge.tsx` piszą tekst literałem
+`text-white` (`bg-destructive text-white`). `src/styles/global.css` nie ma tokenu
+`--destructive-foreground` — ani w `:root`, ani w `.dark` — więc kolor tekstu na czerwonym
+wypełnieniu nie pochodzi z kontraktu i nie zmieni go żaden motyw. Z tego samego powodu `button.tsx`
+i `badge.tsx` nie są w `uiTokensConfig` (`eslint.config.js`): skan literałów zatrzymałby się na tym
+`text-white`, więc ich fokus (od zmiany `ui-focus-ring` obrys `outline-ring` w pełnym kolorze)
+pilnuje tylko reguła **Focus** w `AGENTS.md`, nie check. Pola (`input.tsx`, `textarea.tsx`) są
+w `uiTokensConfig` od tej samej zmiany.
 
-Samym tokenem tego nie da się naprawić bez utraty koloru marki: `/50` na białym przekracza 3:1
-dopiero przy `--ring` ≲ `oklch(0.28 0.045 184.704)`, prawie czarnym. Przyjęte świadomie (przegląd
-wdrożenia `ui-enhancement`, ustalenie F2). Naprawa — krycie albo grubość pierścienia
-w prymitywach, ewentualnie `ring-offset` — czeka na własną zmianę i dotyczy wszystkich widoków,
-nie tylko dziennika.
+Odłożone świadomie (zmiana `ui-focus-ring`, research, ustalenie Z6): nie dotyczy fokusu, a naprawa
+wymaga nowego tokenu w obu motywach z policzonym kontrastem na `--destructive` (w ciemnym motywie na
+`destructive/60`). Po jego dodaniu `text-white` → `text-destructive-foreground`, a oba pliki trafiają
+do `files` w `uiTokensConfig`.
