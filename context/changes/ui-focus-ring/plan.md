@@ -344,12 +344,12 @@ reguła w `AGENTS.md` (faza 3) to opisuje.
 
 #### Automated
 
-- [x] 3.1 `npm run lint` przechodzi
-- [x] 3.2 Tymczasowe `ring-[3px]` w `input.tsx` daje błąd lint
-- [x] 3.3 `npm run typecheck` — 0 błędów
-- [x] 3.4 `npm run format:check` przechodzi
-- [x] 3.5 Diff `known-drift.md` tylko w sekcji „Prymitywy UI"
+- [x] 3.1 `npm run lint` przechodzi — 519ebf1
+- [x] 3.2 Tymczasowe `ring-[3px]` w `input.tsx` daje błąd lint — 519ebf1
+- [x] 3.3 `npm run typecheck` — 0 błędów — 519ebf1
+- [x] 3.4 `npm run format:check` przechodzi — 519ebf1
+- [x] 3.5 Diff `known-drift.md` tylko w sekcji „Prymitywy UI" — 519ebf1
 
 #### Manual
 
-- [x] 3.6 Reguła w `AGENTS.md` wystarcza agentowi bez kontekstu zmiany
+- [x] 3.6 Reguła w `AGENTS.md` wystarcza agentowi bez kontekstu zmiany — 519ebf1
