@@ -247,22 +247,22 @@ dosłowny wynik.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą: `npm run test`
-- [x] 1.2 Typecheck bez błędów: `npm run typecheck`
-- [x] 1.3 Lint przechodzi: `npm run lint`
-- [x] 1.4 Formatowanie zgodne: `npm run format:check`
+- [x] 1.1 Testy jednostkowe przechodzą: `npm run test` — 5bc974b
+- [x] 1.2 Typecheck bez błędów: `npm run typecheck` — 5bc974b
+- [x] 1.3 Lint przechodzi: `npm run lint` — 5bc974b
+- [x] 1.4 Formatowanie zgodne: `npm run format:check` — 5bc974b
 
 ### Phase 2: Dokumentacja i weryfikacja na bazie
 
 #### Automated
 
-- [ ] 2.1 W `known-drift.md` nie ma nagłówka „Trasy przepisów"
-- [ ] 2.2 `parallel-check.md` leży w `context/changes/recipe-search-escape/`
-- [ ] 2.3 Formatowanie zgodne: `npm run format:check`
+- [x] 2.1 W `known-drift.md` nie ma nagłówka „Trasy przepisów"
+- [x] 2.2 `parallel-check.md` leży w `context/changes/recipe-search-escape/`
+- [x] 2.3 Formatowanie zgodne: `npm run format:check`
 
 #### Manual
 
-- [ ] 2.4 Ekran przepisów: `(pomidorowy),` i `100%` znajdują przepis, bez 500
-- [ ] 2.5 Ekran przepisów: `100%` nie zwraca `1000 g`; `a_b` nie zwraca `axb`
-- [ ] 2.6 Ekran przepisów: termin z `"` i `\` nie kończy się błędem
-- [ ] 2.7 Dziennik: wyszukiwarka znajduje tytuł z `%`, a `*` nie wywołuje błędu
+- [x] 2.4 Ekran przepisów: `(pomidorowy),` i `100%` znajdują przepis, bez 500
+- [x] 2.5 Ekran przepisów: `100%` nie zwraca `1000 g`; `a_b` nie zwraca `axb`
+- [x] 2.6 Ekran przepisów: termin z `"` i `\` nie kończy się błędem
+- [x] 2.7 Dziennik: wyszukiwarka znajduje tytuł z `%`, a `*` nie wywołuje błędu

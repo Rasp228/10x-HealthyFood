@@ -46,23 +46,6 @@ Only `login`, `register` and `reset-password` have been extracted so far.
 are application components. Do not add to that set; new application components go in
 `src/components/{ai,auth,common,diary,feedback,layout,pages,profile,recipe}/`.
 
-## Trasy przepisów
-
-### Termin wyszukiwania wklejany surowo w łańcuch PostgREST `or()`
-
-`src/pages/api/recipes/index.ts:73-75` skleja `search` w napis
-`title.ilike.%…%,content.ilike.%…%,additional_params.ilike.%…%` bez żadnego uciekania. Ten napis ma
-własną gramatykę, więc znaki `,`, `(`, `)` i `%` wpisane przez użytkownika nie są traktowane jak
-tekst szukanej frazy: przecinek rozbija warunek na kolejne ogniwo `or`, nawiasy otwierają
-i zamykają grupę, a `%` jest wieloznacznikiem `ilike`. Skutkiem jest błąd 500 z PostgREST albo cicho
-poszerzony wynik — nie wyciek cudzych wierszy, bo `.eq("user_id", …)` i RLS zostają poza tym
-napisem.
-
-Ścieżka dziennika omija to z założenia: `search_field=title` używa `query.ilike("title", …)`, gdzie
-klient Supabase przekazuje wartość jako osobny parametr. Naprawa ogólnej gałęzi (uciekanie albo trzy
-osobne `.ilike()` złożone przez `.or()` z parametrami) czeka na własną zmianę — ekran przepisów
-dzisiaj na niej stoi.
-
 ## Trasy AI
 
 ### Wywołania modelu bez limitu częstości i bez deduplikacji po stronie serwera
