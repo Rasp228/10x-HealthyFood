@@ -1,7 +1,7 @@
 ---
 change_id: recipe-search-escape
 title: Recipe search escape
-status: implemented
+status: impl_reviewed
 created: 2026-10-02
 updated: 2026-10-02
 archived_at: null

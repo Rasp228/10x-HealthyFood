@@ -39,10 +39,13 @@ describe("toContainsPattern", () => {
     ["100%", String.raw`%100\%%`],
     ["a_b", String.raw`%a\_b%`],
     [String.raw`a\b`, String.raw`%a\\b%`],
-    ["a*b", "%a_b%"],
     ["a_b*c%", String.raw`%a\_b_c\%%`],
   ])("%s -> %s", (term, expected) => {
     expect(toContainsPattern(term)).toBe(expected);
+  });
+
+  it("* celowo staje się `_` (dowolny jeden znak, nie dosłowna gwiazdka) - `\\*` PostgREST zamieniłby w `\\%`", () => {
+    expect(toContainsPattern("a*b")).toBe("%a_b%");
   });
 
   it("nie przycina terminu", () => {

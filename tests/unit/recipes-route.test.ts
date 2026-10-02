@@ -85,4 +85,20 @@ describe("GET /api/recipes", () => {
     expect(calls.ilike).toBeUndefined();
     expect(calls.or).toBeUndefined();
   });
+
+  it.each([
+    ["dłuższy niż 200 znaków", "a".repeat(201)],
+    ["ze znakiem NUL", "owsi\u0000anka"],
+  ])("termin %s kończy się 400, zanim trafi do bazy", async (_label, search) => {
+    const response = await GET(requestContext({ search }));
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("termin z dokładnie 200 znaków przechodzi", async () => {
+    const response = await GET(requestContext({ search: "a".repeat(200) }));
+
+    expect(response.status).toBe(200);
+  });
 });
