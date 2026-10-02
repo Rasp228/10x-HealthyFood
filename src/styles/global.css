@@ -26,9 +26,11 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  /* Fokus w kolorze marki (= `--primary`). Pełny `--ring` ~5.7:1 względem tła i karty
-     (WCAG 1.4.11). Uwaga: prymitywy rysują go jako `ring-ring/50` - po złożeniu 50% na białym
-     wychodzi ~2.2:1, poniżej 3:1; wyróżnienie niesie wtedy grubość pierścienia (3 px). */
+  /* Fokus w kolorze marki (= `--primary`). Prymitywy rysują go obrysem 2 px w pełnym `--ring`
+     z 2 px szczeliną (`outline-2 outline-offset-2 outline-ring`), bez przezroczystości.
+     Kontrast obrysu 5.74:1 względem tła i karty (WCAG 1.4.11); szczelina (tło) względem
+     wypełnienia przycisku w kolorze marki też 5.74:1. Źródło:
+     `context/changes/ui-focus-ring/contrast-check.md`. */
   --ring: oklch(0.5 0.085 184.704);
   /* Role stanów - jeden token na rolę, bez `-foreground`; tło i ramka powstają
      z przezroczystości (`bg-success/10 border-success/30 text-success`), jak przy `destructive`.
@@ -84,8 +86,10 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  /* Fokus = `--primary`. Pełny `--ring` ~10.4:1 na tle i ~9.4:1 na karcie; także złożony
-     jako `ring-ring/50` trzyma ~3.3:1 na tle i karcie (WCAG 1.4.11). */
+  /* Fokus = `--primary`, obrys 2 px w pełnym `--ring` z 2 px szczeliną (jak w `:root`).
+     Kontrast obrysu 10.41:1 na tle i 9.42:1 na karcie (WCAG 1.4.11); szczelina (tło) względem
+     wypełnienia przycisku w kolorze marki 10.41:1 (na karcie 9.42:1). Źródło:
+     `context/changes/ui-focus-ring/contrast-check.md`. */
   --ring: oklch(0.78 0.12 184.704);
   /* Role stanów, motyw ciemny - te same odcienie co w `:root`, jaśniejsze pod ciemną kartę.
      `--success` (h 162.48, `--chart-2` tego motywu): ~7.7:1 na karcie, ~6.6:1 na `success/10`.
