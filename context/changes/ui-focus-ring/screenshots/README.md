@@ -42,6 +42,10 @@ początku strony aż do elementu z `aria-current="page"` („Dziennik”). Danyc
   oddziela obrys od wypełnienia w tym samym kolorze. Pola mają przy fokusie także ramkę
   `border-ring` (poza polem z błędem, gdzie zostaje `border-destructive`).
 - TopNav na 375 px w ciemnym motywie: jak w jasnym, obrys nieprzycięty.
+- Fokus myszą (krok 1.8, z mechanizmu, bez osobnego zrzutu ani pomiaru): obrys stoi wyłącznie pod
+  `focus-visible:`, a `focus:outline-hidden` gasi resztę, więc kliknięty przycisk obrysu nie dostaje;
+  pole tekstowe po kliknięciu dostaje — heurystyka `:focus-visible` przeglądarki dla pól
+  przyjmujących tekst, tak samo jak przed zmianą.
 - `scrollWidth`: 1280 na desktopie, 375 na 375 px — sekcja nie rozszerza strony.
 - Nazwy dostępne (snapshot drzewa dostępności sekcji): przyciski „Dodaj wpis (wariant default)”,
   „Poprzedni dzień (wariant outline)”, „Edytuj (wariant ghost)”, „Usuń (wariant destructive)”;

@@ -81,6 +81,10 @@ osobny commit `fix(ui-focus-ring): …` / `chore(ui-focus-ring): …`.
 
 Zamienia pierścień na obrys w czterech prymitywach i przepisuje komentarze przy `--ring`. Zamyka Z1–Z5.
 
+> **Addendum (po `f831ceb`)**: w bazie prymitywów jest `focus:outline-hidden`, nie gołe `outline-hidden`
+> z kontraktów poniżej — goły wariant w `forced-colors: active` rysował zastępczy obrys na każdej
+> kontrolce. Powód i pomiar: `screenshots/README.md`, sekcja `forcedColors: "active"`.
+
 ### Changes Required:
 
 #### 1. Przycisk
@@ -212,6 +216,9 @@ metodę, zawartość zrzutów i wynik sprawdzenia `forcedColors: "active"` (bez 
 ### Overview
 
 Zostawia następnemu agentowi check i regułę, a w `known-drift.md` zostawia tylko to, co zostało (Z6).
+
+> **Addendum (po `f831ceb`)**: reguła **Focus** w `AGENTS.md` mówi `focus:outline-hidden` w bazie,
+> nie `outline-hidden` jak kontrakt poniżej — patrz addendum fazy 1.
 
 ### Changes Required:
 

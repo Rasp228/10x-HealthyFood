@@ -1,7 +1,7 @@
 ---
 change_id: ui-focus-ring
 title: Widoczny pierścień fokusu w prymitywach UI (WCAG 1.4.11, jasny motyw)
-status: implemented
+status: impl_reviewed
 created: 2026-10-02
 updated: 2026-10-02
 archived_at: null
