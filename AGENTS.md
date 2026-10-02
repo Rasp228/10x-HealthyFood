@@ -121,10 +121,19 @@ build variant APIs with `class-variance-authority`, following @src/components/ui
 - **No literals in views**: no hex/rgb/oklch, Tailwind palette classes (`bg-red-50`,
   `text-gray-500`, `text-white`), arbitrary values (`p-[13px]`) or colour `dark:` overrides in
   components and pages — dark mode comes from the token. `uiTokensConfig` in @eslint.config.js
-  enforces this for the `/diary` view; add a view to its `files` once it is on tokens.
+  enforces this for the `/diary` view and for the `input` / `textarea` primitives; add a view to
+  its `files` once it is on tokens.
+- **Focus**: primitives draw keyboard focus as
+  `focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring`
+  on top of `focus:outline-hidden` in the base class — `focus:`, not bare `outline-hidden`, whose
+  forced-colors fallback outline would draw on every control. One colour for every variant,
+  `destructive` and `aria-invalid` included. Do not bring back shadcn's `ring-ring/50` (below 3:1
+  in the light theme). A `npx shadcn@latest add` that overwrites a primitive drops these classes —
+  restore them. Outline plus offset stays ≤ 4 px: the mobile nav in
+  @src/components/layout/TopNav.astro has only `p-1` around its links.
 - **States**: every visible state of `/diary` (loading, empty, error, disabled, validation errors,
-  toasts, delete dialog) renders on the DEV-only kitchen sink @src/pages/dev/diary-states.astro.
-  A new state of that view gets a frame there.
+  keyboard focus, toasts, delete dialog) renders on the DEV-only kitchen sink
+  @src/pages/dev/diary-states.astro. A new state of that view gets a frame there.
 
 ## Code style
 

@@ -18,3 +18,7 @@ po 10x-new przenieść parallel-check.md do context/changes/<change-id>/
 - Wariant kontraktu: istniejący design system — rozszerzamy, bez nowego `shadcn init`.
 - Kontekst i ograniczenia: `docs/reference/known-drift.md`, sekcja „Prymitywy UI”; zasady pracy
   równoległej: `parallel-check.md` w tym folderze.
+- Odejście od planu w fazie 2 (`f831ceb`): prymitywy mają `focus:outline-hidden`, nie gołe
+  `outline-hidden` — w forced-colors zastępczy obrys Tailwinda rysował się na każdej kontrolce.
+  Faza 3: reguła **Focus** w `AGENTS.md` ma mówić `focus:outline-hidden` (kontrakt planu mówi
+  „`outline-hidden` w bazie” — sprzed poprawki). Szczegóły: `screenshots/README.md`.

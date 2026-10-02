@@ -329,27 +329,27 @@ reguła w `AGENTS.md` (faza 3) to opisuje.
 
 #### Automated
 
-- [x] 2.1 `npm run lint` przechodzi
-- [x] 2.2 `npm run typecheck` — 0 błędów
-- [x] 2.3 `npm run format:check` przechodzi
-- [x] 2.4 Skan literałów na `diary-states.astro` — 0 trafień
+- [x] 2.1 `npm run lint` przechodzi — f831ceb
+- [x] 2.2 `npm run typecheck` — 0 błędów — f831ceb
+- [x] 2.3 `npm run format:check` przechodzi — f831ceb
+- [x] 2.4 Skan literałów na `diary-states.astro` — 0 trafień — f831ceb
 
 #### Manual
 
-- [x] 2.5 Zrzuty pokazują obrys ze szczeliną na każdym wariancie w obu motywach
-- [x] 2.6 W emulacji `forced-colors: active` obrys fokusu jest widoczny
-- [x] 2.7 Kontrolki sekcji mają dostępną nazwę
+- [x] 2.5 Zrzuty pokazują obrys ze szczeliną na każdym wariancie w obu motywach — f831ceb
+- [x] 2.6 W emulacji `forced-colors: active` obrys fokusu jest widoczny — f831ceb
+- [x] 2.7 Kontrolki sekcji mają dostępną nazwę — f831ceb
 
 ### Phase 3: Strażnik i reguła
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` przechodzi
-- [ ] 3.2 Tymczasowe `ring-[3px]` w `input.tsx` daje błąd lint
-- [ ] 3.3 `npm run typecheck` — 0 błędów
-- [ ] 3.4 `npm run format:check` przechodzi
-- [ ] 3.5 Diff `known-drift.md` tylko w sekcji „Prymitywy UI"
+- [x] 3.1 `npm run lint` przechodzi
+- [x] 3.2 Tymczasowe `ring-[3px]` w `input.tsx` daje błąd lint
+- [x] 3.3 `npm run typecheck` — 0 błędów
+- [x] 3.4 `npm run format:check` przechodzi
+- [x] 3.5 Diff `known-drift.md` tylko w sekcji „Prymitywy UI"
 
 #### Manual
 
-- [ ] 3.6 Reguła w `AGENTS.md` wystarcza agentowi bez kontekstu zmiany
+- [x] 3.6 Reguła w `AGENTS.md` wystarcza agentowi bez kontekstu zmiany
