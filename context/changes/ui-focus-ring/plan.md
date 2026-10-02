@@ -313,32 +313,32 @@ reguła w `AGENTS.md` (faza 3) to opisuje.
 
 #### Automated
 
-- [x] 1.1 `npm run lint` przechodzi
-- [x] 1.2 `npm run typecheck` — 0 błędów
-- [x] 1.3 `npm run format:check` przechodzi
-- [x] 1.4 `npm run test` przechodzi
-- [x] 1.5 Skan literałów na prymitywach daje dokładnie 2 trafienia (`text-white`)
-- [x] 1.6 Grep starych klas fokusu w prymitywach nie zwraca nic
+- [x] 1.1 `npm run lint` przechodzi — 205018e
+- [x] 1.2 `npm run typecheck` — 0 błędów — 205018e
+- [x] 1.3 `npm run format:check` przechodzi — 205018e
+- [x] 1.4 `npm run test` przechodzi — 205018e
+- [x] 1.5 Skan literałów na prymitywach daje dokładnie 2 trafienia (`text-white`) — 205018e
+- [x] 1.6 Grep starych klas fokusu w prymitywach nie zwraca nic — 205018e
 
 #### Manual
 
-- [x] 1.7 Tab po `/diary` w obu motywach i na 375 px — obrys widoczny, TopNav nieprzycięty
-- [x] 1.8 Fokus myszą nie pokazuje obrysu
+- [x] 1.7 Tab po `/diary` w obu motywach i na 375 px — obrys widoczny, TopNav nieprzycięty — 205018e
+- [x] 1.8 Fokus myszą nie pokazuje obrysu — 205018e
 
 ### Phase 2: Stan fokusu na `/diary` i bramka wizualna
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` przechodzi
-- [ ] 2.2 `npm run typecheck` — 0 błędów
-- [ ] 2.3 `npm run format:check` przechodzi
-- [ ] 2.4 Skan literałów na `diary-states.astro` — 0 trafień
+- [x] 2.1 `npm run lint` przechodzi
+- [x] 2.2 `npm run typecheck` — 0 błędów
+- [x] 2.3 `npm run format:check` przechodzi
+- [x] 2.4 Skan literałów na `diary-states.astro` — 0 trafień
 
 #### Manual
 
-- [ ] 2.5 Zrzuty pokazują obrys ze szczeliną na każdym wariancie w obu motywach
-- [ ] 2.6 W emulacji `forced-colors: active` obrys fokusu jest widoczny
-- [ ] 2.7 Kontrolki sekcji mają dostępną nazwę
+- [x] 2.5 Zrzuty pokazują obrys ze szczeliną na każdym wariancie w obu motywach
+- [x] 2.6 W emulacji `forced-colors: active` obrys fokusu jest widoczny
+- [x] 2.7 Kontrolki sekcji mają dostępną nazwę
 
 ### Phase 3: Strażnik i reguła
 
