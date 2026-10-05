@@ -482,8 +482,8 @@ jedynego klienta tych tras.
 
 #### Automated
 
-- [x] 4.1 §6.1 i §6.2 nie zawierają już „TBD”: `grep -n "TBD — see §3 Phase 1" context/foundation/test-plan.md` nic nie zwraca
+- [x] 4.1 §6.1 i §6.2 nie zawierają już „TBD”: `grep -n "TBD — see §3 Phase 1" context/foundation/test-plan.md` nic nie zwraca — 10a19d2
 
 #### Manual
 
-- [x] 4.2 Osoba spoza fazy potrafi z §6.1/§6.2 dodać nowy test trasy bez czytania tego planu
+- [x] 4.2 Osoba spoza fazy potrafi z §6.1/§6.2 dodać nowy test trasy bez czytania tego planu — 10a19d2

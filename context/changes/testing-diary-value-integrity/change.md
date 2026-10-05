@@ -1,7 +1,7 @@
 ---
 change_id: testing-diary-value-integrity
 title: Testy integralności wartości i sumy dnia (test-plan, faza 1)
-status: implementing
+status: implemented
 created: 2026-10-05
 updated: 2026-10-05
 archived_at: null
