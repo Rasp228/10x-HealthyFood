@@ -102,6 +102,34 @@ Przyjęte świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalen
 `edit-and-delete-entry`, „What We're NOT Doing"): domknięcie wymaga migracji, którą oba plany
 wprost wykluczają.
 
+### Nagłówek bloku odżywczego deklarujący kilka porcji przechodzi jako „na porcję"
+
+FR-009 pozwala wziąć wartość z treści przepisu tylko wtedy, gdy blok odżywczy sam mówi, że opisuje
+**jedną** porcję; wtedy wartość wpisu to liczba z bloku razy zjedzone porcje. Reguła nagłówka
+w `src/lib/utils/recipe-nutrition.ts` sprawdza jednak tylko, czy w linii stoi znacznik bloku
+(„Wartości odżywcze”, „Nutrition”) i dowolne słowo z rodziny porcji („porcj”, „serving”,
+„portion”). Przechodzą więc także nagłówki mówiące wprost o kilku porcjach albo o całym daniu:
+„Wartości odżywcze na 4 porcje:”, „Wartości odżywcze dla 4 porcji:”, „Wartości odżywcze (całość,
+4 porcje):”, „Nutrition per 4 servings:”. Przy `Kalorie: 2000 kcal` i jednej zjedzonej porcji wpis
+dostaje 2000 kcal z pochodzeniem `recipe_nutrition` — czterokrotność, podaną jako wartość
+z przepisu użytkownika, i po cichu wchodzi z nią do sumy dnia. To odwrotność zasady, pod którą PRD
+zawęził FR-009: lepiej nie policzyć (wpis spada do wyceny z treści przepisu, FR-010), niż policzyć
+kilka razy za dużo. Sam „Wartości odżywcze (całość)” bez słowa o porcji jest odrzucany poprawnie.
+
+Kierunek naprawy: odrzucać nagłówek, w którym tuż przed słowem z rodziny porcji stoi liczba różna
+od 1, albo w którym występuje słowo z listy „całość / łącznie / razem / total”. Zmiana mieści się
+w jednym predykacie nagłówka; nie sprawdzono jeszcze nagłówków mieszanych („na porcję z 4 porcji”),
+które taka reguła mogłaby odrzucić niepotrzebnie.
+
+Wyrocznię pilnują cztery testy `test.failing` w `tests/unit/recipe-nutrition.test.ts` (blok
+„F2: nagłówek deklarujący kilka porcji albo całość”), po jednym na nagłówek: każdy oczekuje braku
+wartości (`no_declared_block`). Po naprawie zrobią się czerwone — wtedy zamień je na zwykłe `it`
+i usuń ten wpis.
+
+Odłożone świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F2, decyzja
+SKIPPED; plan `testing-diary-value-integrity`, „What We're NOT Doing”): faza testów przypina
+wyrocznię, nie zmienia zachowania parsera.
+
 ## Prymitywy UI
 
 ### `text-white` w wariancie `destructive`, bez strażnika na `button.tsx`

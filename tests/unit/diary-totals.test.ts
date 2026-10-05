@@ -77,6 +77,36 @@ describe("summarizeDay", () => {
     });
   });
 
+  describe("dzień mieszany ze wszystkimi źródłami wartości i stanami braku", () => {
+    // Suma zależy wyłącznie od tego, czy wpis ma wartość (FR-011): pochodzenie nie waży, a znacznik
+    // wyceny - świeży, stary czy pusty - nie zmienia tego, że wpis bez wartości jest brakiem.
+    // Wyrocznia to literały: 500 + 320 + 410 + 0 = 1230 kcal, braki 3 z 7.
+    const entries = [
+      entry({ id: 1, calories: 500, calorie_origin: "recipe_nutrition", portions: 2, source_recipe_id: 11 }),
+      entry({ id: 2, calories: 320, calorie_origin: "ai_from_recipe", portions: 1, source_recipe_id: 12 }),
+      entry({ id: 3, calories: 410, calorie_origin: "ai_from_description" }),
+      entry({ id: 4, calories: 0, calorie_origin: "manual" }),
+      // Wycena zlecona przed chwilą - wartość jeszcze nie przyszła.
+      entry({ id: 5, calories: null, calorie_origin: null, estimation_requested_at: "2026-09-23T07:59:30.000Z" }),
+      // Wycena zlecona dawno i nigdy niedokończona.
+      entry({ id: 6, calories: null, calorie_origin: null, estimation_requested_at: "2026-09-20T07:00:00.000Z" }),
+      // Wycena nigdy niezlecona.
+      entry({ id: 7, calories: null, calorie_origin: null, estimation_requested_at: null }),
+    ];
+
+    it("sumuje wartości każdego pochodzenia, a zero ręczne liczy jako wartość", () => {
+      expect(summarizeDay(entries).calorieTotal).toBe(1230);
+    });
+
+    it("liczy każdy wpis bez wartości jako brak, bez względu na znacznik wyceny", () => {
+      expect(summarizeDay(entries)).toEqual({
+        calorieTotal: 1230,
+        missingCount: 3,
+        entryCount: 7,
+      });
+    });
+  });
+
   describe("dzień, w którym żaden wpis nie ma wartości", () => {
     const entries = [entry({ id: 1 }), entry({ id: 2 }), entry({ id: 3 })];
 

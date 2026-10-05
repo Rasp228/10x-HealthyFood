@@ -55,6 +55,38 @@ describe("readPerPortionCalories — rozpoznanie nagłówka", () => {
   });
 });
 
+/**
+ * F2 — znany dług, opisany w `docs/reference/known-drift.md` („Wpisy dziennika”). Nagłówek, który
+ * mówi wprost, że blok opisuje kilka porcji albo całe danie, nie jest samodeklarujący w rozumieniu
+ * FR-009, więc wartość nie może powstać. Dziś parser przyjmuje każdy nagłówek ze słowem porcji,
+ * dlatego te testy są `test.failing` — oczekiwana porażka zapisuje wyrocznię, nie obecne zachowanie.
+ *
+ * Każdy nagłówek ma osobny test, bo jeden test z kilkoma asercjami „zawodzi” już przy pierwszej
+ * i nie mówi nic o pozostałych. Gdy F2 zostanie naprawiony, te testy zrobią się czerwone — to
+ * zamierzony sygnał: zamień `test.failing` na `it` i usuń wpis F2 z `known-drift.md`.
+ */
+describe("resolveRecipeCalories — F2: nagłówek deklarujący kilka porcji albo całość", () => {
+  const NO_VALUE = { perPortion: null, total: null, reason: "no_declared_block" };
+
+  test.failing("nie liczy bloku 'Wartości odżywcze na 4 porcje:'", () => {
+    expect(resolveRecipeCalories(recipe("Wartości odżywcze na 4 porcje:", "Kalorie: 2000 kcal"), 1)).toEqual(NO_VALUE);
+  });
+
+  test.failing("nie liczy bloku 'Wartości odżywcze dla 4 porcji:'", () => {
+    expect(resolveRecipeCalories(recipe("Wartości odżywcze dla 4 porcji:", "Kalorie: 2000 kcal"), 1)).toEqual(NO_VALUE);
+  });
+
+  test.failing("nie liczy bloku 'Wartości odżywcze (całość, 4 porcje):'", () => {
+    expect(resolveRecipeCalories(recipe("Wartości odżywcze (całość, 4 porcje):", "Kalorie: 2000 kcal"), 1)).toEqual(
+      NO_VALUE
+    );
+  });
+
+  test.failing("nie liczy bloku 'Nutrition per 4 servings:'", () => {
+    expect(resolveRecipeCalories(recipe("Nutrition per 4 servings:", "Kalorie: 2000 kcal"), 1)).toEqual(NO_VALUE);
+  });
+});
+
 describe("readPerPortionCalories — etykieta linii z kaloriami", () => {
   const withHeader = (line: string) => recipe("Wartości odżywcze (porcja):", line);
 
