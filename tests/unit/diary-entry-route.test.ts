@@ -54,16 +54,20 @@ const storedEntry = (overrides: Partial<DiaryEntryDto> = {}): DiaryEntryDto => (
   ...overrides,
 });
 
+/**
+ * Wiersz, który oddaje atrapa serwisu - stały, niezależny od polecenia.
+ *
+ * Atrapa nie wylicza pochodzenia z ciała żądania: wtedy test trasy sprawdzałby własną atrapę,
+ * a nie trasę. Że `{calories: N}` daje `manual`, dowodzi test `updateEntry` w
+ * `diary-service.test.ts`. Tu sprawdzamy wyłącznie to, za co odpowiada trasa.
+ */
+const SERVICE_ROW = storedEntry({ calories: 450, calorie_origin: "manual" });
+
 beforeEach(() => {
   jest.clearAllMocks();
 
   getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "test@example.com" } } });
-  updateEntry.mockImplementation(async (_userId, _entryId, command) =>
-    storedEntry({
-      calories: command.calories ?? null,
-      calorie_origin: typeof command.calories === "number" ? "manual" : null,
-    })
-  );
+  updateEntry.mockResolvedValue(SERVICE_ROW);
   deleteEntry.mockResolvedValue(true);
 });
 
@@ -88,12 +92,12 @@ describe("PATCH /api/diary-entries/[id]", () => {
     expect(updateEntry).not.toHaveBeenCalled();
   });
 
-  it("{calories: N} zwraca wiersz z pochodzeniem 'manual'", async () => {
+  it("{calories: N} przekazuje polecenie serwisowi i oddaje jego wiersz bez zmian", async () => {
     const response = await PATCH(requestContext("1", { calories: 450 }));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ calories: 450, calorie_origin: "manual" });
     expect(updateEntry).toHaveBeenCalledWith("user-1", 1, { calories: 450 });
+    await expect(response.json()).resolves.toEqual(SERVICE_ROW);
   });
 
   it("400 z details w kształcie ValidationIssue przy błędzie schematu", async () => {

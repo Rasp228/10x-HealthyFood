@@ -441,27 +441,27 @@ jedynego klienta tych tras.
 
 #### Automated
 
-- [x] 1.1 Testy fazy przechodzą: `npx jest tests/unit/diary-totals.test.ts tests/unit/DiaryDaySummary.test.tsx tests/unit/recipe-nutrition.test.ts`
-- [x] 1.2 Cztery testy F2 raportowane jako `failing` (oczekiwana porażka), reszta zielona
-- [x] 1.3 Cała suita przechodzi: `npm run test`
-- [x] 1.4 Lint i format: `npm run lint` i `npm run format:check`
+- [x] 1.1 Testy fazy przechodzą: `npx jest tests/unit/diary-totals.test.ts tests/unit/DiaryDaySummary.test.tsx tests/unit/recipe-nutrition.test.ts` — 922cbc1
+- [x] 1.2 Cztery testy F2 raportowane jako `failing` (oczekiwana porażka), reszta zielona — 922cbc1
+- [x] 1.3 Cała suita przechodzi: `npm run test` — 922cbc1
+- [x] 1.4 Lint i format: `npm run lint` i `npm run format:check` — 922cbc1
 
 #### Manual
 
-- [x] 1.5 Wyrocznie w nowych testach to literały z PRD/decyzji, żadna nie jest liczona funkcją pod testem
-- [x] 1.6 Wpis F2 w `known-drift.md` czyta się zrozumiale bez znajomości przeglądu
+- [x] 1.5 Wyrocznie w nowych testach to literały z PRD/decyzji, żadna nie jest liczona funkcją pod testem — 922cbc1
+- [x] 1.6 Wpis F2 w `known-drift.md` czyta się zrozumiale bez znajomości przeglądu — 922cbc1
 
 ### Phase 2: Wycena kalorii i ścieżka ręczna
 
 #### Automated
 
-- [ ] 2.1 Testy fazy przechodzą: `npx jest tests/unit/diary-estimate-route.test.ts tests/unit/calorie-estimation.service.test.ts tests/unit/diary-entry-route.test.ts tests/unit/diary-service.test.ts`
-- [ ] 2.2 Cała suita przechodzi: `npm run test`
-- [ ] 2.3 Lint i format: `npm run lint` i `npm run format:check`
+- [x] 2.1 Testy fazy przechodzą: `npx jest tests/unit/diary-estimate-route.test.ts tests/unit/calorie-estimation.service.test.ts tests/unit/diary-entry-route.test.ts tests/unit/diary-service.test.ts`
+- [x] 2.2 Cała suita przechodzi: `npm run test`
+- [x] 2.3 Lint i format: `npm run lint` i `npm run format:check`
 
 #### Manual
 
-- [ ] 2.4 W `diary-entry-route.test.ts` żadna asercja nie sprawdza wartości wyliczonej przez atrapę
+- [x] 2.4 W `diary-entry-route.test.ts` żadna asercja nie sprawdza wartości wyliczonej przez atrapę
 
 ### Phase 3: Generowanie przepisu — czytelny błąd zamiast 500 i fałszywego przepisu
 

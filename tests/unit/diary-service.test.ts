@@ -678,6 +678,24 @@ describe("DiaryService", () => {
       expect(result).toEqual(manual);
     });
 
+    it("calories: N po nieudanej wycenie zapisuje liczbę 'manual' - ścieżka ręczna nie czeka na model", async () => {
+      // Wycena padła: wiersz ma znacznik zlecenia i wciąż nie ma wartości. AI nigdy nie jest jedynym
+      // źródłem liczby (FR-004), więc liczba wpisana ręcznie musi wejść bez względu na ten stan.
+      const failedEstimate = storedEntry({ calories: null, estimation_requested_at: "2026-09-23T08:00:00.000Z" });
+      const saved = storedEntry({
+        calories: 450,
+        calorie_origin: "manual",
+        estimation_requested_at: "2026-09-23T08:00:00.000Z",
+      });
+      const stub = createSupabaseStub(rowRead(failedEstimate), { data: saved, error: null });
+
+      const result = await new DiaryService(stub.client).updateEntry("user-1", 1, { calories: 450 });
+
+      expect(updatePayload(stub)).toMatchObject({ calories: 450, calorie_origin: "manual" });
+      expect(stub.builder.is).not.toHaveBeenCalled();
+      expect(result).toEqual(saved);
+    });
+
     it("calories: null zeruje trzy kolumny", async () => {
       const stub = createSupabaseStub(rowRead(estimatedRow), { data: storedEntry(), error: null });
 

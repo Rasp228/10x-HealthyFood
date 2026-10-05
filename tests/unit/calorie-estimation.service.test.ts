@@ -180,6 +180,10 @@ describe("CalorieEstimationService", () => {
       await expect(estimateFor(content)).resolves.toBe(500);
     });
 
+    it("przyjmuje zapis wykładniczy, bo w JSON to wciąż liczba", async () => {
+      await expect(estimateFor('{"calories":1e3}')).resolves.toBe(1000);
+    });
+
     it("woła dostawcę dokładnie raz", async () => {
       await estimateFor('{"calories": 420}');
 
@@ -232,6 +236,12 @@ describe("CalorieEstimationService", () => {
 
     it("odrzuca obiekt nie do sparsowania", async () => {
       await expect(estimateFor("{calories: 420}")).resolves.toBeNull();
+    });
+
+    it("odrzuca obiekt z klamrami w napisie zamiast zgadywać, gdzie się kończy", async () => {
+      // Poprawny JSON, ale wydobycie obiektu z treści nie zna napisów: urwany fragment nie jest
+      // obiektem, więc wynik to brak wartości, a nie 500 ani liczba zgadnięta z kawałka.
+      await expect(estimateFor('{"calories":500,"note":"{x}"}')).resolves.toBeNull();
     });
 
     it("odrzuca pustą treść", async () => {

@@ -8,7 +8,7 @@
 
 import { DiaryService, RecipeNotFoundError } from "@/lib/services/diary.service";
 import { CalorieEstimationService } from "@/lib/services/calorie-estimation.service";
-import { RateLimitError } from "@/lib/api/openrouter.types";
+import { OpenRouterError, RateLimitError } from "@/lib/api/openrouter.types";
 import { POST } from "@/pages/api/diary-entries/[id]/estimate";
 import type { DiaryEntryDto } from "@/types";
 
@@ -276,6 +276,62 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
       await expect(response.json()).resolves.toMatchObject({ code: "AI_UNAVAILABLE" });
       // Wiersz zostaje ze znacznikiem i bez wartości - awaria niczego nie zapisuje.
       expect(applyEstimate).not.toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+
+    it("OpenRouterError z gałęzi opisowej daje 502 AI_UNAVAILABLE i niczego nie zapisuje", async () => {
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockResolvedValue(storedEntry({ content: "frytki" }));
+      estimateFromDescription.mockRejectedValue(new OpenRouterError("Przekroczono czas oczekiwania"));
+
+      const response = await POST(requestContext());
+
+      expect(response.status).toBe(502);
+      await expect(response.json()).resolves.toEqual({
+        error: "Usługa AI jest chwilowo niedostępna",
+        code: "AI_UNAVAILABLE",
+      });
+      expect(applyEstimate).not.toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+  });
+
+  describe("awaria poza dostawcą", () => {
+    it("błąd spoza OpenRouterError z serwisu wyceny daje 500 bez treści błędu w ciele", async () => {
+      // Tylko awaria dostawcy ma własne 502. Każdy inny rzut schodzi do zewnętrznego catcha, a jego
+      // komunikat - tu udający błąd PostgREST z nazwą ograniczenia - zostaje w logu serwera.
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockRejectedValue(
+        new Error('violates check constraint "diary_entries_value_has_origin"')
+      );
+
+      const response = await POST(requestContext());
+
+      expect(response.status).toBe(500);
+      const body = await response.text();
+      expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera" });
+      expect(body).not.toContain("diary_entries_value_has_origin");
+      expect(applyEstimate).not.toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+
+    it("błąd stemplowania daje 500 i model nie zostaje zawołany", async () => {
+      // Znacznik idzie do bazy PRZED modelem. Gdy ten zapis padnie, nie ma czego wyceniać -
+      // wywołanie modelu byłoby opłacone i wyrzucone.
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockRejectedValue(new Error("RLS odrzuciło zapis"));
+
+      const response = await POST(requestContext());
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera" });
+      expect(CalorieEstimationServiceMock).not.toHaveBeenCalled();
+      expect(estimateFromDescription).not.toHaveBeenCalled();
+      expect(estimateFromRecipe).not.toHaveBeenCalled();
 
       consoleError.mockRestore();
     });
