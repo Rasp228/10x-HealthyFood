@@ -178,6 +178,7 @@ export interface AIErrorResponse {
     | "SERVER_ERROR"
     | "NETWORK_ERROR"
     | "AI_PARSE_ERROR"
+    | "AI_UNAVAILABLE"
     | "UNAUTHORIZED"
     | "RECIPE_NOT_FOUND";
   details?: string;

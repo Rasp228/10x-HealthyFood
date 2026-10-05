@@ -84,9 +84,14 @@ async function requestWithRetry(
         code: "NETWORK_ERROR" as const,
       }));
 
-      // Sprawdź czy warto retry dla tego typu błędu
+      // Sprawdź czy warto retry dla tego typu błędu.
+      //
+      // 502 wyłączone: trasa AI daje je po jednej próbie z budżetem 55 s (awaria dostawcy albo
+      // nieczytelna odpowiedź modelu). Automatyczne ponowienie mnożyłoby ten czas i liczbę wywołań
+      // modelu - ponowienie należy do użytkownika, przycisk „Spróbuj ponownie" w `AIModal`.
       if (
         retryCount < MAX_RETRY_ATTEMPTS &&
+        response.status !== 502 &&
         (response.status >= 500 || errorData.code === "AI_TIMEOUT" || errorData.code === "NETWORK_ERROR")
       ) {
         // Exponential backoff
@@ -192,6 +197,12 @@ export function useAI(): UseAIState & UseAIActions {
       retryable = true;
     } else if (aiError.code === "NETWORK_ERROR" || !navigator.onLine) {
       errorMessage = "Sprawdź połączenie internetowe i spróbuj ponownie";
+      retryable = true;
+    } else if (aiError.code === "AI_UNAVAILABLE") {
+      errorMessage = "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę.";
+      retryable = true;
+    } else if (aiError.code === "AI_PARSE_ERROR") {
+      errorMessage = "AI zwróciło odpowiedź, której nie da się odczytać. Spróbuj ponownie.";
       retryable = true;
     } else if (aiError.code === "SERVER_ERROR") {
       errorMessage = "Wystąpił problem z serwerem. Spróbuj później.";

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { APIRoute } from "astro";
-import { AIService } from "../../../lib/services/ai.service";
-import type { AIErrorResponse } from "../../../types";
+import { AIResponseParseError, AIService } from "../../../lib/services/ai.service";
+import { OpenRouterError } from "../../../lib/api/openrouter.types";
+import type { AIErrorResponse, ModifiedRecipeDto } from "../../../types";
 import { zodMessage } from "../../../lib/utils/validation-errors";
 
 export const prerender = false;
@@ -79,17 +80,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
       base_recipe: validationResult.data.base_recipe || JSON.stringify(recipe),
     };
 
-    // Użyj serwisu AI do modyfikacji przepisu
-    const aiService = new AIService(locals.supabase);
-    const result = await aiService.modifyRecipe(user.id, parsedRecipeId, command);
+    let result: ModifiedRecipeDto;
 
-    if (!result) {
-      return new Response(
-        JSON.stringify({
-          error: "Nie udało się zmodyfikować przepisu",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+    try {
+      // Konstrukcja serwisu w tym samym `try`, co wywołanie modelu: brak klucza rzuca
+      // `OpenRouterError` z konstruktora i ma dać to samo 502, co klucz nieprawidłowy.
+      const aiService = new AIService(locals.supabase);
+      result = await aiService.modifyRecipe(user.id, parsedRecipeId, command);
+    } catch (error) {
+      // Mapowanie jak w `generate-recipe.ts` i `diary-entries/[id]/estimate.ts`.
+      if (error instanceof OpenRouterError) {
+        console.error("Błąd dostawcy AI podczas modyfikacji przepisu:", error);
+        const errorResponse: AIErrorResponse = {
+          error: "Usługa AI jest chwilowo niedostępna",
+          code: "AI_UNAVAILABLE",
+        };
+        return new Response(JSON.stringify(errorResponse), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (error instanceof AIResponseParseError) {
+        console.error("Nieczytelna odpowiedź AI podczas modyfikacji przepisu:", error);
+        const errorResponse: AIErrorResponse = {
+          error: "AI zwróciło odpowiedź, której nie da się odczytać",
+          code: "AI_PARSE_ERROR",
+        };
+        return new Response(JSON.stringify(errorResponse), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      throw error;
     }
 
     // Zwróć zmodyfikowany przepis
@@ -98,15 +122,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+    // Komunikat zostaje na serwerze: błąd bazy niesie nazwy tabel i polityk RLS - do przeglądarki
+    // idzie stała, do logu pełny błąd.
+    console.error("Błąd podczas modyfikacji przepisu:", error);
 
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    const errorResponse: AIErrorResponse = {
+      error: "Błąd wewnętrzny serwera",
+      code: "SERVER_ERROR",
+    };
+    return new Response(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

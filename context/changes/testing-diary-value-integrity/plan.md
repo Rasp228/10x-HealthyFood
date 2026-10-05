@@ -455,28 +455,28 @@ jedynego klienta tych tras.
 
 #### Automated
 
-- [x] 2.1 Testy fazy przechodzą: `npx jest tests/unit/diary-estimate-route.test.ts tests/unit/calorie-estimation.service.test.ts tests/unit/diary-entry-route.test.ts tests/unit/diary-service.test.ts`
-- [x] 2.2 Cała suita przechodzi: `npm run test`
-- [x] 2.3 Lint i format: `npm run lint` i `npm run format:check`
+- [x] 2.1 Testy fazy przechodzą: `npx jest tests/unit/diary-estimate-route.test.ts tests/unit/calorie-estimation.service.test.ts tests/unit/diary-entry-route.test.ts tests/unit/diary-service.test.ts` — 0818f1b
+- [x] 2.2 Cała suita przechodzi: `npm run test` — 0818f1b
+- [x] 2.3 Lint i format: `npm run lint` i `npm run format:check` — 0818f1b
 
 #### Manual
 
-- [x] 2.4 W `diary-entry-route.test.ts` żadna asercja nie sprawdza wartości wyliczonej przez atrapę
+- [x] 2.4 W `diary-entry-route.test.ts` żadna asercja nie sprawdza wartości wyliczonej przez atrapę — 0818f1b
 
 ### Phase 3: Generowanie przepisu — czytelny błąd zamiast 500 i fałszywego przepisu
 
 #### Automated
 
-- [ ] 3.1 Testy fazy przechodzą: `npx jest tests/unit/ai-service.test.ts tests/unit/ai-generate-recipe-route.test.ts tests/unit/ai-modify-recipe-route.test.ts tests/unit/use-ai.test.tsx`
-- [ ] 3.2 Cała suita przechodzi: `npm run test`
-- [ ] 3.3 Typecheck bez błędów: `npm run typecheck`
-- [ ] 3.4 Lint i format: `npm run lint` i `npm run format:check`
-- [ ] 3.5 `tests/unit/ai-service.test.ts` importuje prawdziwy `@/lib/services/ai.service` (mockowany jest tylko moduł `openrouter.service`)
+- [x] 3.1 Testy fazy przechodzą: `npx jest tests/unit/ai-service.test.ts tests/unit/ai-generate-recipe-route.test.ts tests/unit/ai-modify-recipe-route.test.ts tests/unit/use-ai.test.tsx`
+- [x] 3.2 Cała suita przechodzi: `npm run test`
+- [x] 3.3 Typecheck bez błędów: `npm run typecheck`
+- [x] 3.4 Lint i format: `npm run lint` i `npm run format:check`
+- [x] 3.5 `tests/unit/ai-service.test.ts` importuje prawdziwy `@/lib/services/ai.service` (mockowany jest tylko moduł `openrouter.service`)
 
 #### Manual
 
-- [ ] 3.6 Z nieprawidłowym `OPENROUTER_API_KEY` w `npm run dev` generowanie w `AIModal` kończy się w ≤ ~60 s komunikatem o niedostępności AI z przyciskiem ponowienia, a w zakładce Network jest jedno żądanie
-- [ ] 3.7 Z poprawnym kluczem generowanie i modyfikacja przepisu działają jak wcześniej
+- [x] 3.6 Z nieprawidłowym `OPENROUTER_API_KEY` w `npm run dev` generowanie w `AIModal` kończy się w ≤ ~60 s komunikatem o niedostępności AI z przyciskiem ponowienia, a w zakładce Network jest jedno żądanie
+- [x] 3.7 Z poprawnym kluczem generowanie i modyfikacja przepisu działają jak wcześniej
 
 ### Phase 4: Cookbook §6 i notatki fazy
 

@@ -7,9 +7,56 @@ import type {
   PreferenceDto,
 } from "../../types";
 import { OpenRouterService } from "../api/openrouter.service";
+import { OpenRouterError } from "../api/openrouter.types";
 import type { JSONSchema, ChatResponse } from "../api/openrouter.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
+
+/**
+ * Model odpowiedział, ale z jego treści nie da się odczytać przepisu (pusta treść, same białe
+ * znaki, wyjątek w trakcie parsowania).
+ *
+ * Osobna klasa, a nie `OpenRouterError`: dostawca zadziałał, zawiodła odpowiedź. Trasa buduje
+ * z tego 502 `AI_PARSE_ERROR` - wcześniej w tym miejscu powstawał przepis „Błąd generowania",
+ * który wracał z 200 jak każdy inny i dało się go zapisać.
+ */
+export class AIResponseParseError extends Error {
+  constructor(message = "Nie udało się odczytać przepisu z odpowiedzi AI") {
+    super(message);
+    this.name = "AIResponseParseError";
+  }
+}
+
+/**
+ * Buduje klienta OpenRoutera pod generowanie i modyfikację przepisów.
+ *
+ * Ten sam kształt co `createEstimationClient` w `calorie-estimation.service.ts` - tam jest pełne
+ * uzasadnienie każdej z trzech wartości. Brakujący klucz rzuca z konstruktora `OpenRouterService`
+ * zwykłym `Error`; zamieniamy go na `OpenRouterError`, żeby trasa dała 502, a nie 500.
+ */
+function createRecipeClient(): OpenRouterService {
+  try {
+    return new OpenRouterService({
+      // Pusty napis, nie `import.meta.env.OPENROUTER_API_KEY`: klient i tak czyta tę zmienną sam,
+      // a `import.meta` w tym pliku uniemożliwia jego import w Jest. Pełne uzasadnienie przy
+      // `apiKey: ""` w `calorie-estimation.service.ts` - nie "sprzątaj" tego z powrotem.
+      apiKey: "",
+      // Pięć sekund pod `maxDuration: 60` z `astro.config.mjs`, żeby trasa zdążyła zbudować 502,
+      // zanim platforma ubije funkcję.
+      timeout: 55_000,
+      // Jedna próba: `retries` liczy w tym kliencie PRÓBY, a `0` wróciłoby do domyślnych dwóch.
+      // Ponowienie należy do użytkownika - przycisk „Spróbuj ponownie" w `AIModal`.
+      retries: 1,
+    });
+  } catch (error) {
+    if (error instanceof OpenRouterError) {
+      throw error;
+    }
+
+    const message = error instanceof Error ? error.message : "nieznany błąd";
+    throw new OpenRouterError(`Konfiguracja OpenRouter jest niekompletna: ${message}`);
+  }
+}
 
 /**
  * Serwis obsługujący interakcje z AI poprzez OpenRouter.ai
@@ -22,10 +69,8 @@ export class AIService {
     // Przechowaj instancję Supabase
     this.supabase = supabase;
 
-    // Inicjalizacja OpenRouterService z domyślnym kluczem API z .env
-    this.openRouterService = new OpenRouterService({
-      apiKey: import.meta.env.OPENROUTER_API_KEY,
-    });
+    // Klient z jedną próbą i budżetem pod limit funkcji; brak klucza rzuca `OpenRouterError`
+    this.openRouterService = createRecipeClient();
 
     // Konfiguracja formatu odpowiedzi dla generowania przepisów
     const recipeSchema: JSONSchema = {
@@ -50,44 +95,44 @@ export class AIService {
    * Generuje przepis kulinarny na podstawie preferencji użytkownika
    * @param userId - ID użytkownika
    * @param command - Parametry dla generacji przepisu
-   * @returns Wygenerowany przepis lub null w przypadku błędu
+   * @returns Wygenerowany przepis
+   * @throws {OpenRouterError} Gdy dostawca jest nieosiągalny albo odmówił - nie jest połykany,
+   *   bo bez niego trasa nie miałaby z czego zbudować 502.
+   * @throws {AIResponseParseError} Gdy z odpowiedzi modelu nie da się odczytać przepisu.
    */
   async generateRecipe(
     userId: string,
     command: GenerateRecipeCommand,
     selectedModel?: string
-  ): Promise<GeneratedRecipeDto | null> {
-    try {
-      const startTime = Date.now();
+  ): Promise<GeneratedRecipeDto> {
+    const startTime = Date.now();
 
-      // Ustaw model i opcjonalnie parametry według potrzeb
-      if (selectedModel) {
-        this.openRouterService.setModel(selectedModel);
-      }
+    // Ustaw model i opcjonalnie parametry według potrzeb
+    if (selectedModel) {
+      this.openRouterService.setModel(selectedModel);
+    }
 
-      // Pobierz i przetworz preferencje użytkownika
-      const userPreferences = await this.getFormattedUserPreferences(userId);
+    // Pobierz i przetworz preferencje użytkownika
+    const userPreferences = await this.getFormattedUserPreferences(userId);
 
-      // Przygotuj treść przepisu bazowego, jeśli istnieje
-      const baseRecipeText = command.base_recipe ? `Przepis bazowy do inspiracji:\n${command.base_recipe}` : "";
+    // Przygotuj treść przepisu bazowego, jeśli istnieje
+    const baseRecipeText = command.base_recipe ? `Przepis bazowy do inspiracji:\n${command.base_recipe}` : "";
 
-      // Przygotuj dodatkowe parametry, jeśli istnieją
-      const additionalParamsText = command.additional_params
-        ? `Dodatkowe instrukcje: ${command.additional_params}`
-        : "";
+    // Przygotuj dodatkowe parametry, jeśli istnieją
+    const additionalParamsText = command.additional_params ? `Dodatkowe instrukcje: ${command.additional_params}` : "";
 
-      // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
-      const userMessage = [
-        additionalParamsText,
-        baseRecipeText,
-        userPreferences ? `Moje preferencje żywieniowe:\n${userPreferences}` : "",
-        !command.base_recipe && !command.additional_params ? "Wygeneruj losowy przepis" : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+    // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
+    const userMessage = [
+      additionalParamsText,
+      baseRecipeText,
+      userPreferences ? `Moje preferencje żywieniowe:\n${userPreferences}` : "",
+      !command.base_recipe && !command.additional_params ? "Wygeneruj losowy przepis" : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
-      // Wiadomość systemowa z preferencjami użytkownika i instrukcjami
-      const systemMessage = `
+    // Wiadomość systemowa z preferencjami użytkownika i instrukcjami
+    const systemMessage = `
         Twoim nieugiętym celem jest dostarczanie precyzyjnych, konkretnych przepisów kulinarnych,
         zoptymalizowanych pod indywidualne preferencje żywieniowe użytkownika. Działasz zgodnie z poniższymi wytycznymi:
 
@@ -133,33 +178,30 @@ export class AIService {
           - Jeśli modyfikujesz przepis bazowy, zachowaj jego główne cechy ale dostosuj do preferencji
       `;
 
-      // Wywołaj API OpenRouter
-      const response = await this.openRouterService.sendMessage(userMessage, systemMessage);
+    // Wywołaj API OpenRouter
+    const response = await this.openRouterService.sendMessage(userMessage, systemMessage);
 
-      const endTime = Date.now();
-      const responseTime = endTime - startTime;
-      const aiModel = response.model || "unknown";
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+    const aiModel = response.model || "unknown";
 
-      // Parsowanie odpowiedzi
-      const parsedRecipe = this.parseAIResponse(response);
+    // Parsowanie odpowiedzi - PRZED logiem: nieudana odpowiedź rzuca tutaj i nie zostawia logu
+    // akcji udającego sukces
+    const parsedRecipe = this.parseAIResponse(response);
 
-      // Zapisz log akcji
-      const logId = await this.logAIAction(userId, "generate_new", aiModel, responseTime);
+    // Zapisz log akcji
+    const logId = await this.logAIAction(userId, "generate_new", aiModel, responseTime);
 
-      return {
-        recipe: {
-          title: parsedRecipe.title,
-          content: parsedRecipe.content,
-          additional_params: parsedRecipe.additional_params || command.additional_params,
-        },
-        ai_model: aiModel,
-        generate_response_time: responseTime,
-        logId,
-      };
-    } catch (error) {
-      console.error("Błąd podczas generowania przepisu:", error);
-      return null;
-    }
+    return {
+      recipe: {
+        title: parsedRecipe.title,
+        content: parsedRecipe.content,
+        additional_params: parsedRecipe.additional_params || command.additional_params,
+      },
+      ai_model: aiModel,
+      generate_response_time: responseTime,
+      logId,
+    };
   }
 
   /**
@@ -167,50 +209,51 @@ export class AIService {
    * @param userId - ID użytkownika
    * @param recipeId - ID przepisu do modyfikacji
    * @param command - Parametry dla modyfikacji przepisu
-   * @returns Zmodyfikowany przepis lub null w przypadku błędu
+   * @returns Zmodyfikowany przepis
+   * @throws {OpenRouterError} Gdy dostawca jest nieosiągalny albo odmówił.
+   * @throws {AIResponseParseError} Gdy z odpowiedzi modelu nie da się odczytać przepisu.
    */
   async modifyRecipe(
     userId: string,
     recipeId: number,
     command: ModifyRecipeCommand,
     selectedModel?: string
-  ): Promise<ModifiedRecipeDto | null> {
-    try {
-      const startTime = Date.now();
+  ): Promise<ModifiedRecipeDto> {
+    const startTime = Date.now();
 
-      // Ustaw model i opcjonalnie parametry według potrzeb
-      if (selectedModel) {
-        this.openRouterService.setModel(selectedModel);
-      }
+    // Ustaw model i opcjonalnie parametry według potrzeb
+    if (selectedModel) {
+      this.openRouterService.setModel(selectedModel);
+    }
 
-      // Pobierz i przetworz preferencje użytkownika
-      const userPreferences = await this.getFormattedUserPreferences(userId);
+    // Pobierz i przetworz preferencje użytkownika
+    const userPreferences = await this.getFormattedUserPreferences(userId);
 
-      // Pobierz i przetworz preferencje z oryginalnego przepisu (additional_params)
-      const recipePreferences = await this.getRecipePreferences(recipeId, userId);
+    // Pobierz i przetworz preferencje z oryginalnego przepisu (additional_params)
+    const recipePreferences = await this.getRecipePreferences(recipeId, userId);
 
-      // Połącz preferencje użytkownika z preferencjami z przepisu
-      const combinedPreferences = this.combinePreferences(userPreferences, recipePreferences);
+    // Połącz preferencje użytkownika z preferencjami z przepisu
+    const combinedPreferences = this.combinePreferences(userPreferences, recipePreferences);
 
-      // Przygotuj treść przepisu bazowego
-      const baseRecipeText = command.base_recipe ? `Przepis do modyfikacji:\n${command.base_recipe}` : "";
+    // Przygotuj treść przepisu bazowego
+    const baseRecipeText = command.base_recipe ? `Przepis do modyfikacji:\n${command.base_recipe}` : "";
 
-      // Przygotuj dodatkowe parametry modyfikacji
-      const additionalParamsText = command.additional_params
-        ? `Instrukcje modyfikacji: ${command.additional_params}`
-        : "";
+    // Przygotuj dodatkowe parametry modyfikacji
+    const additionalParamsText = command.additional_params
+      ? `Instrukcje modyfikacji: ${command.additional_params}`
+      : "";
 
-      // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
-      const userMessage = [
-        additionalParamsText,
-        baseRecipeText,
-        combinedPreferences ? `Moje preferencje żywieniowe:\n${combinedPreferences}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+    // Połącz wszystkie informacje dla użytkownika w jedną wiadomość
+    const userMessage = [
+      additionalParamsText,
+      baseRecipeText,
+      combinedPreferences ? `Moje preferencje żywieniowe:\n${combinedPreferences}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
-      // Wiadomość systemowa dla modyfikacji przepisu
-      const systemMessage = `
+    // Wiadomość systemowa dla modyfikacji przepisu
+    const systemMessage = `
         Twoim celem jest modyfikacja istniejącego przepisu kulinarnego zgodnie z instrukcjami użytkownika i jego preferencjami żywieniowymi.
 
         1. **Wejście**
@@ -247,72 +290,68 @@ export class AIService {
           - NIGDY nie pokazuj procesu myślenia - zwracaj tylko końcowy przepis w formacie JSON.
       `;
 
-      // Wywołaj API OpenRouter
-      const response = await this.openRouterService.sendMessage(userMessage, systemMessage);
+    // Wywołaj API OpenRouter
+    const response = await this.openRouterService.sendMessage(userMessage, systemMessage);
 
-      const endTime = Date.now();
-      const responseTime = endTime - startTime;
-      const aiModel = response.model || "unknown";
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+    const aiModel = response.model || "unknown";
 
-      // Parsowanie odpowiedzi
-      const parsedRecipe = this.parseAIResponse(response);
+    // Parsowanie odpowiedzi - PRZED logiem, z tego samego powodu co w `generateRecipe`
+    const parsedRecipe = this.parseAIResponse(response);
 
-      // Zapisz log akcji
-      const logId = await this.logAIAction(userId, "generate_modification", aiModel, responseTime);
+    // Zapisz log akcji
+    const logId = await this.logAIAction(userId, "generate_modification", aiModel, responseTime);
 
-      // Parsuj oryginalny przepis z base_recipe
-      let originalRecipe;
-      try {
-        originalRecipe = JSON.parse(command.base_recipe || "{}");
-      } catch {
-        // Jeśli nie udało się sparsować, utwórz podstawowy obiekt
-        originalRecipe = {
-          id: recipeId,
-          title: "Oryginalny przepis",
-          content: command.base_recipe || "",
-        };
-      }
-
-      return {
-        original_recipe: {
-          id: originalRecipe.id || recipeId,
-          title: originalRecipe.title || "Oryginalny przepis",
-          content: originalRecipe.content || command.base_recipe || "",
-        },
-        modified_recipe: {
-          title: parsedRecipe.title,
-          content: parsedRecipe.content,
-          additional_params: parsedRecipe.additional_params || command.additional_params,
-        },
-        ai_model: aiModel,
-        generate_response_time: responseTime,
-        logId,
+    // Parsuj oryginalny przepis z base_recipe
+    let originalRecipe;
+    try {
+      originalRecipe = JSON.parse(command.base_recipe || "{}");
+    } catch {
+      // Jeśli nie udało się sparsować, utwórz podstawowy obiekt
+      originalRecipe = {
+        id: recipeId,
+        title: "Oryginalny przepis",
+        content: command.base_recipe || "",
       };
-    } catch (error) {
-      console.error("Błąd podczas modyfikacji przepisu:", error);
-      return null;
     }
+
+    return {
+      original_recipe: {
+        id: originalRecipe.id || recipeId,
+        title: originalRecipe.title || "Oryginalny przepis",
+        content: originalRecipe.content || command.base_recipe || "",
+      },
+      modified_recipe: {
+        title: parsedRecipe.title,
+        content: parsedRecipe.content,
+        additional_params: parsedRecipe.additional_params || command.additional_params,
+      },
+      ai_model: aiModel,
+      generate_response_time: responseTime,
+      logId,
+    };
   }
 
   /**
    * Parsuje odpowiedź z API OpenRouter i ukrywa proces reasoningowy
+   *
+   * @throws {AIResponseParseError} Gdy treść jest pusta (także same białe znaki) albo parsowanie
+   *   rzuciło. Żaden z tych przypadków nie staje się już przepisem - zastępczy przepis wracał
+   *   z 200 i dało się go zapisać jak prawdziwy.
    */
   private parseAIResponse(response: ChatResponse): {
     title: string;
     content: string;
     additional_params?: string | null;
   } {
+    const rawContent: unknown = response?.choices?.[0]?.message?.content;
+
+    if (typeof rawContent !== "string" || rawContent.trim() === "") {
+      throw new AIResponseParseError("Odpowiedź AI nie zawiera treści");
+    }
+
     try {
-      if (!response?.choices?.[0]?.message?.content) {
-        return {
-          title: "Błąd generowania",
-          content: "Nie udało się otrzymać odpowiedzi z AI.",
-          additional_params: null,
-        };
-      }
-
-      const rawContent = response.choices[0].message.content;
-
       // Najpierw spróbuj znaleźć JSON w odpowiedzi
       const jsonMatch = this.extractJsonFromResponse(rawContent);
       if (jsonMatch) {
@@ -358,11 +397,7 @@ export class AIService {
       return this.fallbackTextParsing(rawContent);
     } catch (error) {
       console.error("Błąd podczas parsowania odpowiedzi AI:", error);
-      return {
-        title: "Błąd generowania",
-        content: "Wystąpił problem podczas przetwarzania odpowiedzi z AI.",
-        additional_params: null,
-      };
+      throw new AIResponseParseError();
     }
   }
 
