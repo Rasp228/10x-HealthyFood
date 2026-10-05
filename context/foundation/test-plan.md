@@ -110,11 +110,65 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 
 ### 6.1 Adding a unit test
 
-- TBD — see §3 Phase 1 (wzorzec: suma dnia i parser bloku odżywczego z wyrocznią z PRD, nie z kodu).
+- **Lokalizacja**: `tests/unit/` (katalogu `tests/integration/` jeszcze nie ma; testy tras też leżą
+  w `tests/unit/`). Jest 30 + ts-jest, nigdy `vitest`; domyślne środowisko to jsdom.
+- **Nazewnictwo**: `<moduł>.test.ts` dla czystej logiki (`diary-totals.test.ts`), `<Komponent>.test.tsx`
+  dla wyspy React (`DiaryDaySummary.test.tsx`), `use-<hook>.test.tsx` dla hooka. Opisy `describe`/`it`
+  po polsku, w języku zachowania („liczy każdy wpis bez wartości jako brak…”).
+- **Testy referencyjne**: `tests/unit/diary-totals.test.ts` (czysta funkcja, fabryka `entry(overrides)`
+  z pełnym wierszem `DiaryEntryDto`), `tests/unit/DiaryDaySummary.test.tsx` (RTL, asercje po
+  `data-testid` na tekście, który widzi użytkownik).
+- **Wyrocznia**: literał z PRD, kontraktu albo decyzji planu, zapisany w komentarzu nad przypadkiem
+  (np. „500 + 320 + 410 + 0 = 1230 kcal, braki 3 z 7”). Nigdy wartość policzona kodem pod testem (§1).
+- **Pełny tekst**: `expect(el.textContent).toBe("…")`, nie `toHaveTextContent("…")` — ten drugi
+  z argumentem-napisem sprawdza tylko podciąg i przepuści dopisany albo ucięty fragment.
+- **Znany dług**: defekt, którego faza nie naprawia, zapisz jako `test.failing` z wyrocznią
+  (referencja: blok F2 w `tests/unit/recipe-nutrition.test.ts`) — jeden `test.failing` na przypadek,
+  bo jeden test z kilkoma asercjami „zawodzi” już przy pierwszej. Komentarz nad blokiem odsyła do
+  `docs/reference/known-drift.md`. Jest 30 liczy oczekiwaną porażkę jako *passed* w podsumowaniu;
+  gdy ktoś naprawi defekt, test zrobi się czerwony — to sygnał, by zamienić go na `it` i usunąć wpis
+  z `known-drift.md`.
+- **Kontrola wyroczni**: przed commitem celowo zepsuj linię produkcyjną, którą test pilnuje, zobacz
+  czerwony test, przywróć. Test, który nie czerwienieje, niczego nie dowodzi.
+- **Uruchomienie**: `npx jest tests/unit/<plik>`; cała suita `npm run test` (to samo co w CI).
 
 ### 6.2 Adding an integration test for an API route
 
-- TBD — see §3 Phase 1 (wzorzec: zła odpowiedź modelu nie zapisuje wartości; mock tylko na krawędzi HTTP).
+- **Lokalizacja i nazwa**: `tests/unit/<domena>-<trasa>-route.test.ts`
+  (`ai-generate-recipe-route.test.ts`, `diary-estimate-route.test.ts`). Test importuje handler
+  (`import { POST } from "@/pages/api/…"`) i woła go z ręcznie zbudowanym kontekstem
+  `{ request, params, locals: { supabase: { auth: { getUser } } } }` rzutowanym na
+  `Parameters<typeof POST>[0]`.
+- **Środowisko**: docblock `/** @jest-environment node */` na początku pliku — trasa buduje
+  `Response`, którego jsdom nie dostarcza (`ReferenceError: Response is not defined`).
+- **Co mockować**: tylko krawędź dostawcy modelu, nigdy własne serwisy w całości.
+  - `jest.mock("@/lib/api/openrouter.service", () => ({ OpenRouterService: jest.fn()… }))` — wymagane
+    w każdym pliku, który pośrednio importuje klienta: konstruktor prawdziwego `AIService` buduje
+    `OpenRouterService`, a ten moduł czyta `import.meta.env`, czego ts-jest (CommonJS) nie skompiluje.
+    Fabryka `jest.mock` jest wynoszona ponad importy, więc nie może sięgać po zmienne spoza siebie.
+  - Serwis trasy zostaje **prawdziwą klasą**; podmieniasz metody `jest.spyOn(Service.prototype, "metoda")`.
+    Dzięki temu klasy błędów łapane w trasie (`AIResponseParseError`, `RecipeNotFoundError`) są tymi
+    samymi bytami, które serwis rzuca w produkcji, i `instanceof` działa.
+  - `OpenRouterError` i podklasy (`RateLimitError`) importuj z `@/lib/api/openrouter.types` — ten moduł
+    nie jest mockowany, więc `instanceof OpenRouterError` w trasie widzi prawdziwą klasę.
+  - Wariant: trasa wyceny mockuje cały moduł `calorie-estimation.service` (on opakowuje dostawcę),
+    a `DiaryService` zostaje prawdziwy ze `spyOn` — patrz `diary-estimate-route.test.ts`.
+- **Kontrakt błędów (wyrocznia)**: awaria dostawcy (`OpenRouterError`, także rzut konstruktora klienta
+  przy braku klucza) → 502 `{error:"Usługa AI jest chwilowo niedostępna", code:"AI_UNAVAILABLE"}`;
+  nieczytelna odpowiedź modelu → 502 `{error:"AI zwróciło odpowiedź, której nie da się odczytać",
+  code:"AI_PARSE_ERROR"}`; każdy inny błąd → 500 ze stałym ciałem bez `details` (`/api/ai/*`:
+  `{error:"Błąd wewnętrzny serwera", code:"SERVER_ERROR"}`; trasa wyceny: samo `{error:"Błąd wewnętrzny serwera"}`).
+  Dla 500 czytaj `response.text()` i sprawdź `not.toContain(<komunikat błędu>)` — ciało nie może
+  wyciekać nazw ograniczeń ani treści wyjątku. Po awarii sprawdź też, że zapis nie nastąpił
+  (`expect(applyEstimate).not.toHaveBeenCalled()`). Zawsze dodaj przypadek 401 bez sesji
+  (`getUser` → `{ data: { user: null } }`) i 200 z wynikiem serwisu.
+- **Higiena**: `jest.clearAllMocks()` w `beforeEach`, `jest.restoreAllMocks()` w `afterAll`;
+  `console.error` wyciszony `spyOn(...).mockImplementation(() => undefined)` w przypadkach błędów.
+- **Testy referencyjne**: `tests/unit/ai-generate-recipe-route.test.ts` (pełny kontrakt 200/401/502/500),
+  `tests/unit/diary-estimate-route.test.ts` (gałęzie trasy, brak zapisu po awarii). Serwis pod trasą:
+  `tests/unit/ai-service.test.ts`; klient przeglądarkowy z `fetch` zamockowanym na krawędzi
+  (atrapa odpowiedzi to zwykły obiekt, bo jsdom nie ma `Response`): `tests/unit/use-ai.test.tsx`.
+- **Uruchomienie**: `npx jest tests/unit/<plik>-route.test.ts`.
 
 ### 6.3 Adding an ownership / access test
 
@@ -131,6 +185,16 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 ### 6.6 Per-rollout-phase notes
 
 (Po każdej fazie `/10x-implement` dopisuje tu 2–3 linie o tym, co faza nauczyła.)
+
+**§3 Phase 1 — Integralność wartości i sumy dnia** (`testing-diary-value-integrity`, 2026-10-05):
+
+- F2 (nagłówek „na 4 porcje” mnoży wartość) nie jest naprawiony — przypięty jako cztery `test.failing`
+  z wyrocznią FR-009 w `tests/unit/recipe-nutrition.test.ts` i opisany w `docs/reference/known-drift.md`.
+- Ochrona przed spóźnioną wyceną (§2 #1) jest dowiedziona tylko testami interakcji
+  (`tests/unit/diary-service.test.ts`), nie zachowaniem — bez stanowej atrapy ani prawdziwej bazy
+  ryzyko pozostaje częściowo otwarte.
+- „N oczekuje” rozstrzygnięte na korzyść obecnego tekstu: „Bez policzonych kalorii: N z M. Suma ich
+  nie obejmuje.” spełnia FR-011 i jest przypięty w `tests/unit/DiaryDaySummary.test.tsx`.
 
 ## 7. What We Deliberately Don't Test
 
