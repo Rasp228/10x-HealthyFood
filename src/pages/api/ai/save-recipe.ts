@@ -129,7 +129,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const errorResponse: AIErrorResponse = {
           error: "Nie udało się zaktualizować przepisu",
           code: "SERVER_ERROR",
-          details: updateError.message,
         };
         return new Response(JSON.stringify(errorResponse), {
           status: 500,
@@ -164,7 +163,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const errorResponse: AIErrorResponse = {
         error: "Nie udało się utworzyć przepisu",
         code: "SERVER_ERROR",
-        details: error.message,
       };
       return new Response(JSON.stringify(errorResponse), {
         status: 500,
@@ -182,14 +180,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Obsługa nieoczekiwanych błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+    // Komunikat zostaje na serwerze, jak w `generate-recipe.ts`: błąd bazy niesie nazwy tabel
+    // i polityk RLS - do przeglądarki idzie stała, do logu pełny błąd. Tak samo w obu 500 wyżej.
     console.error("Nieoczekiwany błąd w save-recipe:", error);
 
     const errorResponse: AIErrorResponse = {
       error: "Błąd wewnętrzny serwera",
       code: "SERVER_ERROR",
-      details: errorMessage,
     };
 
     return new Response(JSON.stringify(errorResponse), {

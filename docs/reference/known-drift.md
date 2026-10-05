@@ -74,6 +74,26 @@ a istniejące trasy `/api/ai/*` mają tę samą lukę. Zamknięcie jej w trasie 
 wdrożenia `edit-and-delete-entry`, ustalenie F1), brakuje czytelnika przed wywołaniem modelu.
 Do przemyślenia razem z S-05, która dziedziczy ten kontrakt.
 
+### Niepusta odpowiedź modelu bez przepisu wraca jako przepis z 200
+
+Od zmiany `testing-diary-value-integrity` `AIService.parseAIResponse`
+(`src/lib/services/ai.service.ts`) rzuca `AIResponseParseError`, a trasy `/api/ai/generate-recipe`
+i `/api/ai/modify-recipe` dają 502 `AI_PARSE_ERROR` — ale tylko wtedy, gdy treść jest pusta, złożona
+z samych białych znaków albo nie jest napisem. Każdy inny tekst, który nie jest JSON-em z `title`
+i `content`, trafia do `fallbackTextParsing` i wraca jako przepis z 200: odmowa modelu („Nie mogę
+pomóc w tej prośbie”) albo JSON bez tych pól (`{}`) staje się przepisem zbudowanym z samej
+odpowiedzi. Użytkownik może go zapisać jak prawdziwy. Ryzyko #2 test-planu („zła odpowiedź modelu zostaje
+przyjęta”) jest więc zamknięte tylko dla odpowiedzi pustej.
+
+Kierunek naprawy: uznawać za przepis wyłącznie JSON z niepustymi `title` i `content`, a resztę
+kończyć `AIResponseParseError`. Zanim to się stanie, trzeba sprawdzić, jak często używany model
+odpowiada czystym tekstem zamiast JSON-em, bo dziś te odpowiedzi ratuje parsowanie tekstowe.
+
+Obecne zachowanie przypina test „tekst nie-JSON staje się przepisem z parsowania tekstowego (obecne
+zachowanie)” w `tests/unit/ai-service.test.ts`; po naprawie zamień go na oczekiwanie
+`AIResponseParseError`. Odłożone świadomie (plan `testing-diary-value-integrity`, „What We're NOT
+Doing”: `fallbackTextParsing` bez zmian; przegląd wdrożenia, ustalenie F4).
+
 ## Wpisy dziennika
 
 ### Reguła „porcje tylko razem z przepisem" obowiązuje wyłącznie w chwili zapisu

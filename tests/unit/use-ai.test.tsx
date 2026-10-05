@@ -58,6 +58,30 @@ describe("useAI - polityka ponowień", () => {
     expect(result.current.retryable).toBe(true);
   });
 
+  it("502 z ciałem nie-JSON (strona bramy) też nie jest ponawiane", async () => {
+    jest.useFakeTimers();
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+
+    const { result } = renderHook(() => useAI());
+
+    await act(async () => {
+      const pending = result.current.generateRecipe(PARAMS).catch(() => undefined);
+      // Zapas na oba okna backoffu - gdyby ponowienie wróciło, zdążyłoby wystartować.
+      await jest.advanceTimersByTimeAsync(10_000);
+      await pending;
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.retryable).toBe(true);
+  });
+
   it("500 jest ponawiane jak dotąd: jedna próba i dwa ponowienia z backoffem", async () => {
     jest.useFakeTimers();
     fetchMock.mockResolvedValue(errorResponse(500, { error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR" }));

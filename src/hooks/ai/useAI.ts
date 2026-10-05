@@ -30,8 +30,11 @@ interface UseAIActions {
   cancelOperation: () => void;
 }
 
-// Timeout w milisekundach (60 sekund)
-const AI_TIMEOUT = 60000;
+// Timeout w milisekundach (65 sekund) - powyżej `maxDuration: 60` z `astro.config.mjs`, tak jak
+// `ESTIMATION_ABORT_MS` w ścieżce dziennika. Trasa ma 55 s na model plus własny narzut (sesja,
+// preferencje); przy 60 s przeglądarka poddawała się przed 502 i pokazywała timeout zamiast
+// „Usługa AI jest chwilowo niedostępna".
+const AI_TIMEOUT = 65_000;
 
 // Maksymalna liczba prób retry
 const MAX_RETRY_ATTEMPTS = 2;
@@ -64,6 +67,8 @@ async function requestWithRetry(
     controller.abort();
   }, timeout);
 
+  let responseReceived = false;
+
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -75,6 +80,7 @@ async function requestWithRetry(
       signal: controller.signal,
     });
 
+    responseReceived = true;
     clearTimeout(timeoutId);
     abortControllerRef.current = null;
 
@@ -113,8 +119,14 @@ async function requestWithRetry(
       throw { code: "AI_TIMEOUT", message: "Request timeout" };
     }
 
-    // Retry dla błędów sieciowych
-    if (retryCount < MAX_RETRY_ATTEMPTS && (errorObj.code === "NETWORK_ERROR" || !navigator.onLine)) {
+    // Retry dla błędów sieciowych - tylko gdy odpowiedź w ogóle nie przyszła. Odpowiedź HTTP
+    // rozstrzygnięto już wyżej (ponów albo rzuć); bez tego warunku 502 z ciałem nie-JSON (strona
+    // bramy, fallback `NETWORK_ERROR`) wracałoby tu do ponowień mimo wykluczenia 502.
+    if (
+      !responseReceived &&
+      retryCount < MAX_RETRY_ATTEMPTS &&
+      (errorObj.code === "NETWORK_ERROR" || !navigator.onLine)
+    ) {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[retryCount] || 4000));
       return requestWithRetry(abortControllerRef, url, body, timeout, retryCount + 1);
     }
