@@ -555,25 +555,25 @@ Nie dotyczy: brak zmian schematu, zachowania i konfiguracji CI.
 
 #### Automated
 
-- [x] 2.1 `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts` przechodzi (`test.failing` liczone jako passed)
-- [x] 2.2 Kontrola wyroczni: tymczasowe usunięcie `.eq("user_id", userId)` z `readOwnRecipeContent` czerwieni przypadek 404; wycofane
-- [x] 2.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
+- [x] 2.1 `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts` przechodzi (`test.failing` liczone jako passed) — f9afea3
+- [x] 2.2 Kontrola wyroczni: tymczasowe usunięcie `.eq("user_id", userId)` z `readOwnRecipeContent` czerwieni przypadek 404; wycofane — f9afea3
+- [x] 2.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą — f9afea3
 
 #### Manual
 
-- [x] 2.4 Wpis w `known-drift.md` jest zrozumiały bez czytania planu i wskazuje test, który przypina zachowanie
+- [x] 2.4 Wpis w `known-drift.md` jest zrozumiały bez czytania planu i wskazuje test, który przypina zachowanie — f9afea3
 
 ### Phase 3: Klient wylogowania nie udaje sukcesu (#3)
 
 #### Automated
 
-- [ ] 3.1 `npx jest tests/unit/LogoutButton.test.tsx` przechodzi
-- [ ] 3.2 Kontrola wyroczni: tymczasowe usunięcie `window.location.replace` z gałęzi sukcesu czerwieni test `it`; wycofane
-- [ ] 3.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
+- [x] 3.1 `npx jest tests/unit/LogoutButton.test.tsx` przechodzi
+- [x] 3.2 Kontrola wyroczni: tymczasowe usunięcie `window.location.replace` z gałęzi sukcesu czerwieni test `it`; wycofane
+- [x] 3.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
 
 #### Manual
 
-- [ ] 3.4 Wpis w `known-drift.md` opisuje skutek dla użytkownika, nie tylko linię kodu
+- [x] 3.4 Wpis w `known-drift.md` opisuje skutek dla użytkownika, nie tylko linię kodu
 
 ### Phase 4: E2E — sesja po „Wyloguj” jest martwa na serwerze (#3)
 

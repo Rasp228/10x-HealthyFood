@@ -218,3 +218,33 @@ zapisują wyrocznię. Po naprawie zrobią się czerwone: zamień je na zwykłe `
 
 Przyjęte świadomie (plan `testing-session-and-access-boundaries`, D5: faza testów przypina
 defekty, nie zmienia zachowania produkcyjnego).
+
+## Wylogowanie
+
+### Klient wylogowania przekierowuje na ekran logowania mimo nieudanego wylogowania
+
+Przycisk „Wyloguj” w `src/components/layout/TopNav.astro` obsługuje niewidoczna wyspa
+`src/components/common/LogoutButton.tsx`. Po `POST /api/auth/logout` woła
+`window.location.replace("/auth/login")` bez względu na wynik: przy odpowiedzi `!ok` (trasa daje 400,
+gdy `signOut()` w Supabase zwróci błąd) tylko loguje błąd w konsoli, a w gałęzi `catch` (błąd sieci)
+czyści `localStorage` i też przekierowuje. Użytkownik widzi ekran logowania i uznaje, że się
+wylogował, a sesja może trwać dalej. Przy błędzie sieci żądanie nie dotarło do serwera, więc
+ciasteczko sesji zostaje nietknięte i wejście na `/` pokaże go zalogowanego — to groźne zwłaszcza na
+współdzielonym komputerze. Przy 400 ciasteczka zwykle są już skasowane, ale refresh token mógł nie
+zostać unieważniony.
+
+Kierunek naprawy: przy `!ok` i w `catch` zostać na stronie i pokazać toast błędu z `useToast`
+(`src/hooks/common/useToast.ts`); wyspa musi wtedy renderować `<ToastContainer />`, bo dziś zwraca
+`null`, a toast bez kontenera powstaje i nigdy się nie rysuje. Przekierowanie zostaje tylko na
+gałęzi sukcesu.
+
+Zachowanie przypinają testy w `tests/unit/LogoutButton.test.tsx`: zwykły `it` „ok: true wysyła POST
+/api/auth/logout i dopiero potem przekierowuje na /auth/login” pilnuje gałęzi sukcesu, a dwa
+`test.failing` — „ok: false (400 z trasy przy błędzie GoTrue) nie przekierowuje na /auth/login”
+i „błąd sieci (fetch rzuca) nie przekierowuje na /auth/login” — zapisują wyrocznię. Po naprawie
+zrobią się czerwone: zamień je na zwykłe `it` i usuń ten wpis. `src/components/auth/LogoutButton.tsx`
+to martwy bliźniak z tym samym defektem — nic go nie importuje; naprawiać trzeba wyspę
+z `src/components/common/`, a bliźniaka raczej usunąć niż poprawiać.
+
+Przyjęte świadomie (plan `testing-session-and-access-boundaries`, D1: faza testów przypina
+defekty, nie zmienia zachowania produkcyjnego).
