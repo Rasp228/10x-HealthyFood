@@ -543,25 +543,25 @@ Nie dotyczy: brak zmian schematu, zachowania i konfiguracji CI.
 
 #### Automated
 
-- [x] 1.1 `npx jest tests/unit/middleware.test.ts` przechodzi
-- [x] 1.2 Kontrola wyroczni: tymczasowe dopisanie `"/diary"` do `PUBLIC_PATHS` czerwieni przypadki A i C, usunięcie `flushCookies` z jednego `redirect` czerwieni F; obie zmiany wycofane
-- [x] 1.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą (typecheck: 0 błędów)
+- [x] 1.1 `npx jest tests/unit/middleware.test.ts` przechodzi — d0062c8
+- [x] 1.2 Kontrola wyroczni: tymczasowe dopisanie `"/diary"` do `PUBLIC_PATHS` czerwieni przypadki A i C, usunięcie `flushCookies` z jednego `redirect` czerwieni F; obie zmiany wycofane — d0062c8
+- [x] 1.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą (typecheck: 0 błędów) — d0062c8
 
 #### Manual
 
-- [x] 1.4 Lista przypadków A/B odpowiada PRD (`prd.md:230`) i decyzjom D2, D3, D7, a nie `PUBLIC_PATHS`
+- [x] 1.4 Lista przypadków A/B odpowiada PRD (`prd.md:230`) i decyzjom D2, D3, D7, a nie `PUBLIC_PATHS` — d0062c8
 
 ### Phase 2: Własność broniona wyłącznie kodem (#4)
 
 #### Automated
 
-- [ ] 2.1 `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts` przechodzi (`test.failing` liczone jako passed)
-- [ ] 2.2 Kontrola wyroczni: tymczasowe usunięcie `.eq("user_id", userId)` z `readOwnRecipeContent` czerwieni przypadek 404; wycofane
-- [ ] 2.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
+- [x] 2.1 `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts` przechodzi (`test.failing` liczone jako passed)
+- [x] 2.2 Kontrola wyroczni: tymczasowe usunięcie `.eq("user_id", userId)` z `readOwnRecipeContent` czerwieni przypadek 404; wycofane
+- [x] 2.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
 
 #### Manual
 
-- [ ] 2.4 Wpis w `known-drift.md` jest zrozumiały bez czytania planu i wskazuje test, który przypina zachowanie
+- [x] 2.4 Wpis w `known-drift.md` jest zrozumiały bez czytania planu i wskazuje test, który przypina zachowanie
 
 ### Phase 3: Klient wylogowania nie udaje sukcesu (#3)
 

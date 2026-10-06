@@ -192,3 +192,29 @@ zamień na zwykłe `it` i usuń ten wpis.
 
 Odłożone świadomie (plan `testing-session-and-access-boundaries`, faza 1: faza testów przypina
 defekty, nie zmienia zachowania produkcyjnego).
+
+## Własność rekordów
+
+### Usunięcie cudzego albo nieistniejącego przepisu zgłasza sukces
+
+`DELETE /api/recipes/:id` (`src/pages/api/recipes/[id].ts`) usuwa przez
+`.delete().eq("id", recipeId).eq("user_id", user.id)` bez `.select()`, więc nie wie, czy trafił
+w jakikolwiek wiersz. Przepis innego użytkownika i przepis, którego nie ma, kończą się tak samo:
+200 `{ success: true, message: "Przepis został usunięty" }`, a dane zostają nietknięte. Izolacja
+działa (filtr i RLS nie pozwolą skasować cudzego wiersza), ale kontrakt nie: trasa kłamie o
+skutku, w przeciwieństwie do GET i PUT tego samego zasobu oraz `DELETE /api/diary-entries/:id`,
+które w tej sytuacji dają 404.
+
+Kierunek naprawy: `.select("id")` po filtrach i 404 „Przepis nie został znaleziony”, gdy lista
+usuniętych wierszy jest pusta — tak jak `DiaryService.deleteEntry`. Przed zmianą sprawdzić
+wywołujących: `RecipeService.deleteRecipe` (`src/lib/services/recipe.service.ts`) już traktuje 404
+jako `false`, a `CleanupService.deleteAllTestUserRecipes` (`tests/e2e/services/cleanup.service.ts`)
+usuwa wyłącznie przepisy z listy zalogowanego użytkownika, więc 404 dostałby tylko przy wyścigu.
+
+Zachowanie przypinają testy w `tests/unit/recipes-route.test.ts` (blok „DELETE /api/recipes/:id”):
+zwykły `it` „DELETE B na przepisie A zostawia wiersz A nietknięty” pilnuje stanu danych, a dwa
+`test.failing` — „DELETE B na przepisie A daje 404” i „DELETE nieistniejącego przepisu daje 404” —
+zapisują wyrocznię. Po naprawie zrobią się czerwone: zamień je na zwykłe `it` i usuń ten wpis.
+
+Przyjęte świadomie (plan `testing-session-and-access-boundaries`, D5: faza testów przypina
+defekty, nie zmienia zachowania produkcyjnego).

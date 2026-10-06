@@ -6,6 +6,7 @@
  */
 
 import { GET } from "@/pages/api/recipes/index";
+import { DELETE } from "@/pages/api/recipes/[id]";
 
 type RouteContext = Parameters<typeof GET>[0];
 
@@ -100,5 +101,99 @@ describe("GET /api/recipes", () => {
     const response = await GET(requestContext({ search: "a".repeat(200) }));
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe("DELETE /api/recipes/:id", () => {
+  type Row = Record<string, unknown>;
+  type DeleteContext = Parameters<typeof DELETE>[0];
+
+  const USER_A = "user-a";
+  const USER_B = "user-b";
+
+  /** Stan tabeli `recipes` w atrapie - po operacji sprawdzany osobno od statusu odpowiedzi. */
+  let recipes: Row[];
+
+  /**
+   * Stanowa atrapa z wierszami dwóch właścicieli. Budowniczy z `GET` wyżej tylko zapisuje
+   * wywołania; tu `delete()` usuwa wyłącznie wiersze spełniające KAŻDY filtr `eq`, a łańcuch
+   * rozwiązuje się przy `await` - tak jak `.delete().eq("id", …).eq("user_id", …)` w trasie.
+   * Bez `select()` PostgREST nie oddaje usuniętych wierszy, więc atrapa zwraca `data: null`.
+   */
+  const createSupabase = (userId: string) => ({
+    auth: { getUser: async () => ({ data: { user: { id: userId, email: `${userId}@example.com` } } }) },
+    from: (table: string) => {
+      if (table !== "recipes") {
+        throw new Error(`Atrapa nie zna tabeli ${table}`);
+      }
+
+      const filters: [string, unknown][] = [];
+      let deleting = false;
+      const query = {
+        delete: () => {
+          deleting = true;
+          return query;
+        },
+        eq: (column: string, value: unknown) => {
+          filters.push([column, value]);
+          return query;
+        },
+        then: (resolve: (value: unknown) => unknown) => {
+          if (deleting) {
+            recipes = recipes.filter((row) => !filters.every(([column, value]) => row[column] === value));
+          }
+          return resolve({ data: null, error: null });
+        },
+      };
+      return query;
+    },
+  });
+
+  const deleteContext = (id: string, userId: string) =>
+    ({
+      params: { id },
+      locals: { supabase: createSupabase(userId) },
+    }) as unknown as DeleteContext;
+
+  const ids = () => recipes.map((row) => row.id);
+
+  beforeEach(() => {
+    recipes = [
+      { id: 10, user_id: USER_A, title: "Przepis A" },
+      { id: 20, user_id: USER_B, title: "Przepis B" },
+    ];
+  });
+
+  it("DELETE B na przepisie A zostawia wiersz A nietknięty", async () => {
+    await DELETE(deleteContext("10", USER_B));
+
+    expect(ids()).toEqual([10, 20]);
+  });
+
+  it("kontrola pozytywna: A usuwa własny przepis - 200 i wiersz znika", async () => {
+    // Na tym kontrakcie stoi też `CleanupService.deleteAllTestUserRecipes` w E2E.
+    const response = await DELETE(deleteContext("10", USER_A));
+
+    expect(response.status).toBe(200);
+    expect(ids()).toEqual([20]);
+  });
+
+  /**
+   * Znany dług, opisany w `docs/reference/known-drift.md` („Własność rekordów”). Usunięcie cudzego
+   * albo nieistniejącego przepisu nie może zgłaszać sukcesu, a dziś trasa oddaje 200
+   * `{success:true}`, bo DELETE bez `.select("id")` nie mówi, czy cokolwiek trafił. Dlatego te testy
+   * są `test.failing` - oczekiwana porażka zapisuje wyrocznię, nie obecne zachowanie. Po naprawie
+   * zrobią się czerwone: zamień `test.failing` na `it` i usuń wpis z `known-drift.md`.
+   */
+  test.failing("DELETE B na przepisie A daje 404", async () => {
+    const response = await DELETE(deleteContext("10", USER_B));
+
+    expect(response.status).toBe(404);
+  });
+
+  test.failing("DELETE nieistniejącego przepisu daje 404", async () => {
+    const response = await DELETE(deleteContext("999", USER_B));
+
+    expect(response.status).toBe(404);
   });
 });
