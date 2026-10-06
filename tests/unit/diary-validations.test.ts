@@ -199,6 +199,17 @@ describe("createDiaryEntrySchema", () => {
       );
     });
 
+    // Wyrocznia: `recipes.id` to `serial` (int4), więc 2147483647 to największy możliwy przepis.
+    it("przyjmuje górną granicę int4 2147483647", () => {
+      expect(dataOf(parseRecipeEntry({ source_recipe_id: 2147483647 })).source_recipe_id).toBe(2147483647);
+    });
+
+    it("odrzuca 2147483648 - ponad zakresem int4 nie ma żadnego przepisu", () => {
+      expect(messageFor(parseRecipeEntry({ source_recipe_id: 2147483648 }), "source_recipe_id")).toBe(
+        "Nieprawidłowy identyfikator przepisu"
+      );
+    });
+
     it("przyjmuje jawne null - wpis opisowy nie pochodzi z żadnego przepisu", () => {
       expect(dataOf(parseEntry({ source_recipe_id: null })).source_recipe_id).toBeNull();
     });
@@ -414,5 +425,22 @@ describe("entryIdSchema", () => {
 
   it("odrzuca zero", () => {
     expect(entryIdSchema.safeParse("0").success).toBe(false);
+  });
+
+  // Wyrocznia: `diary_entries.id` to `serial`, czyli int4 - największy wiersz ma 2147483647
+  // (literał typu Postgresa, nie wartość wzięta ze schematu). Krok dalej nie jest żadnym wierszem.
+  it.each([
+    ["2147483647", true],
+    ["2147483648", false],
+  ])("identyfikator %s na granicy int4 → przechodzi: %s", (id, passes) => {
+    expect(entryIdSchema.safeParse(id).success).toBe(passes);
+  });
+
+  it("2147483648 odrzuca komunikatem identyfikatora wpisu", () => {
+    const result = entryIdSchema.safeParse("2147483648");
+
+    if (result.success) throw new Error("Oczekiwano błędu walidacji");
+
+    expect(result.error.issues[0].message).toBe("Nieprawidłowy identyfikator wpisu");
   });
 });

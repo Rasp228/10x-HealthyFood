@@ -148,3 +148,24 @@ describe("PUT /api/user-settings", () => {
     consoleError.mockRestore();
   });
 });
+
+describe("PUT /api/user-settings - granice celu", () => {
+  // Wyrocznia: CHECK `daily_calorie_goal between 500 and 10000` z `create_user_settings.sql:27-28`
+  // (literał migracji, nie wartość ze schematu pod testem).
+  it.each([500, 10000])("cel %i na granicy → 200 i zapis", async (goal) => {
+    const response = await PUT(putContext({ daily_calorie_goal: goal }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ daily_calorie_goal: goal });
+    expect(setDailyGoal).toHaveBeenCalledWith("user-1", goal);
+  });
+
+  it.each([499, 10001])("cel %i za granicą → 400 z details przy polu, bez setDailyGoal", async (goal) => {
+    const response = await PUT(putContext({ daily_calorie_goal: goal }));
+
+    expect(response.status).toBe(400);
+    const { details } = await response.json();
+    expect(details).toEqual(expect.arrayContaining([{ path: "daily_calorie_goal", message: expect.any(String) }]));
+    expect(setDailyGoal).not.toHaveBeenCalled();
+  });
+});

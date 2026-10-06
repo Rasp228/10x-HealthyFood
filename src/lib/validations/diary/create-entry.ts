@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_INT4_ID } from "../common/id";
 
 /**
  * Sprawdza, czy data faktycznie istnieje w kalendarzu.
@@ -99,6 +100,9 @@ export const createDiaryEntrySchema = z
       .number("Identyfikator przepisu musi być liczbą")
       .int("Identyfikator przepisu musi być liczbą całkowitą")
       .positive("Identyfikator przepisu musi być dodatni")
+      // `recipes.id` to `serial` (int4): większa liczba nie wskazuje żadnego przepisu, a bez sufitu
+      // dotarłaby do PostgREST i wróciła jako 500 zamiast 400.
+      .max(MAX_INT4_ID, "Nieprawidłowy identyfikator przepisu")
       .nullable()
       .optional(),
     portions: portionsSchema.nullable().optional(),

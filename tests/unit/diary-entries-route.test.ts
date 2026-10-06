@@ -154,3 +154,69 @@ describe("POST /api/diary-entries - przepis innego użytkownika", () => {
     });
   });
 });
+
+/** Wpis opisowy, poprawny poza polem, które nadpisuje przypadek. */
+const describedEntry = (extra: Row = {}) => ({
+  entry_date: "2026-10-06",
+  content: "Owsianka z bananem",
+  ...extra,
+});
+
+describe("POST /api/diary-entries - granice pól", () => {
+  /**
+   * Wyrocznia (literały źródłowe, nie schemat pod testem):
+   * - `content` 500 znaków - `create_diary_entries.sql:33`;
+   * - `amount_text` 100 znaków - `create_diary_entries.sql:35`;
+   * - `calories` 0 - check migracji `calories >= 0`; 5000 - decyzja produktowa
+   *   (`manual-diary-entry/reviews/plan-review.md`);
+   * - `portions` 99 - decyzja produktowa, przy `numeric(6,2)` i `portions > 0`.
+   * Wpis z porcjami musi wskazywać przepis, więc te przypadki idą z własnym przepisem B (20).
+   */
+  it.each<[string, Row]>([
+    ["content 500 znaków", describedEntry({ content: "a".repeat(500) })],
+    ["amount_text 100 znaków", describedEntry({ amount_text: "a".repeat(100) })],
+    ["calories 0", describedEntry({ calories: 0 })],
+    ["calories 5000", describedEntry({ calories: 5000 })],
+    ["portions 99 z przepisem", entryFromRecipe(20, { portions: 99 })],
+  ])("granica przechodzi: %s → 201 i jeden insert", async (_label, body) => {
+    const response = await POST(requestContext(body));
+
+    expect(response.status).toBe(201);
+    expect(inserted).toHaveLength(1);
+  });
+
+  /**
+   * Wyrocznia jak wyżej, krok dalej za granicą; `source_recipe_id` 2147483648 - `recipes.id` to
+   * `serial` (int4), największa wartość 2147483647. Każdy przypadek: 400, `details` wskazuje pole,
+   * a do `diary_entries` nie poszedł żaden insert.
+   */
+  it.each<[string, Row, string]>([
+    ["content 501 znaków", describedEntry({ content: "a".repeat(501) }), "content"],
+    ["amount_text 101 znaków", describedEntry({ amount_text: "a".repeat(101) }), "amount_text"],
+    ["calories -1", describedEntry({ calories: -1 }), "calories"],
+    ["calories 5001", describedEntry({ calories: 5001 }), "calories"],
+    ["portions 99.01 z przepisem", entryFromRecipe(20, { portions: 99.01 }), "portions"],
+    ["portions 0 z przepisem", entryFromRecipe(20, { portions: 0 }), "portions"],
+    ["source_recipe_id 2147483648", entryFromRecipe(2147483648), "source_recipe_id"],
+  ])("krok dalej: %s → 400 z details przy polu i bez zapisu", async (_label, body, field) => {
+    const response = await POST(requestContext(body));
+
+    expect(response.status).toBe(400);
+    const { details } = await response.json();
+    expect(details).toEqual(expect.arrayContaining([{ path: field, message: expect.any(String) }]));
+    expect(inserted).toEqual([]);
+  });
+
+  it("przyszła data 2999-01-01 → 201 (obecne zachowanie — luka zaakceptowana)", async () => {
+    // Serwer nie ma reguły przyszłej daty: blokuje ją tylko przeglądarka, świadomie, żeby nie
+    // rozstrzygać strefy czasowej użytkownika na serwerze (archiwum `manual-diary-entry`).
+    // Luka jest opisana w `docs/reference/known-drift.md` („Wpisy dziennika”, wpis dodawany w fazie 5
+    // planu `testing-protected-data-and-limits`). Gdy serwer dostanie regułę, ten test zrobi się
+    // czerwony - wtedy zamień go na oczekiwanie 400 i usuń wpis z known-drift.
+    const response = await POST(requestContext(describedEntry({ entry_date: "2999-01-01" })));
+
+    expect(response.status).toBe(201);
+    expect(inserted).toHaveLength(1);
+    expect(inserted[0]).toMatchObject({ entry_date: "2999-01-01" });
+  });
+});

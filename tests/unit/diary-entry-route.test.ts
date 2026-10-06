@@ -196,3 +196,63 @@ describe("DELETE /api/diary-entries/[id]", () => {
     consoleError.mockRestore();
   });
 });
+
+describe("PATCH /api/diary-entries/[id] - granice pól i identyfikatora", () => {
+  /**
+   * Wyrocznia (literały źródłowe, nie schemat pod testem):
+   * - `content` 500 znaków - `create_diary_entries.sql:33`;
+   * - `calories` 5000 - decyzja produktowa (`manual-diary-entry/reviews/plan-review.md`);
+   * - `portions` 99 - decyzja produktowa.
+   * Krok dalej daje 400 z `details` przy polu, a serwis nie jest wołany - nic nie trafia do bazy.
+   */
+  it.each<[string, Record<string, unknown>, string]>([
+    ["content 501 znaków", { content: "a".repeat(501) }, "content"],
+    ["calories 5001", { calories: 5001 }, "calories"],
+    ["portions 99.01", { portions: 99.01 }, "portions"],
+  ])("krok dalej: %s → 400 bez wywołania serwisu", async (_label, body, field) => {
+    const response = await PATCH(requestContext("1", body));
+
+    expect(response.status).toBe(400);
+    const { details } = await response.json();
+    expect(details).toEqual(expect.arrayContaining([{ path: field, message: expect.any(String) }]));
+    expect(updateEntry).not.toHaveBeenCalled();
+  });
+
+  // Wyrocznia: `diary_entries.id` to `serial` (int4), największy wiersz ma 2147483647.
+  it("granica identyfikatora 2147483647 dociera do serwisu", async () => {
+    const response = await PATCH(requestContext("2147483647"));
+
+    expect(response.status).toBe(200);
+    expect(updateEntry).toHaveBeenCalledWith("user-1", 2147483647, { calories: 450 });
+  });
+
+  it("identyfikator 2147483648 → 400 bez wywołania serwisu", async () => {
+    const response = await PATCH(requestContext("2147483648"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      details: [{ path: "", message: "Nieprawidłowy identyfikator wpisu" }],
+    });
+    expect(updateEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /api/diary-entries/[id] - granica identyfikatora", () => {
+  // Wyrocznia: `diary_entries.id` to `serial` (int4), największy wiersz ma 2147483647.
+  it("granica identyfikatora 2147483647 dociera do serwisu", async () => {
+    const response = await DELETE(deleteContext("2147483647"));
+
+    expect(response.status).toBe(204);
+    expect(deleteEntry).toHaveBeenCalledWith("user-1", 2147483647);
+  });
+
+  it("identyfikator 2147483648 → 400 bez wywołania serwisu", async () => {
+    const response = await DELETE(deleteContext("2147483648"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      details: [{ path: "", message: "Nieprawidłowy identyfikator wpisu" }],
+    });
+    expect(deleteEntry).not.toHaveBeenCalled();
+  });
+});

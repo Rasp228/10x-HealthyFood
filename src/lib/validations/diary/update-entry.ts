@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { positiveIdParamSchema } from "../common/id";
 import {
   amountTextSchema,
   caloriesValueSchema,
@@ -10,16 +11,14 @@ import {
 /**
  * Identyfikator wpisu dziennika czytany z `params.id`.
  *
- * Parametr ścieżki jest napisem (albo go nie ma), więc walidacja zaczyna się od kształtu, a nie
- * od `parseInt`: `parseInt("12abc")` oddaje 12 i cicho przepuszcza adres, którego nikt nie
- * zamierzał obsłużyć. `Number.isSafeInteger` domyka górną stronę - `id` jest w bazie typu
- * `serial`, a napis dłuższy niż zakres bezpiecznej liczby nie jest żadnym wierszem.
+ * Reguła kształtu i sufit int4 (`id` jest w bazie typu `serial`) są wspólne dla tras
+ * z identyfikatorem w ścieżce (`common/id.ts`); tu zostają tylko komunikaty wpisu.
  */
-export const entryIdSchema = z
-  .string("Identyfikator wpisu jest wymagany")
-  .regex(/^\d+$/, "Identyfikator wpisu musi być dodatnią liczbą całkowitą")
-  .transform((value) => Number(value))
-  .refine((value) => Number.isSafeInteger(value) && value > 0, "Nieprawidłowy identyfikator wpisu");
+export const entryIdSchema = positiveIdParamSchema({
+  required: "Identyfikator wpisu jest wymagany",
+  format: "Identyfikator wpisu musi być dodatnią liczbą całkowitą",
+  invalid: "Nieprawidłowy identyfikator wpisu",
+});
 
 export type EntryIdSchema = z.infer<typeof entryIdSchema>;
 

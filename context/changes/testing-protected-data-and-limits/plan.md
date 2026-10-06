@@ -500,29 +500,29 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 
 #### Automated
 
-- [x] 1.1 Nowe testy przechodzą: `npx jest tests/unit/protected-data.test.ts`
-- [x] 1.2 Cała suita przechodzi: `npm run test`
-- [x] 1.3 Typy: `npm run typecheck` — 0 błędów
-- [x] 1.4 Lint: `npm run lint`
+- [x] 1.1 Nowe testy przechodzą: `npx jest tests/unit/protected-data.test.ts` — c0549ce
+- [x] 1.2 Cała suita przechodzi: `npm run test` — c0549ce
+- [x] 1.3 Typy: `npm run typecheck` — 0 błędów — c0549ce
+- [x] 1.4 Lint: `npm run lint` — c0549ce
 
 #### Manual
 
-- [x] 1.5 Kontrola wyroczni: usunięcie filtra `id` z DELETE preferencji czerwieni test
-- [x] 1.6 Kontrola wyroczni: `update` na `recipes` w `createEntry` czerwieni test
+- [x] 1.5 Kontrola wyroczni: usunięcie filtra `id` z DELETE preferencji czerwieni test — c0549ce
+- [x] 1.6 Kontrola wyroczni: `update` na `recipes` w `createEntry` czerwieni test — c0549ce
 
 ### Phase 2: Granice dziennika, celu i identyfikatorów (#6)
 
 #### Automated
 
-- [ ] 2.1 Testy fazy przechodzą (walidacje, trasy dziennika, cel, parsery)
-- [ ] 2.2 Cała suita przechodzi: `npm run test`
-- [ ] 2.3 Typy: `npm run typecheck` — 0 błędów
-- [ ] 2.4 Lint: `npm run lint`
+- [x] 2.1 Testy fazy przechodzą (walidacje, trasy dziennika, cel, parsery)
+- [x] 2.2 Cała suita przechodzi: `npm run test`
+- [x] 2.3 Typy: `npm run typecheck` — 0 błędów
+- [x] 2.4 Lint: `npm run lint`
 
 #### Manual
 
-- [ ] 2.5 Kontrola wyroczni: usunięcie `.max(MAX_INT4_ID)` czerwieni testy 2147483648
-- [ ] 2.6 Kontrola wyroczni: sufit kalorii 5001 czerwieni test 5001 → 400
+- [x] 2.5 Kontrola wyroczni: usunięcie `.max(MAX_INT4_ID)` czerwieni testy 2147483648
+- [x] 2.6 Kontrola wyroczni: sufit kalorii 5001 czerwieni test 5001 → 400
 
 ### Phase 3: Preferencje — 400 zamiast 500
 
