@@ -23,5 +23,32 @@
   // sprintf-js. Advisory obejmuje <=1.1.3, a 1.1.3 to najnowsza wersja - łatki nie ma.
   // `npm audit fix --force` proponuje cofnięcie do ts-jest@29.1.2. Do zbudowanej aplikacji nie
   // trafia. Przeglądać przy każdym bumpie jest / ts-jest. Stan na 2026-10-06.
-  "allowlist": ["GHSA-9wv6-86v2-598j", "GHSA-vfj7-8cjw-p6xm", "GHSA-hp3w-g68c-fv3c"]
+  //
+  // Każdy wpis ma `expiry`: po tej dacie przestaje działać i bramka znów się wywraca. To
+  // wymusza przegląd, nawet gdy nikt nie podbijał zależności - łatka mogła już wyjść. Przy
+  // przeglądzie: sprawdź, czy jest wersja bez podatności (`npm view <pakiet> version`); jeśli
+  // jest - podbij i usuń wpis, jeśli nie - przesuń `expiry` o 3 miesiące i zaktualizuj „Stan na”.
+  "allowlist": [
+    {
+      "GHSA-9wv6-86v2-598j": {
+        "active": true,
+        "expiry": "2027-01-06",
+        "notes": "path-to-regexp przez @astrojs/vercel"
+      }
+    },
+    {
+      "GHSA-vfj7-8cjw-p6xm": {
+        "active": true,
+        "expiry": "2027-01-06",
+        "notes": "braces przez eslint-plugin-astro, tylko dev, brak łatki"
+      }
+    },
+    {
+      "GHSA-hp3w-g68c-fv3c": {
+        "active": true,
+        "expiry": "2027-01-06",
+        "notes": "sprintf-js przez pokrycie Jest, tylko dev, brak łatki"
+      }
+    }
+  ]
 }

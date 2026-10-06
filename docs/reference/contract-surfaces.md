@@ -140,7 +140,12 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Contract**: every entry has an inline comment naming its source and its review trigger — an
   `@astrojs/vercel` bump; an `eslint-plugin-astro` bump or a `braces` release above 3.0.3; a
   `jest` / `ts-jest` bump. A new entry needs the same kind of comment, or the allowlist stops
-  being reviewable.
+  being reviewable. Every entry is an NSP record with an `expiry` date (3 months out): once it
+  passes, the entry stops applying and `test:security` fails again on that advisory alone — a
+  scheduled review even when no dependency was bumped. At review, bump and drop the entry if a
+  patched release exists; otherwise move `expiry` forward and update the comment's date.
+- **Stale entries**: an allowlisted advisory that is no longer in the tree does not fail the
+  gate; `audit-ci` only logs "Consider not allowlisting advisory". Remove such entries.
 - **Breaks**: `npm audit fix --force` proposes a downgrade for each, and none should be taken:
   - `@astrojs/vercel@8.0.4`, a major downgrade that drops the `x-astro-path` patch and forces a
     return to Astro 5;
