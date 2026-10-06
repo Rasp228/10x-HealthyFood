@@ -586,16 +586,16 @@ Nie dotyczy: brak zmian schematu, zachowania i konfiguracji CI.
 #### Manual
 
 - [x] 4.4 Raport Playwrighta pokazuje 200 w kontroli pozytywnej i 302 po wylogowaniu dla obu adresów — 218dac9
-- [ ] 4.5 Job `e2e-tests` w CI przechodzi z nowym specem (po pushu użytkownika)
+- [x] 4.5 Job `e2e-tests` w CI przechodzi z nowym specem (po pushu użytkownika)
 
 ### Phase 5: Cookbook §6.3/§6.4, notatki fazy i dryf dokumentacji
 
 #### Automated
 
-- [x] 5.1 `npm run test`, `npm run lint`, `npm run format:check` i `npm run typecheck` przechodzą
-- [x] 5.2 `grep -c "TBD — see §3 Phase 2" context/foundation/test-plan.md` zwraca 0
+- [x] 5.1 `npm run test`, `npm run lint`, `npm run format:check` i `npm run typecheck` przechodzą — 179870b
+- [x] 5.2 `grep -c "TBD — see §3 Phase 2" context/foundation/test-plan.md` zwraca 0 — 179870b
 
 #### Manual
 
-- [x] 5.3 §6.3 i §6.4 pozwalają dodać nowy test middleware albo własności bez czytania tego planu
-- [x] 5.4 §6.6 nie przedstawia ryzyka #4 jako zamkniętego
+- [x] 5.3 §6.3 i §6.4 pozwalają dodać nowy test middleware albo własności bez czytania tego planu — 179870b
+- [x] 5.4 §6.6 nie przedstawia ryzyka #4 jako zamkniętego — 179870b

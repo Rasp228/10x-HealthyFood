@@ -1,7 +1,7 @@
 ---
 change_id: testing-session-and-access-boundaries
 title: Testy granic sesji i dostępu (faza 2 test-planu, ryzyka #3 i #4)
-status: implementing
+status: implemented
 created: 2026-10-05
 updated: 2026-10-06
 archived_at: null
