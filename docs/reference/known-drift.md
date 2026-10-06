@@ -167,3 +167,28 @@ Odłożone świadomie (zmiana `ui-focus-ring`, research, ustalenie Z6): nie doty
 wymaga nowego tokenu w obu motywach z policzonym kontrastem na `--destructive` (w ciemnym motywie na
 `destructive/60`). Po jego dodaniu `text-white` → `text-destructive-foreground`, a oba pliki trafiają
 do `files` w `uiTokensConfig`.
+
+## Middleware
+
+### Wyjątek przy wymianie kodu weryfikacji kończy się 500 zamiast przekierowania
+
+Gałąź `catch` w `src/middleware/index.ts` (wymiana `code` na `/auth/verify`) przekierowuje na
+`/auth/verify?error=Wystąpił błąd podczas weryfikacji` bez `encodeURIComponent`, w przeciwieństwie
+do dwóch pozostałych gałęzi błędu. `redirect` w Astro wkłada ścieżkę do nagłówka `Location` bez
+kodowania, a `Headers` odrzuca znak spoza Latin-1 („ą”, kod 261) wyjątkiem
+`TypeError: Cannot convert argument to a ByteString`. Użytkownik, któremu wymiana kodu z linku
+w mailu rzuci (np. błąd sieci do Supabase), dostaje więc 500 zamiast ekranu z komunikatem, a
+`flushCookies` na tym wyjściu nigdy się nie wykonuje — kasowanie sesji po `signOut()` nie dociera
+do przeglądarki.
+
+Kierunek naprawy: `encodeURIComponent` na komunikacie, tak jak w gałęzi `if (error)` i w gałęzi
+`?error=`.
+
+Zachowanie przypinają dwa testy w `tests/unit/middleware.test.ts` (blok „każde wyjście niesie
+ciasteczka sesji”): zwykły `it` „…dziś wywraca przekierowanie na niezakodowanym Location (obecne
+zachowanie)” oczekuje wyjątku `ByteString`, a `it.failing` „wyjątek przy wymianie kodu przekierowuje
+z błędem, z ciasteczkami” opisuje docelowe 302 z ciasteczkami. Po naprawie usuń pierwszy, drugi
+zamień na zwykłe `it` i usuń ten wpis.
+
+Odłożone świadomie (plan `testing-session-and-access-boundaries`, faza 1: faza testów przypina
+defekty, nie zmienia zachowania produkcyjnego).
