@@ -579,23 +579,23 @@ Nie dotyczy: brak zmian schematu, zachowania i konfiguracji CI.
 
 #### Automated
 
-- [x] 4.1 `npx playwright test tests/e2e/session-boundaries.spec.ts` z `TEST_MODE=true` przechodzi lokalnie
-- [x] 4.2 `npm run test:e2e` przechodzi w całości (pozostałe specy nie cierpią z powodu globalnego wylogowania)
-- [x] 4.3 `npm run lint` i `npm run typecheck` przechodzą
+- [x] 4.1 `npx playwright test tests/e2e/session-boundaries.spec.ts` z `TEST_MODE=true` przechodzi lokalnie — 218dac9
+- [x] 4.2 `npm run test:e2e` przechodzi w całości (pozostałe specy nie cierpią z powodu globalnego wylogowania) — 218dac9
+- [x] 4.3 `npm run lint` i `npm run typecheck` przechodzą — 218dac9
 
 #### Manual
 
-- [x] 4.4 Raport Playwrighta pokazuje 200 w kontroli pozytywnej i 302 po wylogowaniu dla obu adresów
+- [x] 4.4 Raport Playwrighta pokazuje 200 w kontroli pozytywnej i 302 po wylogowaniu dla obu adresów — 218dac9
 - [ ] 4.5 Job `e2e-tests` w CI przechodzi z nowym specem (po pushu użytkownika)
 
 ### Phase 5: Cookbook §6.3/§6.4, notatki fazy i dryf dokumentacji
 
 #### Automated
 
-- [ ] 5.1 `npm run test`, `npm run lint`, `npm run format:check` i `npm run typecheck` przechodzą
-- [ ] 5.2 `grep -c "TBD — see §3 Phase 2" context/foundation/test-plan.md` zwraca 0
+- [x] 5.1 `npm run test`, `npm run lint`, `npm run format:check` i `npm run typecheck` przechodzą
+- [x] 5.2 `grep -c "TBD — see §3 Phase 2" context/foundation/test-plan.md` zwraca 0
 
 #### Manual
 
-- [ ] 5.3 §6.3 i §6.4 pozwalają dodać nowy test middleware albo własności bez czytania tego planu
-- [ ] 5.4 §6.6 nie przedstawia ryzyka #4 jako zamkniętego
+- [x] 5.3 §6.3 i §6.4 pozwalają dodać nowy test middleware albo własności bez czytania tego planu
+- [x] 5.4 §6.6 nie przedstawia ryzyka #4 jako zamkniętego

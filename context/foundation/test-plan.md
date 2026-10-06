@@ -172,11 +172,98 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 
 ### 6.3 Adding an ownership / access test
 
-- TBD — see §3 Phase 2 (wzorzec: dwa podmioty, obcy identyfikator przy każdym czasowniku).
+- **Lokalizacja i nazwa**: jak trasa w §6.2 — `tests/unit/<domena>-route.test.ts`
+  (`diary-entries-route.test.ts`, blok `DELETE /api/recipes/:id` w `recipes-route.test.ts`),
+  `/** @jest-environment node */`, handler importowany i wołany z ręcznie zbudowanym kontekstem
+  `{ request, params, locals: { supabase } }`.
+- **Zakres — tylko obrona w kodzie**: atrapa klienta Supabase widzi wyłącznie pierwszą warstwę
+  (filtr po `user_id` w trasie albo serwisie), nigdy RLS. Ten wzorzec dowodzi więc izolacji tylko
+  tam, gdzie broni *wyłącznie* kod — referencyjnie odwołanie do cudzego przepisu przy tworzeniu
+  wpisu (`source_recipe_id`): klucz obcy jest sprawdzany z pominięciem RLS, więc baza takiego wpisu
+  nie odrzuci. Tam, gdzie broni też polityka bazy, zielony test atrapy nie jest dowodem izolacji.
+- **Stanowa atrapa dwóch właścicieli**: tablica wierszy A i B w pliku; każde
+  `eq(kolumna, wartość)` filtruje zbiór, `delete()` usuwa tylko wiersze spełniające *każdy* filtr,
+  `insert()` dopisuje do rejestru (`inserted`). Atrapa obsługuje tylko łańcuchy, których trasa
+  faktycznie używa, a nieznaną tabelę kończy wyjątkiem. Stub odpowiadający „nie ma” na wszystko
+  jest tautologią — przeszedłby też po usunięciu filtra po użytkowniku.
+- **Przypadki (wyrocznia z wymagania, nie z kodu)**: B z identyfikatorem A → 404 z tym samym ciałem
+  co dla nieistniejącego identyfikatora (`999`) — cudzy i nieistniejący muszą być nieodróżnialne;
+  ciało odpowiedzi nie zawiera treści rekordu A; `user_id` A w ciele żądania nie zmienia podmiotu
+  (schemat wycina nieznane pola); wartość podana ręcznie nie omija sprawdzenia własności.
+- **Kontrola pozytywna** (obowiązkowa): ten sam łańcuch dla własnego rekordu B → 201/200, a zapis
+  idzie z `user_id` B przez prawdziwy kod (np. parser przepisu daje 250 kcal, `recipe_nutrition`).
+  Bez niej nie wiadomo, czy atrapa w ogóle cokolwiek znajduje.
+- **Stan po operacji, nie tylko status**: sprawdzaj rejestr insertów (`expect(inserted).toEqual([])`)
+  i zawartość tabeli atrapy (`ids()` → `[10, 20]` po DELETE B na rekordzie A) osobno od kodu
+  odpowiedzi. Status może kłamać — `DELETE /api/recipes/:id` na cudzym przepisie oddaje dziś 200, choć
+  wiersz zostaje (defekt D5 przypięty `test.failing`, `docs/reference/known-drift.md`, „Własność rekordów”).
+- **Kontrola wyroczni** (§6.1): usuń `.eq("user_id", …)` z odczytu albo DELETE i zobacz czerwień —
+  w tej fazie usunięcie filtra z odczytu własnego przepisu czerwieniło 4 testy, a z DELETE test stanu
+  wiersza A.
+- **Testy referencyjne**: `tests/unit/diary-entries-route.test.ts` (POST z obcym `source_recipe_id`,
+  atrapa `select/eq/maybeSingle` + rejestr insertów), `tests/unit/recipes-route.test.ts` blok
+  `DELETE /api/recipes/:id` (atrapa `delete/eq/then`, stan tabeli, dwa `test.failing` z wyrocznią 404).
+- **Uruchomienie**: `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts`.
+- **Nie wdrożone — dowód RLS**: izolacja tam, gdzie broni polityka bazy (GET/PATCH/DELETE wpisów,
+  cel dnia, preferencje), wymaga e2e na poziomie API z dwoma kontami: dwa konteksty Playwright
+  `request`, każdy zalogowany przez `POST /api/auth/login` z nagłówkiem `Origin` (`security.checkOrigin`),
+  B woła każdy czasownik z identyfikatorem A i dostaje 404 albo pustą listę, a stan A sprawdza się
+  z kontekstu A. Drugiego konta e2e nie ma (decyzja D4 planu `testing-session-and-access-boundaries`),
+  więc tego wzorca w repo jeszcze nie ma — dodaj go razem z drugim kontem.
 
 ### 6.4 Adding a middleware / session test
 
-- TBD — see §3 Phase 2 (wzorzec: wylogowanie kończy sesję; ścieżka publiczna vs chroniona).
+- **Lokalizacja**: decyzja dostępu i ciasteczka — `tests/unit/middleware.test.ts` (integracja
+  middleware pod Jest); klient wylogowania — `tests/unit/LogoutButton.test.tsx` (RTL); martwa sesja
+  po wylogowaniu — `tests/e2e/session-boundaries.spec.ts` (Playwright, prawdziwy Supabase).
+- **Szew middleware** (bez serwera Astro):
+  - `/** @jest-environment node */` — middleware i atrapa `redirect` budują `Response`.
+  - `jest.mock("astro:middleware", () => ({ defineMiddleware: (fn) => fn }), { virtual: true })` —
+    moduł wirtualny Vite, którego Jest nie rozwiąże; test woła `onRequest(context, next)` wprost.
+  - `jest.mock("@/db/supabase.client", …)` — alias rozwiązuje się do tego samego pliku, który
+    middleware importuje jako `../db/supabase.client.ts`, więc atrapa trafia w ten moduł. Atrapa
+    zwraca `{ supabase: { auth: { getUser, signOut, exchangeCodeForSession } }, flushCookies }`;
+    zmienne sięgane z fabryki mają prefiks `mock` (fabryka jest wynoszona ponad deklaracje).
+  - Kontekst budowany ręcznie: `{ locals, url, request, redirect }`, gdzie `redirect` to
+    `(path) => new Response(null, { status: 302, headers: { Location: path } })` — ten sam kształt
+    co w Astro 7, **bez kodowania** ścieżki, żeby atrapa pokazywała te same błędy co produkcja
+    (tak wyszedł defekt `ByteString` — `docs/reference/known-drift.md`, „Middleware”). `next` to
+    `jest.fn` zwracający 200 z rozpoznawalnym ciałem — po nim poznajesz przepuszczenie.
+- **Atrapa `flushCookies` behawioralna**: dopisuje do odpowiedzi znacznik
+  `Set-Cookie` i zwraca ją; test czyta nagłówek z odpowiedzi, którą zwrócił middleware. Sama asercja
+  „funkcja wywołana” przepuściłaby wyjście, które spłukuje ciasteczka na innej odpowiedzi
+  (`context/foundation/lessons.md`). Każde nowe wyjście z middleware dostaje przypadek ze znacznikiem.
+- **Wyrocznia zbioru ścieżek**: z wymagania (PRD: bez sesji tylko logowanie, rejestracja, reset,
+  weryfikacja) i z drzewa `src/pages/**` — test mapuje każdy plik strony/trasy na URL (`index` →
+  katalog, `[id]` → `1`); pliki z `src/pages/auth/` i `src/pages/api/auth/` mają przejść bez sesji,
+  wszystko inne dostać 302 na `/auth/login`. **Nigdy** z `PUBLIC_PATHS`: test nie importuje ani nie
+  przepisuje tej listy — asercja na jej zawartości byłaby tautologią. Strażnik mapowania: zbiór
+  z drzewa nie może być mniejszy niż przypadki z wymagania. Dokładne dopasowanie (`/auth/login/`,
+  `/Auth/Login`) → 302 bez pętli.
+- **Kontrakt API bez sesji**: trasa `/api/*` spoza auth dostaje **302 + `Location: /auth/login`**,
+  nie 401 (decyzja D2) — zarówno w teście middleware, jak i w e2e. `/api/health` też jest chroniona (D3).
+- **Klient wylogowania (RTL)**: `fetch` zamockowany na krawędzi, atrapa odpowiedzi `{ ok, status }`.
+  jsdom 26 pod Jest 30 nie pozwala przedefiniować `window.location` ani szpiegować
+  `location.replace` („Cannot redefine property”), więc test szpieguje `replace` na obiekcie
+  implementacji jsdom (symbol `impl`) — opisane w pliku; gdy jsdom to zmieni, czerwienieje zwykły test
+  sukcesu. Ekran logowania wolno pokazać tylko po potwierdzonym wylogowaniu (D1) — przypadki `!ok`
+  i błędu sieci są dziś `test.failing` (`known-drift.md`, „Wylogowanie”).
+- **Wzorzec e2e martwej sesji**: zaloguj się, zbierz `context.cookies()`; **kontrola pozytywna** —
+  te ciasteczka w świeżym `browser.newContext({ baseURL })` (baseURL jawnie) dają 200 na chronionej
+  stronie z `request.get(path, { maxRedirects: 0 })`; kliknij „Wyloguj” i poczekaj na
+  `POST /api/auth/logout` 200; te same ciasteczka w kolejnym świeżym kontekście → 302 na `/auth/login`
+  dla strony i dla trasy API, a `page.goto("/")` ląduje na `/auth/login`. Dowodem jest odpowiedź
+  serwera, nie zniknięcie ciasteczka z przeglądarki. Test czerwienieje przy `signOut({ scope: "others" })`
+  i przy pominięciu `signOut()` (zmierzone: krok po wylogowaniu dał 200); `scope: "local"` go **nie**
+  czerwieni — GoTrue i tak unieważnia bieżącą sesję. Wylogowanie jest globalne dla konta testowego,
+  więc spec nie dzieli sesji z innymi (`workers: 1`, każdy spec loguje się sam). Same GET — bez `Origin`.
+- **Kontrola wyroczni**: dopisanie `/diary` do `PUBLIC_PATHS` czerwieniło przypadki ścieżek chronionych,
+  zdjęcie `flushCookies` z przekierowania gościa — przypadek ze znacznikiem.
+- **Testy referencyjne**: `tests/unit/middleware.test.ts` (74 przypadki: ścieżki z wymagania, zbiór
+  z drzewa, dopasowanie dokładne, sesja, każde wyjście ze znacznikiem, defekt `ByteString` jako `it`
+  + `it.failing`), `tests/unit/LogoutButton.test.tsx`, `tests/e2e/session-boundaries.spec.ts`.
+- **Uruchomienie**: `npx jest tests/unit/middleware.test.ts tests/unit/LogoutButton.test.tsx`;
+  e2e `npm run test:e2e -- session-boundaries` (gdy port 3000 jest zajęty: `E2E_PORT=<wolny port>`).
 
 ### 6.5 Adding a boundary / preserved-data test
 
@@ -195,6 +282,19 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   ryzyko pozostaje częściowo otwarte.
 - „N oczekuje” rozstrzygnięte na korzyść obecnego tekstu: „Bez policzonych kalorii: N z M. Suma ich
   nie obejmuje.” spełnia FR-011 i jest przypięty w `tests/unit/DiaryDaySummary.test.tsx`.
+
+**§3 Phase 2 — Granice sesji i dostępu** (`testing-session-and-access-boundaries`, 2026-10-06):
+
+- §2 #4 pozostaje **częściowo otwarte**: dowiedziona jest tylko obrona w kodzie (cudzy przepis przy
+  tworzeniu wpisu, stan wiersza przy DELETE przepisu). Izolacja RLS dwoma kontami nie ma automatycznego
+  dowodu — drugiego konta e2e nie ma (D4), wzorzec opisany w §6.3 jako „Nie wdrożone”.
+- Trzy defekty przypięte `test.failing` i opisane w `docs/reference/known-drift.md`, bez naprawy:
+  wyjątek przy wymianie kodu weryfikacji daje 500 zamiast 302 (niezakodowany `Location`, „Middleware”),
+  DELETE cudzego albo nieistniejącego przepisu zgłasza 200 („Własność rekordów”), klient wylogowania
+  przekierowuje mimo `!ok` i błędu sieci („Wylogowanie”).
+- Runtime e2e na prawdziwym Supabase: po `signOut()` access token sprzed wylogowania **jest odrzucany**
+  (strona i API → 302 na `/auth/login`), więc §2 #3 po stronie serwera jest dowiedzione; pełne
+  `npm run test:e2e` lokalnie 13/13. Przebieg nowego speca w jobie `e2e-tests` w CI czeka na push.
 
 ## 7. What We Deliberately Don't Test
 

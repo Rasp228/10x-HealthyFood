@@ -21,7 +21,7 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 ### `flushCookies`
 
 - **Defined**: `src/db/supabase.client.ts` (returned from `createSupabaseServerInstance`)
-- **Used by**: every return path in `src/middleware/index.ts` — six `redirect()` calls and the
+- **Used by**: every return path in `src/middleware/index.ts` — five `redirect()` calls and the
   awaited `next()`.
 - **Breaks**: a return that skips it loses the rotated session cookie. No exception at the call
   site; the write lands after the response was sent and is logged, and the user appears signed out
