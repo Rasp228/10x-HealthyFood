@@ -567,25 +567,25 @@ Nie dotyczy: brak zmian schematu, zachowania i konfiguracji CI.
 
 #### Automated
 
-- [x] 3.1 `npx jest tests/unit/LogoutButton.test.tsx` przechodzi
-- [x] 3.2 Kontrola wyroczni: tymczasowe usunięcie `window.location.replace` z gałęzi sukcesu czerwieni test `it`; wycofane
-- [x] 3.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą
+- [x] 3.1 `npx jest tests/unit/LogoutButton.test.tsx` przechodzi — f614260
+- [x] 3.2 Kontrola wyroczni: tymczasowe usunięcie `window.location.replace` z gałęzi sukcesu czerwieni test `it`; wycofane — f614260
+- [x] 3.3 `npm run test`, `npm run lint` i `npm run typecheck` przechodzą — f614260
 
 #### Manual
 
-- [x] 3.4 Wpis w `known-drift.md` opisuje skutek dla użytkownika, nie tylko linię kodu
+- [x] 3.4 Wpis w `known-drift.md` opisuje skutek dla użytkownika, nie tylko linię kodu — f614260
 
 ### Phase 4: E2E — sesja po „Wyloguj” jest martwa na serwerze (#3)
 
 #### Automated
 
-- [ ] 4.1 `npx playwright test tests/e2e/session-boundaries.spec.ts` z `TEST_MODE=true` przechodzi lokalnie
-- [ ] 4.2 `npm run test:e2e` przechodzi w całości (pozostałe specy nie cierpią z powodu globalnego wylogowania)
-- [ ] 4.3 `npm run lint` i `npm run typecheck` przechodzą
+- [x] 4.1 `npx playwright test tests/e2e/session-boundaries.spec.ts` z `TEST_MODE=true` przechodzi lokalnie
+- [x] 4.2 `npm run test:e2e` przechodzi w całości (pozostałe specy nie cierpią z powodu globalnego wylogowania)
+- [x] 4.3 `npm run lint` i `npm run typecheck` przechodzą
 
 #### Manual
 
-- [ ] 4.4 Raport Playwrighta pokazuje 200 w kontroli pozytywnej i 302 po wylogowaniu dla obu adresów
+- [x] 4.4 Raport Playwrighta pokazuje 200 w kontroli pozytywnej i 302 po wylogowaniu dla obu adresów
 - [ ] 4.5 Job `e2e-tests` w CI przechodzi z nowym specem (po pushu użytkownika)
 
 ### Phase 5: Cookbook §6.3/§6.4, notatki fazy i dryf dokumentacji
