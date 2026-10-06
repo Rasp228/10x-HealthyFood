@@ -130,12 +130,19 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Note**: `format:check` is `prettier --check .`. Never gate on `npm run format -- --check`, which
   expands to `prettier --write . --check`, writes fixes and exits 0.
 
-### `GHSA-9wv6-86v2-598j`
+### `GHSA-9wv6-86v2-598j`, `GHSA-vfj7-8cjw-p6xm`, `GHSA-hp3w-g68c-fv3c`
 
-- **Declared**: the `allowlist` in `audit-ci.jsonc`, with the reasoning inline. The advisory is a
-  transitive `path-to-regexp` pulled in by `@astrojs/vercel`; the same file carries the `moderate`
-  failure threshold.
-- **Contract**: one allowlisted advisory, reviewed on every `@astrojs/vercel` bump. A second entry
-  needs the same kind of inline comment, or the allowlist stops being reviewable.
-- **Breaks**: `npm audit fix --force` proposes `@astrojs/vercel@8.0.4` to clear it — a major
-  downgrade that drops the `x-astro-path` patch and forces a return to Astro 5. Do not take it.
+- **Declared**: the `allowlist` in `audit-ci.jsonc`, with the reasoning inline; the same file
+  carries the `moderate` failure threshold.
+  - `GHSA-9wv6-86v2-598j`: transitive `path-to-regexp` pulled in by `@astrojs/vercel`.
+  - `GHSA-vfj7-8cjw-p6xm`: `braces` via `eslint-plugin-astro` (dev only). No patched release.
+  - `GHSA-hp3w-g68c-fv3c`: `sprintf-js` via Jest's coverage chain (dev only). No patched release.
+- **Contract**: every entry has an inline comment naming its source and its review trigger — an
+  `@astrojs/vercel` bump; an `eslint-plugin-astro` bump or a `braces` release above 3.0.3; a
+  `jest` / `ts-jest` bump. A new entry needs the same kind of comment, or the allowlist stops
+  being reviewable.
+- **Breaks**: `npm audit fix --force` proposes a downgrade for each, and none should be taken:
+  - `@astrojs/vercel@8.0.4`, a major downgrade that drops the `x-astro-path` patch and forces a
+    return to Astro 5;
+  - `eslint-plugin-astro@1.5.0`;
+  - `ts-jest@29.1.2`.

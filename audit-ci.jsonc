@@ -10,5 +10,18 @@
   // a `npm audit fix --force` proponuje cofnięcie do @astrojs/vercel@8.0.4, co zabrałoby
   // łatkę CVE `x-astro-path` i wymusiłoby powrót do Astro 5. Przeglądać przy każdym
   // bumpie @astrojs/vercel. Stan na 2026-09-18.
-  "allowlist": ["GHSA-9wv6-86v2-598j"]
+  //
+  // GHSA-vfj7-8cjw-p6xm (braces, high) przychodzi tylko w narzędziach deweloperskich:
+  // eslint-plugin-astro > astro-eslint-parser > fast-glob > micromatch > braces. Advisory obejmuje
+  // <=3.0.3, a 3.0.3 to najnowsza wersja - łatki nie ma. `npm audit fix --force` proponuje
+  // cofnięcie do eslint-plugin-astro@1.5.0 (major w dół). Do zbudowanej aplikacji nie trafia.
+  // Przeglądać przy każdym bumpie eslint-plugin-astro i przy wydaniu braces > 3.0.3.
+  // Stan na 2026-10-06.
+  //
+  // GHSA-hp3w-g68c-fv3c (sprintf-js, moderate) przychodzi tylko w łańcuchu pokrycia Jest:
+  // @jest/transform > babel-plugin-istanbul > @istanbuljs/load-nyc-config > js-yaml > argparse >
+  // sprintf-js. Advisory obejmuje <=1.1.3, a 1.1.3 to najnowsza wersja - łatki nie ma.
+  // `npm audit fix --force` proponuje cofnięcie do ts-jest@29.1.2. Do zbudowanej aplikacji nie
+  // trafia. Przeglądać przy każdym bumpie jest / ts-jest. Stan na 2026-10-06.
+  "allowlist": ["GHSA-9wv6-86v2-598j", "GHSA-vfj7-8cjw-p6xm", "GHSA-hp3w-g68c-fv3c"]
 }
