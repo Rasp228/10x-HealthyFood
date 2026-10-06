@@ -272,12 +272,14 @@ describe("middleware - każde wyjście niesie ciasteczka sesji", () => {
   });
 
   /**
-   * `test.failing` celowo: gałąź `catch` przekierowuje na `/auth/verify?error=Wystąpił błąd…`
-   * z niezakodowanym tekstem, a `Location` z „ą” (kod 261) nie przechodzi przez `Headers` -
-   * `TypeError: Cannot convert argument to a ByteString`. Zamiast 302 z ciasteczkami użytkownik
-   * dostaje 500. Ten sam konstruktor stoi w `redirect` Astro, więc to nie artefakt atrapy.
-   * Po zakodowaniu komunikatu w middleware (`encodeURIComponent`, jak w pozostałych gałęziach)
-   * test zrobi się czerwony - wtedy zamień go na zwykłe `it`.
+   * Znany defekt (`docs/reference/known-drift.md`, „Middleware”): gałąź `catch` przekierowuje na
+   * `/auth/verify?error=Wystąpił błąd…` z niezakodowanym tekstem, a `Location` z „ą” (kod 261) nie
+   * przechodzi przez `Headers` - `TypeError: Cannot convert argument to a ByteString`. Zamiast 302
+   * z ciasteczkami użytkownik dostaje 500. Ten sam konstruktor stoi w `redirect` Astro, więc to nie
+   * artefakt atrapy.
+   *
+   * Ten `it` przypina **obecne zachowanie**. Po zakodowaniu komunikatu w middleware
+   * (`encodeURIComponent`, jak w pozostałych gałęziach) zrobi się czerwony - wtedy go usuń.
    */
   it("wyjątek przy wymianie kodu dziś wywraca przekierowanie na niezakodowanym Location (obecne zachowanie)", async () => {
     mockExchangeCodeForSession.mockRejectedValue(new Error("sieć"));
@@ -285,6 +287,10 @@ describe("middleware - każde wyjście niesie ciasteczka sesji", () => {
     await expect(runMiddleware("/auth/verify?code=abc")).rejects.toThrow(/ByteString/);
   });
 
+  /**
+   * `it.failing` celowo: **wyrocznia** dla tego samego wyjścia - 302 na `/auth/verify?error=…`
+   * z ciasteczkami. Po naprawie zrobi się czerwony - wtedy zamień go na zwykłe `it`.
+   */
   it.failing("wyjątek przy wymianie kodu przekierowuje z błędem, z ciasteczkami", async () => {
     mockExchangeCodeForSession.mockRejectedValue(new Error("sieć"));
 

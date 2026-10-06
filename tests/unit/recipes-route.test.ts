@@ -118,7 +118,9 @@ describe("DELETE /api/recipes/:id", () => {
    * Stanowa atrapa z wierszami dwóch właścicieli. Budowniczy z `GET` wyżej tylko zapisuje
    * wywołania; tu `delete()` usuwa wyłącznie wiersze spełniające KAŻDY filtr `eq`, a łańcuch
    * rozwiązuje się przy `await` - tak jak `.delete().eq("id", …).eq("user_id", …)` w trasie.
-   * Bez `select()` PostgREST nie oddaje usuniętych wierszy, więc atrapa zwraca `data: null`.
+   * Bez `select()` PostgREST nie oddaje usuniętych wierszy, więc atrapa zwraca `data: null`;
+   * z `select()` oddaje usunięte wiersze - tak jak trasa po naprawie z `known-drift.md`. Dzięki temu
+   * wyrocznie `test.failing` niżej przełączą się na czerwone właśnie wtedy, a nie na 500.
    */
   const createSupabase = (userId: string) => ({
     auth: { getUser: async () => ({ data: { user: { id: userId, email: `${userId}@example.com` } } }) },
@@ -129,6 +131,7 @@ describe("DELETE /api/recipes/:id", () => {
 
       const filters: [string, unknown][] = [];
       let deleting = false;
+      let returning = false;
       const query = {
         delete: () => {
           deleting = true;
@@ -138,11 +141,17 @@ describe("DELETE /api/recipes/:id", () => {
           filters.push([column, value]);
           return query;
         },
+        select: () => {
+          returning = true;
+          return query;
+        },
         then: (resolve: (value: unknown) => unknown) => {
+          const matches = (row: Row) => filters.every(([column, value]) => row[column] === value);
+          const deleted = deleting ? recipes.filter(matches) : [];
           if (deleting) {
-            recipes = recipes.filter((row) => !filters.every(([column, value]) => row[column] === value));
+            recipes = recipes.filter((row) => !matches(row));
           }
-          return resolve({ data: null, error: null });
+          return resolve({ data: returning ? deleted : null, error: null });
         },
       };
       return query;

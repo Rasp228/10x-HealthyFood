@@ -198,7 +198,7 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   odpowiedzi. Status może kłamać — `DELETE /api/recipes/:id` na cudzym przepisie oddaje dziś 200, choć
   wiersz zostaje (defekt D5 przypięty `test.failing`, `docs/reference/known-drift.md`, „Własność rekordów”).
 - **Kontrola wyroczni** (§6.1): usuń `.eq("user_id", …)` z odczytu albo DELETE i zobacz czerwień —
-  w tej fazie usunięcie filtra z odczytu własnego przepisu czerwieniło 4 testy, a z DELETE test stanu
+  w tej fazie usunięcie filtra z odczytu własnego przepisu czerwieni 5 testów, a z DELETE test stanu
   wiersza A.
 - **Testy referencyjne**: `tests/unit/diary-entries-route.test.ts` (POST z obcym `source_recipe_id`,
   atrapa `select/eq/maybeSingle` + rejestr insertów), `tests/unit/recipes-route.test.ts` blok
@@ -251,12 +251,17 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 - **Wzorzec e2e martwej sesji**: zaloguj się, zbierz `context.cookies()`; **kontrola pozytywna** —
   te ciasteczka w świeżym `browser.newContext({ baseURL })` (baseURL jawnie) dają 200 na chronionej
   stronie z `request.get(path, { maxRedirects: 0 })`; kliknij „Wyloguj” i poczekaj na
-  `POST /api/auth/logout` 200; te same ciasteczka w kolejnym świeżym kontekście → 302 na `/auth/login`
-  dla strony i dla trasy API, a `page.goto("/")` ląduje na `/auth/login`. Dowodem jest odpowiedź
+  `POST /api/auth/logout` 200; te same ciasteczka → 302 na `/auth/login` dla strony i dla trasy API,
+  a `page.goto("/")` ląduje na `/auth/login` — **każde sprawdzenie w osobnym świeżym kontekście**,
+  bo pierwsza odpowiedź 302 zapisuje do słoika kontekstu ciasteczka kasujące i kolejne żądanie
+  przeszłoby już bez odtworzonej sesji. Dowodem jest odpowiedź
   serwera, nie zniknięcie ciasteczka z przeglądarki. Test czerwienieje przy `signOut({ scope: "others" })`
   i przy pominięciu `signOut()` (zmierzone: krok po wylogowaniu dał 200); `scope: "local"` go **nie**
   czerwieni — GoTrue i tak unieważnia bieżącą sesję. Wylogowanie jest globalne dla konta testowego,
-  więc spec nie dzieli sesji z innymi (`workers: 1`, każdy spec loguje się sam). Same GET — bez `Origin`.
+  więc spec nie dzieli sesji z innymi (`workers: 1`, każdy spec loguje się sam). `workers: 1` nie
+  chroni jednak równoległych przebiegów na tym samym koncie (CI z różnych gałęzi, lokalne `test:e2e`
+  na `integration`): ten spec może je wylogować w połowie testu. Trwała naprawa — osobne konto dla
+  speca — czeka jako follow-up. Same GET — bez `Origin`.
 - **Kontrola wyroczni**: dopisanie `/diary` do `PUBLIC_PATHS` czerwieniło przypadki ścieżek chronionych,
   zdjęcie `flushCookies` z przekierowania gościa — przypadek ze znacznikiem.
 - **Testy referencyjne**: `tests/unit/middleware.test.ts` (74 przypadki: ścieżki z wymagania, zbiór

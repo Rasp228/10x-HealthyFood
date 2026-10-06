@@ -109,6 +109,9 @@ describe("POST /api/diary-entries - przepis innego użytkownika", () => {
   it("odpowiedź na przepis A nie zdradza jego treści", async () => {
     const response = await POST(requestContext(entryFromRecipe(10)));
 
+    // Bez statusu ta asercja nie mogłaby się zaczerwienić: trasa nigdy nie oddaje treści przepisu,
+    // więc po usunięciu filtra `user_id` dałaby 201 bez „Tajny przepis A”.
+    expect(response.status).toBe(404);
     await expect(response.text()).resolves.not.toContain("Tajny przepis A");
   });
 

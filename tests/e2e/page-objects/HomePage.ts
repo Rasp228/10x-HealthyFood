@@ -1,4 +1,4 @@
-import { type Page, type Locator, expect } from "@playwright/test";
+import { type Page, type Locator, type Response, expect } from "@playwright/test";
 
 export class HomePage {
   readonly page: Page;
@@ -13,6 +13,7 @@ export class HomePage {
   readonly emptyRecipesState: Locator;
   readonly emptyStateActionButton: Locator;
   readonly recipesGrid: Locator;
+  readonly logoutButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -27,6 +28,8 @@ export class HomePage {
     this.emptyRecipesState = page.getByTestId("empty-recipes-state");
     this.emptyStateActionButton = page.getByTestId("empty-state-action-button");
     this.recipesGrid = page.getByTestId("recipes-grid");
+    // Przycisk z `TopNav.astro` - obsługuje go niewidoczna wyspa `common/LogoutButton.tsx`
+    this.logoutButton = page.locator("#logout-button");
   }
 
   async goto() {
@@ -100,6 +103,21 @@ export class HomePage {
   async waitForSearchResults() {
     // Czeka na zaladowanie wyników wyszukiwania (debounce)
     await this.page.waitForTimeout(600); // 500ms debounce + buffer
+  }
+
+  /**
+   * Klika „Wyloguj”, czeka na `POST /api/auth/logout` i na ekran logowania. Zwraca odpowiedź
+   * serwera, bo samo przekierowanie niczego nie dowodzi - klient przekierowuje także po porażce
+   * (`docs/reference/known-drift.md`, „Wylogowanie”).
+   */
+  async logout(): Promise<Response> {
+    const logoutResponsePromise = this.page.waitForResponse(
+      (response) => response.url().endsWith("/api/auth/logout") && response.request().method() === "POST"
+    );
+    await this.logoutButton.click();
+    const logoutResponse = await logoutResponsePromise;
+    await this.page.waitForURL("**/auth/login");
+    return logoutResponse;
   }
 
   async getRecipeCount(): Promise<number> {
