@@ -30,11 +30,14 @@ Schemas belong in `src/lib/validations/<domain>/<action>.ts`, following
 `src/lib/validations/auth/login.ts`. Still declaring them inline:
 
 - `src/pages/api/ai/generate-recipe.ts`, `modify-recipe.ts`, `save-recipe.ts`
-- `src/pages/api/recipes/index.ts`, `[id].ts`
-- `src/pages/api/preferences/index.ts`, `[id].ts`
 - `src/pages/api/auth/update-password.ts`
 
-Only `login`, `register` and `reset-password` have been extracted so far.
+Extracted so far: `auth/` (`login`, `register`, `reset-password`), `diary/`, `user-settings/`,
+`recipe/` (`list-recipes`, and since change `testing-protected-data-and-limits` `create-recipe` and
+`update-recipe`) and `preferences/` (`upsert-preference`, `list-preferences`, same change), plus
+the shared path-id schema in `common/id.ts`. The
+preferences and `/api/recipes` routes now validate with `safeParse` + `zodIssues` and answer 400;
+they still query Supabase from the handler (see "Services" above).
 
 ## Components
 
@@ -149,6 +152,99 @@ i usuń ten wpis.
 Odłożone świadomie (przegląd wdrożenia `recipe-entry-with-portions`, ustalenie F2, decyzja
 SKIPPED; plan `testing-diary-value-integrity`, „What We're NOT Doing”): faza testów przypina
 wyrocznię, nie zmienia zachowania parsera.
+
+### Przyszła data wpisu przechodzi przez serwer
+
+`entryDateSchema` (`src/lib/validations/diary/create-entry.ts`) sprawdza tylko kształt `RRRR-MM-DD`
+i to, że dzień istnieje w kalendarzu. Reguły „nie z przyszłości” nie ma, więc
+`POST /api/diary-entries` z `entry_date: "2999-01-01"` zapisuje wpis z 201, a
+`PATCH /api/diary-entries/:id` przyjmuje taką datę tak samo. Przyszłość blokuje wyłącznie
+przeglądarka: `useSelectedDay` (`src/hooks/diary/useSelectedDay.ts`) zamienia dzień z przyszłości
+w `?date=` na dzisiejszy, a modal edycji ma `max={today}` i własne sprawdzenie
+(`src/components/diary/DiaryEntryEditModal.tsx`). Żądanie spoza przeglądarki (`curl`, skrypt)
+zapisze więc wpis na dowolny istniejący dzień — a skoro widok dziennika nie otworzy dnia
+z przyszłości, użytkownik nie zobaczy go ani nie usunie z UI, dopóki ten dzień nie nadejdzie.
+Reguła „klient blokuje, więc serwer też” (ryzyko #6 test-planu) jest tu świadomie fałszywa.
+
+Kierunek naprawy: reguła przyszłej daty na serwerze wymaga najpierw decyzji, czyje „dzisiaj”
+obowiązuje — serwer nie zna strefy czasowej użytkownika, a wpis tuż po północy w Polsce jest dla
+serwera w UTC jeszcze wczorajszy. Reguła musi więc albo dostać strefę od klienta, albo zostawić
+zapas jednego dnia ponad dzisiejszą datę UTC — tego wyboru archiwum nie rozstrzygnęło.
+
+Zachowanie przypina test „przyszła data 2999-01-01 → 201 (obecne zachowanie — luka zaakceptowana)”
+w `tests/unit/diary-entries-route.test.ts` (blok „POST /api/diary-entries - granice pól”); PATCH
+przypięty nie jest. Gdy serwer dostanie regułę, test zrobi się czerwony — zamień go wtedy na
+oczekiwanie 400 i usuń ten wpis.
+
+Przyjęte świadomie (plan `manual-diary-entry`, „Open Risks & Assumptions”: bez decyzji o strefie
+czasowej na serwerze; podtrzymane w planie `edit-and-delete-entry` dla PATCH i w planie
+`testing-protected-data-and-limits`, „What We're NOT Doing”: luka zostaje, tylko przypięta
+i opisana).
+
+## Przepisy
+
+### Sufit tytułu: 100 w UI i w `save-recipe`, 255 w `/api/recipes` i w bazie
+
+Kolumna `recipes.title` to `varchar(255)`
+(`supabase/migrations/20250427130913_healthymeal_schema.sql`). Od zmiany
+`testing-protected-data-and-limits` `POST /api/recipes` i `PUT /api/recipes/:id` pilnują tego
+literału (`src/lib/validations/recipe/create-recipe.ts`, `max(255)`), więc tytuł 256-znakowy daje
+400, a nie 500 z bazy. Formularz przepisu (`src/components/recipe/RecipeFormModal.tsx`) i trasa
+zapisu przepisu z AI (`src/pages/api/ai/save-recipe.ts`) mają jednak własne, inline schematy
+z `max(100)`. Ten sam tytuł 150-znakowy przechodzi więc przez `/api/recipes` (np. `curl`), a przez
+formularz i `save-recipe` dostaje błąd; po zapisie formularz edycji go nie przyjmie, dopóki
+użytkownik nie skróci tytułu. Treść i `additional_params` mają na obu ścieżkach ten sam sufit 5000.
+
+Kierunek zbieżności: jeden `recipeTitleSchema` w `src/lib/validations/recipe/` dla wszystkich trzech
+miejsc. Plan wybrał 255 jako wyrocznię serwera, bo chroni przed 500 bez migracji; zrównanie
+w dół (100 wszędzie) wymaga sprawdzenia, czy w bazie są już dłuższe tytuły, bo inaczej ich edycja
+skończy się 400. Przy okazji `save-recipe.ts` wypadnie z listy „Routes with inline Zod schemas”.
+
+Przyjęte świadomie (plan `testing-protected-data-and-limits`, „What We're NOT Doing”: bez zmian
+w sufitach UI; research tej zmiany, Open Question 4).
+
+### `GET /api/recipes` oddaje przy 500 treść błędu w `details`
+
+Od zmiany `testing-protected-data-and-limits` każde 500 tras preferencji oraz `POST /api/recipes`
+i `GET`/`PUT`/`DELETE /api/recipes/:id` ma stałe ciało `{ error: "Błąd wewnętrzny serwera" }`,
+a pełny błąd idzie do `console.error`. Wyjątkiem jest `GET /api/recipes` (lista,
+`src/pages/api/recipes/index.ts`): gałąź `catch` odsyła `details: error.message` i niczego nie
+loguje. Komunikat PostgREST trafia więc do przeglądarki razem z nazwami kolumn i ograniczeń,
+a w logu serwera nie zostaje ślad awarii.
+
+Kierunek naprawy: to samo stałe ciało i `console.error("Error fetching recipes:", error)` co
+w `POST` tego pliku. Test na wzór przypadku „awaria bazy przy insercie → 500 ze stałym ciałem”
+w `tests/unit/recipes-route.test.ts`. Testu, który przypina obecne zachowanie, nie ma.
+
+Odłożone świadomie (plan `testing-protected-data-and-limits`, faza 4: „GET listy … bez zmian”).
+Ten sam kształt mają `GET` i `POST /api/diary-entries`, wyłączone z tej zmiany osobno, bo na złe
+wejście dają już 400.
+
+## Preferencje
+
+### Konflikt preferencji w `/profile` pokazuje się jako błąd pola albo ogólny toast
+
+Trasy preferencji dają od zmiany `testing-protected-data-and-limits` 409
+`{ error: "Taka preferencja już istnieje" }` dla duplikatu, a 400 `"Nieprawidłowe dane wejściowe"`
+dla wartości z samych spacji. `src/components/profile/ProfilePage.tsx` nie pokazuje tych odpowiedzi
+w toaście:
+
+- dodanie duplikatu kończy się komunikatem serwera w linii pod polem (`role="alert"`), nie toastem;
+- edycja, która trafia na 409, pokazuje ogólny toast „Błąd podczas aktualizacji preferencji”;
+  tekst z serwera widać tylko w linii pod polem edycji (`src/components/profile/PreferenceChip.tsx`);
+- schemat przeglądarkowy (`preferenceSchema`) nie trimuje, więc `"   "` przechodzi klienta,
+  odrzuca je dopiero serwer, a użytkownik widzi w linii ogólne „Nieprawidłowe dane wejściowe”
+  zamiast komunikatu o wymaganej wartości.
+
+Dane są bezpieczne w każdym z tych przypadków — przy 400 i 409 nic się nie zapisuje (przypięte
+w `tests/unit/preferences-route.test.ts`) — chodzi tylko o to, co użytkownik czyta.
+
+Kierunek naprawy: `.trim()` w `preferenceSchema` przed `min(1)` (albo import
+`preferenceValueSchema` z `src/lib/validations/preferences/upsert-preference.ts`) i toast
+z `err.message` w `handleUpdatePreference`. Testu, który przypina obecne zachowanie klienta, nie ma.
+
+Przyjęte świadomie (plan `testing-protected-data-and-limits`, faza 3, test ręczny: błąd w linii
+uznany za wystarczający, klient bez zmian).
 
 ## Prymitywy UI
 

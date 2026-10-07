@@ -57,6 +57,24 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Note**: Zod is v4 — read failures from `err.issues`. `ZodError.errors` does not exist, so
   `"errors" in err` returns `false` and a guard against it silently skips its branch.
 
+### `MAX_INT4_ID` / `positiveIdParamSchema`
+
+- **Defined**: `src/lib/validations/common/id.ts` — `MAX_INT4_ID = 2147483647`, the top of
+  Postgres `integer` / `serial` (int4).
+- **Used by**: `positiveIdParamSchema` (path ids: `entryIdSchema` in
+  `src/lib/validations/diary/update-entry.ts`, the id schemas of `src/pages/api/preferences/[id].ts`
+  and `src/pages/api/recipes/[id].ts`) and `source_recipe_id` in
+  `src/lib/validations/diary/create-entry.ts`.
+- **Contract**: a path id is a string of digits in `1..MAX_INT4_ID`; anything else is a 400 before
+  the query runs. Every `id` column it guards is `serial`, and `diary_entries.source_recipe_id` is
+  `integer` (migrations under Tables below).
+- **Breaks**: the constant mirrors a column type, not a business rule. Widening a guarded column
+  to `bigint` / `bigserial` without raising it rejects real ids with 400. Dropping the ceiling, or
+  routing a new id through `parseInt`, lets a value above int4 reach PostgREST, which rejects it
+  with a range error, and the route answers 500 instead of 400; `parseInt` also reads `"12abc"`
+  as 12. Covered by the `2147483647` / `2147483648` cases in
+  `tests/unit/diary-validations.test.ts` and the diary, preferences and recipes route tests.
+
 ## Database
 
 ### Tables — `preferences`, `recipes`, `logs`, `diary_entries`, `user_settings`
@@ -80,7 +98,18 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
   is duplicated in `src/lib/validations/user-settings/update-goal.ts`; changing one without the
   other lets the route accept a value the database rejects (a 500 instead of a 400), or the
   reverse. The goal deliberately does not live in `preferences`: every preference row is sent to
-  the recipe prompt.
+  the recipe prompt. The same duplication holds for `preferences` and `recipes`: the column
+  `value varchar(50)` with `char_length <= 50` is repeated in
+  `src/lib/validations/preferences/upsert-preference.ts` (after `trim()`), and `title varchar(255)`,
+  `content` and `additional_params` `char_length <= 5000` in
+  `src/lib/validations/recipe/create-recipe.ts` (shared by `update-recipe.ts`). Changing a migration
+  literal without its schema, or the reverse, turns a 400 into a 500 or rejects what the database
+  would store. The UI and `/api/ai/save-recipe` cap the title at 100, not 255 — a known divergence
+  (@docs/reference/known-drift.md, "Przepisy"). The `preferences_unique_user_category_value`
+  constraint on `(user_id, category, value)` surfaces from the preferences routes as 409 via
+  Postgres code `23505`; dropping the constraint silently turns a 409 back into a second, identical
+  row. Boundary and "+1" cases for all of these are in `tests/unit/preferences-route.test.ts` and
+  `tests/unit/recipes-route.test.ts`.
 
 ### Enums — `action_type_enum`, `preference_category_enum`, `calorie_origin_enum`
 

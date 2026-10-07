@@ -272,7 +272,58 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 
 ### 6.5 Adding a boundary / preserved-data test
 
-- TBD — see §3 Phase 3 (wzorzec: granica limitu i o jeden dalej → 400; stan preferencji po operacji).
+- **Lokalizacja**: jak trasa w §6.2 — `tests/unit/<domena>-route.test.ts`, `/** @jest-environment node */`,
+  handler importowany i wołany z ręcznie zbudowanym kontekstem `{ request, params, url, locals: { supabase } }`.
+  Zachowanie danych między tabelami: `tests/unit/protected-data.test.ts`; granice preferencji:
+  `tests/unit/preferences-route.test.ts`; granice przepisów: blok „zapis przepisów - sufity bazy na
+  serwerze” w `tests/unit/recipes-route.test.ts`.
+- **Atrapa bazy**: `createSupabaseTables({ userId, tables, unique })` z `tests/helpers/supabase-tables.ts`
+  zwraca `{ supabase, tables, snapshot() }`. Trasy i serwisy zostają **prawdziwe** — podmieniona jest
+  tylko warstwa bazy (i, jak w §6.2, krawędź dostawcy modelu). Atrapa wykonuje łańcuchy `select`
+  (także `count: "exact"`), `insert`, `upsert`, `update`, `delete` z filtrami `eq`/`is`; `update`
+  i `delete` trafiają tylko w wiersze spełniające *każdy* filtr, `single()` bez trafienia daje
+  `PGRST116`, nieznana tabela albo metoda kończy się wyjątkiem. Import ścieżką względną
+  (`../helpers/supabase-tables`) — Jest nie ma aliasu `@tests`. Nowy łańcuch w trasie = nowa metoda
+  w atrapie, nie stub „zawsze pusto”.
+- **Czego atrapa nie dowodzi**: RLS, kluczy obcych (`on delete set null` przy usunięciu przepisu),
+  CHECK-ów i wartości domyślnych kolumn — celowo ich nie udaje, bo wtedy test dowodziłby atrapy.
+  Jedyny wyjątek to deklaracja `unique` jako odwzorowanie literału migracji (kolizja → `{ code: "23505" }`,
+  trasa → 409). Gwarancja oparta na bazie potrzebuje innej warstwy (e2e albo SQL, §7); zapisz to
+  w komentarzu testu, jak w przypadku DELETE przepisu w `protected-data.test.ts`.
+- **Zachowanie danych (#5)**: seed z wierszami **dwóch** użytkowników w każdej tabeli, a u A co
+  najmniej dwa wiersze, które filtr musi rozróżnić (dwie preferencje tej samej kategorii) — sam filtr
+  po `user_id` nie może wystarczyć do zielonego testu. `const before = db.snapshot()`, operacja,
+  `after = db.snapshot()`, potem:
+  - tabele chronione głęboko równe migawce — `expect({ [name]: after[name] }).toEqual({ [name]: before[name] })`,
+    żeby różnica w raporcie Jest nazywała tabelę;
+  - **kontrola pozytywna** (obowiązkowa): tabela docelowa faktycznie się zmieniła — usunięty wiersz
+    zniknął, a reszta jest równa `before` bez niego (`withoutIds`), nowy wpis ma wartość policzoną
+    przez prawdziwy parser. Bez niej zielony test przeszedłby też dla atrapy, która nic nie zapisuje.
+- **Granica i krok dalej (#6)**: wyrocznią jest literał migracji albo zapisana decyzja produktowa,
+  w stałej z komentarzem (`VALUE_MAX = 50` — `value varchar(50)`, `INT4_MAX = 2147483647` — `id serial`),
+  nigdy wartość odczytana ze schematu pod testem. Sparametryzowane `it.each` — na granicy → 201/200
+  i zapis (dla tekstu co do znaku), o krok dalej → 400 z `details` w kształcie `ValidationIssue`
+  wskazującym pole (`[{ path: "value", message: expect.any(String) }]`) **i brak zapisu**
+  (`expect(db.snapshot()).toEqual(before)` albo pusty rejestr insertów). Status bez sprawdzenia stanu
+  nie wystarcza. Dla każdej trasy także: ciało nie-JSON → 400; identyfikator `"12abc"`, `"0"`
+  i `2147483648` → 400, a `2147483647` przechodzi schemat (dalej 404 dla nieistniejącego); duplikat
+  → 409 z tabelą bez zmian; awaria bazy → 500 ze stałym ciałem, `response.text()` bez treści błędu
+  atrapy, pełny błąd w `console.error` (atrapa podmienia jedną metodę łańcucha przez `Object.assign`).
+- **Luka zaakceptowana**: reguła, której serwer świadomie nie ma (przyszła data), dostaje zwykły `it`
+  z obecnym zachowaniem i nazwą kończącą się „(obecne zachowanie — luka zaakceptowana)” oraz wpis
+  w `docs/reference/known-drift.md`; to nie `test.failing`, bo nie ma wyroczni „400”, tylko decyzja.
+- **Duplikaty limitów**: limit trzymany w schemacie i w migracji jest zarejestrowany
+  w `docs/reference/contract-surfaces.md` („Database”, „Validation” — `MAX_INT4_ID`). Nowy limit =
+  stała w schemacie z komentarzem wskazującym literał migracji + wpis tam + para przypadków tutaj.
+- **Kontrola wyroczni** (§6.1): usunięcie `.eq("id", …)` z DELETE preferencji czerwieni test
+  zachowania danych, a usunięcie `.max(255)` / `.max(MAX_INT4_ID)` albo powrót do `.parse()` — test
+  „krok dalej”.
+- **Testy referencyjne**: `tests/unit/protected-data.test.ts` (cel, dziennik, wycena, DELETE
+  preferencji i przepisu na jednej atrapie czterech tabel), `tests/unit/preferences-route.test.ts`
+  (pełny zestaw granic jednej domeny), `tests/unit/diary-entries-route.test.ts` blok „granice pól”
+  (wariant z rejestrem insertów zamiast `snapshot()`).
+- **Uruchomienie**: `npx jest tests/unit/protected-data.test.ts tests/unit/preferences-route.test.ts tests/unit/recipes-route.test.ts`;
+  cała suita `npm run test`.
 
 ### 6.6 Per-rollout-phase notes
 
@@ -300,6 +351,19 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 - Runtime e2e na prawdziwym Supabase: po `signOut()` access token sprzed wylogowania **jest odrzucany**
   (strona i API → 302 na `/auth/login`), więc §2 #3 po stronie serwera jest dowiedzione; pełne
   `npm run test:e2e` lokalnie 13/13. Przebieg nowego speca w jobie `e2e-tests` w CI czeka na push.
+
+**§3 Phase 3 — Dane chronione i twarde limity** (`testing-protected-data-and-limits`, 2026-10-07):
+
+- Pierwsza faza, która **naprawia** zamiast przypinać: preferencje i `/api/recipes` POST/PUT dawały
+  500 na złe wejście (`.parse()`, brak sufitów bazy, ciało nie-JSON, duplikat), teraz 400/409 ze
+  schematem w `src/lib/validations/`; każda poprawka weszła z testem, który bez niej czerwienieje.
+  Uboczna zmiana kontraktu: `GET /api/preferences` wymaga całkowitych `limit`/`offset` (`1.5` → 400).
+- §2 #5 dowiedzione na poziomie kodu (żadna operacja celu ani dziennika nie zmienia `preferences`
+  i `recipes`); zachowanie wpisów po usunięciu przepisu (`on delete set null`) zostaje bez
+  automatycznego dowodu — to gwarancja bazy, której atrapa nie widzi.
+- §2 #6 ma trzy opisane luki w `docs/reference/known-drift.md` zamiast poprawek: przyszła data
+  (przypięta jako 201), tytuł przepisu 100 ↔ 255 i 500 z `details` w `GET /api/recipes` (lista);
+  do tego komunikaty konfliktu preferencji w `/profile` („Preferencje”).
 
 ## 7. What We Deliberately Don't Test
 

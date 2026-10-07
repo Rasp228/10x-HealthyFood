@@ -543,24 +543,24 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 
 #### Automated
 
-- [x] 4.1 Testy przechodzą: `npx jest tests/unit/recipes-route.test.ts tests/unit/protected-data.test.ts`
-- [x] 4.2 Cała suita przechodzi, `test.failing` D5 nadal oczekiwane
-- [x] 4.3 Typy: `npm run typecheck` — 0 błędów
-- [x] 4.4 Lint: `npm run lint`
+- [x] 4.1 Testy przechodzą: `npx jest tests/unit/recipes-route.test.ts tests/unit/protected-data.test.ts` — 0f798db
+- [x] 4.2 Cała suita przechodzi, `test.failing` D5 nadal oczekiwane — 0f798db
+- [x] 4.3 Typy: `npm run typecheck` — 0 błędów — 0f798db
+- [x] 4.4 Lint: `npm run lint` — 0f798db
 
 #### Manual
 
-- [x] 4.5 Ekran przepisów: tworzenie, edycja i usunięcie bez regresji
-- [x] 4.6 Kontrola wyroczni: usunięcie `.max(255)` czerwieni test 256 → 400
+- [x] 4.5 Ekran przepisów: tworzenie, edycja i usunięcie bez regresji — 0f798db
+- [x] 4.6 Kontrola wyroczni: usunięcie `.max(255)` czerwieni test 256 → 400 — 0f798db
 
 ### Phase 5: Dokumentacja i cookbook
 
 #### Automated
 
-- [ ] 5.1 `npm run format:check` przechodzi
-- [ ] 5.2 Cała suita przechodzi: `npm run test`
+- [x] 5.1 `npm run format:check` przechodzi
+- [x] 5.2 Cała suita przechodzi: `npm run test`
 
 #### Manual
 
-- [ ] 5.3 §6.5 czytelny bez sięgania do planu
-- [ ] 5.4 `known-drift.md` nie wymienia tras preferencji i `/api/recipes` jako inline schematów
+- [x] 5.3 §6.5 czytelny bez sięgania do planu
+- [x] 5.4 `known-drift.md` nie wymienia tras preferencji i `/api/recipes` jako inline schematów
