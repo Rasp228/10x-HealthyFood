@@ -557,10 +557,10 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 
 #### Automated
 
-- [x] 5.1 `npm run format:check` przechodzi
-- [x] 5.2 Cała suita przechodzi: `npm run test`
+- [x] 5.1 `npm run format:check` przechodzi — 08968c9
+- [x] 5.2 Cała suita przechodzi: `npm run test` — 08968c9
 
 #### Manual
 
-- [x] 5.3 §6.5 czytelny bez sięgania do planu
-- [x] 5.4 `known-drift.md` nie wymienia tras preferencji i `/api/recipes` jako inline schematów
+- [x] 5.3 §6.5 czytelny bez sięgania do planu — 08968c9
+- [x] 5.4 `known-drift.md` nie wymienia tras preferencji i `/api/recipes` jako inline schematów — 08968c9
