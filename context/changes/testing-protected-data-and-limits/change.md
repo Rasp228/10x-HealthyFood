@@ -1,7 +1,7 @@
 ---
 change_id: testing-protected-data-and-limits
 title: Testy faza 3 — dane chronione (preferencje, przepisy) i twarde limity
-status: implemented
+status: impl_reviewed
 created: 2026-10-06
 updated: 2026-10-07
 archived_at: null

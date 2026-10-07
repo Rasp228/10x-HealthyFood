@@ -330,6 +330,16 @@ describe("GET /api/preferences", () => {
     expect(await json(response)).toMatchObject({ total: 2, data: [{ id: 2 }, { id: 1 }] });
   });
 
+  // Pusty parametr to brak parametru: domyślna strona, nie `limit=0` z koercji `""` → 0.
+  it.each(["?limit=", "?limit=%20", "?offset=", "?limit=&offset="])("%s → 200 z domyślną stroną", async (search) => {
+    const db = createDb();
+
+    const response = await getPreferences(context(db.supabase, { method: "GET", search }));
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toMatchObject({ total: 2, data: [{ id: 2 }, { id: 1 }] });
+  });
+
   it.each(["51", "-1", "abc", "1.5"])("limit=%s → 400 z details na limit", async (limit) => {
     const db = createDb();
 
@@ -349,7 +359,7 @@ describe("GET /api/preferences", () => {
 });
 
 describe("DELETE /api/preferences/:id", () => {
-  it.each(["12abc", String(INT4_MAX + 1)])('id "%s" → 400, tabela bez zmian', async (id) => {
+  it.each(["12abc", "0", String(INT4_MAX + 1)])('id "%s" → 400, tabela bez zmian', async (id) => {
     const db = createDb();
     const before = db.snapshot();
 

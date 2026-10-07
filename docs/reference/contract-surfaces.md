@@ -126,9 +126,10 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 
 ### Path aliases — `@/*` and `@tests/*`
 
-- **Declared twice**: `tsconfig.json` (`paths`) and `jest.config.js` (`moduleNameMapper`).
+- **Declared twice**: `tsconfig.json` (`paths`) and `jest.config.js` (`moduleNameMapper`) — `@/*`
+  only. `@tests/*` is in `tsconfig.json` alone, so tests import from `tests/` by relative path.
 - **Breaks**: adding an alias to one and not the other type-checks but fails at test runtime, or
-  the reverse. Update both.
+  the reverse. Update both. An `@tests/...` import in a Jest test is exactly that failure today.
 
 ### `export const prerender`
 

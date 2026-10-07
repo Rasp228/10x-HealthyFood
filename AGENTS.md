@@ -153,8 +153,9 @@ and `eslint-plugin-jsx-a11y` do not support ESLint 10 yet.
   during render against a key held in state, the pattern React's docs call "adjusting state when
   props change". See @src/components/recipe/RecipeFormModal.tsx.
 
-Aliases `@/*` → `src/*` and `@tests/*` → `tests/*` are declared in both @tsconfig.json and
-@jest.config.js — update both when adding one.
+Alias `@/*` → `src/*` is declared in both @tsconfig.json and @jest.config.js — update both when
+adding one. `@tests/*` → `tests/*` exists only in `tsconfig.json`: it type-checks but fails under
+Jest, so tests import helpers by relative path (`../helpers/supabase-tables`).
 
 ## Testing
 

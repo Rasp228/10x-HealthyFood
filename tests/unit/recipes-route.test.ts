@@ -380,6 +380,20 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
       expect(db.snapshot()).toEqual(before);
     });
 
+    it("PUT na cudzym przepisie → 404, cudzy wiersz nietknięty", async () => {
+      // Przepis 20 należy do B; zalogowany jest OWNER. Bez `.eq("user_id", user.id)` w UPDATE
+      // trasa nadpisałaby wiersz B - ten test to jedyny strażnik tego filtra po stronie PUT.
+      const foreign = { ...seed().recipes[0], id: 20, user_id: "user-b", title: "Cudza owsianka" };
+      const db = createSupabaseTables({ userId: OWNER, tables: { recipes: [...seed().recipes, foreign] } });
+      const before = db.snapshot();
+
+      const response = await PUT(context(db.supabase, { method: "PUT", id: "20", body: validBody }));
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "Przepis nie został znaleziony" });
+      expect(db.snapshot()).toEqual(before);
+    });
+
     it("awaria bazy przy aktualizacji → 500 ze stałym ciałem, bez treści błędu atrapy", async () => {
       const db = createDb();
       const failure = { data: null, error: { code: "22001", message: SECRET, details: SECRET, hint: SECRET } };
@@ -399,20 +413,23 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
     });
   });
 
-  describe("identyfikator przepisu ponad int4", () => {
-    const over = String(INT4_MAX + 1);
-
-    it.each([
+  describe("nieprawidłowy identyfikator przepisu", () => {
+    const routes = [
       ["GET", getRecipe],
       ["PUT", PUT],
       ["DELETE", DELETE],
-    ] as const)(`%s z id ${over} → 400, zanim zapytanie trafi do bazy`, async (method, route) => {
+    ] as const;
+    // Cyfry z literami (`parseInt` czytał "12abc" jako 12), zero i int4 + 1.
+    const badIds = ["12abc", "0", String(INT4_MAX + 1)];
+    const cases = routes.flatMap(([method, route]) => badIds.map((id) => [method, id, route] as const));
+
+    it.each(cases)('%s z id "%s" → 400, zanim zapytanie trafi do bazy', async (method, id, route) => {
       const db = createDb();
       const before = db.snapshot();
       const from = jest.spyOn(db.supabase, "from");
 
       const body = method === "PUT" ? validBody : undefined;
-      const response = await route(context(db.supabase, { method, id: over, body }));
+      const response = await route(context(db.supabase, { method, id, body }));
 
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({ error: "Nieprawidłowe ID przepisu" });

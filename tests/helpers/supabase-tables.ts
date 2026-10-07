@@ -15,6 +15,9 @@
  * `select` (także z `{ count: "exact" }`), `insert`, `upsert` (z `onConflict`), `update`, `delete`,
  * filtry `eq` / `is`, a do tego `order`, `range`, `limit`, `single`, `maybeSingle` i `await`.
  * Nieznana tabela albo nieobsługiwana metoda kończy się wyjątkiem, nie cichym pustym wynikiem.
+ * Uwaga: wyjątek z nieobsługiwanej metody (`.or`, `.ilike`, `.in` - `TypeError`) łapie `catch`
+ * trasy i zamienia w 500. Test oczekujący 500 musi więc sprawdzić też konkretny błąd przekazany
+ * do `console.error`, inaczej przejdzie z niewłaściwego powodu.
  *
  * Import w testach ścieżką względną (`../helpers/supabase-tables`) - Jest nie ma aliasu `@tests`.
  */
@@ -49,7 +52,8 @@ export interface SupabaseTablesOptions {
 }
 
 type Operation = "select" | "insert" | "upsert" | "update" | "delete";
-type Filter = [column: string, value: unknown];
+/** `is` zapamiętany osobno: brak kolumny w wierszu (`undefined`) to dla niego `null`, jak w bazie. */
+type Filter = [column: string, value: unknown, operator: "eq" | "is"];
 type OrderBy = [column: string, ascending: boolean];
 
 const deepCopy = <T>(value: T): T => structuredClone(value);
@@ -157,13 +161,17 @@ export const createSupabaseTables = (options: SupabaseTablesOptions) => {
     }
 
     eq(column: string, value: unknown): this {
-      this.filters.push([column, value]);
+      this.filters.push([column, value, "eq"]);
       return this;
     }
 
-    /** `.is(kolumna, null)` - jedyne użycie w trasach. Porównanie ścisłe, jak `eq`. */
+    /**
+     * `.is(kolumna, null)` - jedyne użycie w trasach. Kolumna, której wiersz atrapy w ogóle nie ma,
+     * liczy się jako `null`: inaczej niekompletny seed nigdy by nie pasował, a asercja „nic się nie
+     * zmieniło” byłaby pusta.
+     */
     is(column: string, value: null | boolean): this {
-      this.filters.push([column, value]);
+      this.filters.push([column, value, "is"]);
       return this;
     }
 
@@ -200,7 +208,10 @@ export const createSupabaseTables = (options: SupabaseTablesOptions) => {
     }
 
     /** Wiersz spełnia KAŻDY filtr - tak samo dla odczytu, `update` i `delete`. */
-    private matches = (row: Row): boolean => this.filters.every(([column, value]) => row[column] === value);
+    private matches = (row: Row): boolean =>
+      this.filters.every(([column, value, operator]) =>
+        operator === "is" ? (row[column] ?? null) === value : row[column] === value
+      );
 
     private rows(): Row[] {
       return tables[this.table];

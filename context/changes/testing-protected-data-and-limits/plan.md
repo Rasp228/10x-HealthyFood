@@ -536,6 +536,7 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 #### Manual
 
 - [x] 3.5 `/profile`: duplikat pokazuje toast „Taka preferencja już istnieje” — 6b6f969
+  - Spełnione w zmienionej formie: komunikat serwera pokazuje się w linii pod polem (`role="alert"`), nie w toaście; przy edycji 409 daje ogólny toast. Przyjęte świadomie — `docs/reference/known-drift.md`, „Preferencje” (przegląd wdrożenia, F4).
 - [x] 3.6 `/profile`: dodanie, edycja i usunięcie preferencji bez regresji — 6b6f969
 - [x] 3.7 Kontrola wyroczni: powrót do `.parse()` czerwieni test 51 → 400 — 6b6f969
 
