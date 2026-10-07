@@ -528,30 +528,30 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 
 #### Automated
 
-- [x] 3.1 Testy przechodzą: `npx jest tests/unit/preferences-route.test.ts tests/unit/protected-data.test.ts`
-- [x] 3.2 Cała suita przechodzi: `npm run test`
-- [x] 3.3 Typy: `npm run typecheck` — 0 błędów
-- [x] 3.4 Lint: `npm run lint`
+- [x] 3.1 Testy przechodzą: `npx jest tests/unit/preferences-route.test.ts tests/unit/protected-data.test.ts` — 6b6f969
+- [x] 3.2 Cała suita przechodzi: `npm run test` — 6b6f969
+- [x] 3.3 Typy: `npm run typecheck` — 0 błędów — 6b6f969
+- [x] 3.4 Lint: `npm run lint` — 6b6f969
 
 #### Manual
 
-- [x] 3.5 `/profile`: duplikat pokazuje toast „Taka preferencja już istnieje”
-- [x] 3.6 `/profile`: dodanie, edycja i usunięcie preferencji bez regresji
-- [x] 3.7 Kontrola wyroczni: powrót do `.parse()` czerwieni test 51 → 400
+- [x] 3.5 `/profile`: duplikat pokazuje toast „Taka preferencja już istnieje” — 6b6f969
+- [x] 3.6 `/profile`: dodanie, edycja i usunięcie preferencji bez regresji — 6b6f969
+- [x] 3.7 Kontrola wyroczni: powrót do `.parse()` czerwieni test 51 → 400 — 6b6f969
 
 ### Phase 4: Przepisy POST/PUT — limity bazy na serwerze
 
 #### Automated
 
-- [ ] 4.1 Testy przechodzą: `npx jest tests/unit/recipes-route.test.ts tests/unit/protected-data.test.ts`
-- [ ] 4.2 Cała suita przechodzi, `test.failing` D5 nadal oczekiwane
-- [ ] 4.3 Typy: `npm run typecheck` — 0 błędów
-- [ ] 4.4 Lint: `npm run lint`
+- [x] 4.1 Testy przechodzą: `npx jest tests/unit/recipes-route.test.ts tests/unit/protected-data.test.ts`
+- [x] 4.2 Cała suita przechodzi, `test.failing` D5 nadal oczekiwane
+- [x] 4.3 Typy: `npm run typecheck` — 0 błędów
+- [x] 4.4 Lint: `npm run lint`
 
 #### Manual
 
-- [ ] 4.5 Ekran przepisów: tworzenie, edycja i usunięcie bez regresji
-- [ ] 4.6 Kontrola wyroczni: usunięcie `.max(255)` czerwieni test 256 → 400
+- [x] 4.5 Ekran przepisów: tworzenie, edycja i usunięcie bez regresji
+- [x] 4.6 Kontrola wyroczni: usunięcie `.max(255)` czerwieni test 256 → 400
 
 ### Phase 5: Dokumentacja i cookbook
 

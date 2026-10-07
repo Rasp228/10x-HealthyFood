@@ -1,18 +1,10 @@
-import { z } from "zod";
 import type { APIRoute } from "astro";
 import { buildIlikeOrFilter, toContainsPattern } from "../../../lib/utils/recipe-search";
 import { zodIssues } from "../../../lib/utils/validation-errors";
+import { createRecipeSchema } from "../../../lib/validations/recipe/create-recipe";
 import { listRecipesSchema } from "../../../lib/validations/recipe/list-recipes";
 
 export const prerender = false;
-
-// Schemat walidacji dla danych wejściowych do tworzenia przepisu
-const createRecipeSchema = z.object({
-  title: z.string().min(1, "Tytuł jest wymagany"),
-  content: z.string().min(1, "Treść przepisu jest wymagana"),
-  additional_params: z.string().nullable().optional(),
-  is_ai_generated: z.boolean().optional().default(false),
-});
 
 // Handler GET - pobieranie listy przepisów
 export const GET: APIRoute = async ({ locals, url }) => {
@@ -119,8 +111,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Pobierz i zwaliduj dane wejściowe
-    const rawData = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec
+    // `user-settings/index.ts`): `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const rawData = await request.json().catch(() => null);
     const validationResult = createRecipeSchema.safeParse(rawData);
 
     if (!validationResult.success) {
@@ -152,15 +145,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Zwróć utworzony przepis
     return new Response(JSON.stringify(data), { status: 201, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
+    console.error("Error creating recipe:", error);
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

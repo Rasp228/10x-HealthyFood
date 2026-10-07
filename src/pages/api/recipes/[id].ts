@@ -1,15 +1,31 @@
-import { z } from "zod";
 import type { APIRoute } from "astro";
-import { zodIssues } from "../../../lib/utils/validation-errors";
+import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
+import { positiveIdParamSchema } from "../../../lib/validations/common/id";
+import { updateRecipeSchema } from "../../../lib/validations/recipe/update-recipe";
 
 export const prerender = false;
 
-// Schemat walidacji dla danych wejściowych do aktualizacji przepisu
-const updateRecipeSchema = z.object({
-  title: z.string().min(1, "Tytuł jest wymagany"),
-  content: z.string().min(1, "Treść przepisu jest wymagana"),
-  additional_params: z.string().nullable().optional(),
+/**
+ * Identyfikator przepisu z `params.id`. Wspólna reguła kształtu i sufitu int4 (`id serial`):
+ * `"12abc"` nie jest już czytane jako 12, a `"2147483648"` nie dociera do PostgREST.
+ */
+const recipeIdSchema = positiveIdParamSchema({
+  required: "Identyfikator przepisu jest wymagany",
+  format: "Identyfikator przepisu musi być dodatnią liczbą całkowitą",
+  invalid: "Nieprawidłowe ID przepisu",
 });
+
+const invalidIdResponse = (details: ValidationIssue[]) =>
+  new Response(JSON.stringify({ error: "Nieprawidłowe ID przepisu", details }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const internalErrorResponse = () =>
+  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
 
 // Handler GET - pobieranie pojedynczego przepisu
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -27,13 +43,11 @@ export const GET: APIRoute = async ({ params, locals }) => {
     }
 
     // Pobierz ID przepisu z parametrów ścieżki
-    const recipeId = parseInt(params.id || "0", 10);
-    if (isNaN(recipeId) || recipeId <= 0) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowe ID przepisu" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const idResult = recipeIdSchema.safeParse(params.id);
+    if (!idResult.success) {
+      return invalidIdResponse(zodIssues(idResult.error));
     }
+    const recipeId = idResult.data;
 
     // Pobierz przepis z bazy danych
     const { data: recipe, error } = await locals.supabase
@@ -57,16 +71,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Zwróć przepis
     return new Response(JSON.stringify(recipe), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
+    console.error("Error fetching recipe:", error);
+    return internalErrorResponse();
   }
 };
 
@@ -86,16 +93,15 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     }
 
     // Pobierz ID przepisu z parametrów ścieżki
-    const recipeId = parseInt(params.id || "0", 10);
-    if (isNaN(recipeId) || recipeId <= 0) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowe ID przepisu" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const idResult = recipeIdSchema.safeParse(params.id);
+    if (!idResult.success) {
+      return invalidIdResponse(zodIssues(idResult.error));
     }
+    const recipeId = idResult.data;
 
-    // Pobierz i zwaliduj dane wejściowe
-    const rawData = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec
+    // `user-settings/index.ts`): `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const rawData = await request.json().catch(() => null);
     const validationResult = updateRecipeSchema.safeParse(rawData);
 
     if (!validationResult.success) {
@@ -142,16 +148,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    // Jak w GET: do przeglądarki stała, do logu pełny błąd.
+    console.error("Error updating recipe:", error);
+    return internalErrorResponse();
   }
 };
 
@@ -171,15 +170,14 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
 
     // Pobierz ID przepisu z parametrów ścieżki
-    const recipeId = parseInt(params.id || "0", 10);
-    if (isNaN(recipeId) || recipeId <= 0) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowe ID przepisu" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const idResult = recipeIdSchema.safeParse(params.id);
+    if (!idResult.success) {
+      return invalidIdResponse(zodIssues(idResult.error));
     }
+    const recipeId = idResult.data;
 
-    // Usuń przepis z bazy danych
+    // Usuń przepis z bazy danych. Bez `.select()` trasa nie wie, czy cokolwiek usunęła - znany dług
+    // („Własność rekordów” w `docs/reference/known-drift.md`), celowo poza tą zmianą.
     const { error } = await locals.supabase.from("recipes").delete().eq("id", recipeId).eq("user_id", user.id);
 
     if (error) {
@@ -192,15 +190,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
-
-    return new Response(
-      JSON.stringify({
-        error: "Błąd wewnętrzny serwera",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    // Jak w GET: do przeglądarki stała, do logu pełny błąd.
+    console.error("Error deleting recipe:", error);
+    return internalErrorResponse();
   }
 };
