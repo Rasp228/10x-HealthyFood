@@ -1,12 +1,33 @@
 import type { APIRoute } from "astro";
-import { z } from "zod";
 import type { UpdatePreferenceCommand } from "../../../types";
+import { positiveIdParamSchema } from "../../../lib/validations/common/id";
+import { upsertPreferenceSchema } from "../../../lib/validations/preferences/upsert-preference";
+import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
 
-// Schemat walidacji dla aktualizacji preferencji
-const preferenceSchema = z.object({
-  category: z.enum(["lubiane", "nielubiane", "wykluczone", "diety"] as const),
-  value: z.string().min(1).max(50),
+/** Kod Postgresa dla naruszenia unikatu - tu `preferences_unique_user_category_value`. */
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Identyfikator preferencji z `params.id`. Wspólna reguła kształtu i sufitu int4 (`id serial`):
+ * `"12abc"` nie jest już czytane jako 12, a `"2147483648"` nie dociera do PostgREST.
+ */
+const preferenceIdSchema = positiveIdParamSchema({
+  required: "Identyfikator preferencji jest wymagany",
+  format: "Identyfikator preferencji musi być dodatnią liczbą całkowitą",
+  invalid: "Nieprawidłowe ID preferencji",
 });
+
+const invalidIdResponse = (details: ValidationIssue[]) =>
+  new Response(JSON.stringify({ error: "Nieprawidłowe ID preferencji", details }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const internalErrorResponse = () =>
+  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
 
 export const prerender = false;
 
@@ -26,20 +47,30 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       });
     }
 
-    const preferenceId = parseInt(params.id || "0", 10);
+    const idResult = preferenceIdSchema.safeParse(params.id);
 
-    if (isNaN(preferenceId) || preferenceId <= 0) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowe ID preferencji" }), {
-        status: 400,
-      });
+    if (!idResult.success) {
+      return invalidIdResponse(zodIssues(idResult.error));
     }
 
-    const body = await request.json();
-    const validatedData = preferenceSchema.parse(body);
-    const preference: UpdatePreferenceCommand = {
-      category: validatedData.category,
-      value: validatedData.value,
-    };
+    const preferenceId = idResult.data;
+
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec
+    // `user-settings/index.ts`): `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const rawData = await request.json().catch(() => null);
+    const validationResult = upsertPreferenceSchema.safeParse(rawData);
+
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Nieprawidłowe dane wejściowe",
+          details: zodIssues(validationResult.error),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const preference: UpdatePreferenceCommand = validationResult.data;
 
     // Sprawdź czy preferencja należy do użytkownika
     const { data: existingPreference, error: fetchError } = await supabase
@@ -67,6 +98,14 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       .select()
       .single();
 
+    // Zmiana na parę (kategoria, wartość), którą użytkownik już ma - konflikt, nie awaria.
+    if (error?.code === UNIQUE_VIOLATION) {
+      return new Response(JSON.stringify({ error: "Taka preferencja już istnieje" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (error) {
       throw error;
     }
@@ -78,18 +117,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       },
     });
   } catch (error) {
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
     console.error("Error updating preference:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Wystąpił błąd serwera",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return internalErrorResponse();
   }
 };
 
@@ -109,13 +139,13 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       });
     }
 
-    const preferenceId = parseInt(params.id || "0", 10);
+    const idResult = preferenceIdSchema.safeParse(params.id);
 
-    if (isNaN(preferenceId) || preferenceId <= 0) {
-      return new Response(JSON.stringify({ error: "Nieprawidłowe ID preferencji" }), {
-        status: 400,
-      });
+    if (!idResult.success) {
+      return invalidIdResponse(zodIssues(idResult.error));
     }
+
+    const preferenceId = idResult.data;
 
     // Sprawdź czy preferencja należy do użytkownika
     const { data: existingPreference, error: fetchError } = await supabase
@@ -142,17 +172,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       status: 204,
     });
   } catch (error) {
+    // Jak w PUT: do przeglądarki stała, do logu pełny błąd.
     console.error("Error deleting preference:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Wystąpił błąd serwera",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return internalErrorResponse();
   }
 };

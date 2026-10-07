@@ -514,30 +514,30 @@ Statusu §3 nie zmieniaj — robi to orkiestrator `/10x-test-plan`.
 
 #### Automated
 
-- [x] 2.1 Testy fazy przechodzą (walidacje, trasy dziennika, cel, parsery)
-- [x] 2.2 Cała suita przechodzi: `npm run test`
-- [x] 2.3 Typy: `npm run typecheck` — 0 błędów
-- [x] 2.4 Lint: `npm run lint`
+- [x] 2.1 Testy fazy przechodzą (walidacje, trasy dziennika, cel, parsery) — ba1e2f3
+- [x] 2.2 Cała suita przechodzi: `npm run test` — ba1e2f3
+- [x] 2.3 Typy: `npm run typecheck` — 0 błędów — ba1e2f3
+- [x] 2.4 Lint: `npm run lint` — ba1e2f3
 
 #### Manual
 
-- [x] 2.5 Kontrola wyroczni: usunięcie `.max(MAX_INT4_ID)` czerwieni testy 2147483648
-- [x] 2.6 Kontrola wyroczni: sufit kalorii 5001 czerwieni test 5001 → 400
+- [x] 2.5 Kontrola wyroczni: usunięcie `.max(MAX_INT4_ID)` czerwieni testy 2147483648 — ba1e2f3
+- [x] 2.6 Kontrola wyroczni: sufit kalorii 5001 czerwieni test 5001 → 400 — ba1e2f3
 
 ### Phase 3: Preferencje — 400 zamiast 500
 
 #### Automated
 
-- [ ] 3.1 Testy przechodzą: `npx jest tests/unit/preferences-route.test.ts tests/unit/protected-data.test.ts`
-- [ ] 3.2 Cała suita przechodzi: `npm run test`
-- [ ] 3.3 Typy: `npm run typecheck` — 0 błędów
-- [ ] 3.4 Lint: `npm run lint`
+- [x] 3.1 Testy przechodzą: `npx jest tests/unit/preferences-route.test.ts tests/unit/protected-data.test.ts`
+- [x] 3.2 Cała suita przechodzi: `npm run test`
+- [x] 3.3 Typy: `npm run typecheck` — 0 błędów
+- [x] 3.4 Lint: `npm run lint`
 
 #### Manual
 
-- [ ] 3.5 `/profile`: duplikat pokazuje toast „Taka preferencja już istnieje”
-- [ ] 3.6 `/profile`: dodanie, edycja i usunięcie preferencji bez regresji
-- [ ] 3.7 Kontrola wyroczni: powrót do `.parse()` czerwieni test 51 → 400
+- [x] 3.5 `/profile`: duplikat pokazuje toast „Taka preferencja już istnieje”
+- [x] 3.6 `/profile`: dodanie, edycja i usunięcie preferencji bez regresji
+- [x] 3.7 Kontrola wyroczni: powrót do `.parse()` czerwieni test 51 → 400
 
 ### Phase 4: Przepisy POST/PUT — limity bazy na serwerze
 

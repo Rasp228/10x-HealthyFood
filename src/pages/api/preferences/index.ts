@@ -1,19 +1,11 @@
 import type { APIRoute } from "astro";
-import { z } from "zod";
-import type { CreatePreferenceCommand, PreferencesDto, PreferenceCategoryEnum } from "../../../types";
+import type { CreatePreferenceCommand, PreferencesDto } from "../../../types";
+import { listPreferencesSchema } from "../../../lib/validations/preferences/list-preferences";
+import { upsertPreferenceSchema } from "../../../lib/validations/preferences/upsert-preference";
+import { zodIssues } from "../../../lib/utils/validation-errors";
 
-// Schemat walidacji dla nowej preferencji
-const preferenceSchema = z.object({
-  category: z.enum(["lubiane", "nielubiane", "wykluczone", "diety"] as const),
-  value: z.string().min(0).max(50),
-});
-
-// Schemat walidacji dla parametrów zapytania
-const querySchema = z.object({
-  category: z.enum(["lubiane", "nielubiane", "wykluczone", "diety"] as const).optional(),
-  limit: z.coerce.number().min(0).max(50).optional(),
-  offset: z.coerce.number().min(0).optional(),
-});
+/** Kod Postgresa dla naruszenia unikatu - tu `preferences_unique_user_category_value`. */
+const UNIQUE_VIOLATION = "23505";
 
 export const prerender = false;
 
@@ -36,9 +28,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams.entries());
 
-    // Walidacja parametrów zapytania
-    const validatedParams = querySchema.parse(queryParams);
-    const { category, limit = 50, offset = 0 } = validatedParams;
+    // Walidacja parametrów zapytania - zły parametr to błąd wejścia (400), nie awaria serwera.
+    const validationResult = listPreferencesSchema.safeParse(queryParams);
+
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Nieprawidłowe parametry zapytania",
+          details: zodIssues(validationResult.error),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { category, limit = 50, offset = 0 } = validationResult.data;
 
     // Przygotuj zapytanie
     let query = supabase
@@ -72,18 +75,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       },
     });
   } catch (error) {
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
     console.error("Error fetching preferences:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Wystąpił błąd serwera",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
 
@@ -103,14 +101,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const body = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera: bez tego `catch`
+    // wyjątek z `request.json()` trafiłby do zewnętrznego catcha i wróciłby jako 500. `null` nie
+    // przechodzi schematu, więc odpowiada ta sama 400.
+    const rawData = await request.json().catch(() => null);
+    const validationResult = upsertPreferenceSchema.safeParse(rawData);
 
-    // Walidacja danych wejściowych
-    const validatedData = preferenceSchema.parse(body);
-    const preference: CreatePreferenceCommand = {
-      category: validatedData.category as PreferenceCategoryEnum,
-      value: validatedData.value,
-    };
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Nieprawidłowe dane wejściowe",
+          details: zodIssues(validationResult.error),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const preference: CreatePreferenceCommand = validationResult.data;
 
     // Sprawdź limit preferencji
     const { count } = await supabase.from("preferences").select("*", { count: "exact" }).eq("user_id", user.id);
@@ -141,6 +148,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .select()
       .single();
 
+    // Ta sama para (kategoria, wartość) u tego użytkownika - konflikt z istniejącym zasobem,
+    // nie awaria. Wartość jest już po `trim()`, więc „ wega ” trafia na zapisane „wega”.
+    if (error?.code === UNIQUE_VIOLATION) {
+      return new Response(JSON.stringify({ error: "Taka preferencja już istnieje" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (error) {
       throw error;
     }
@@ -152,17 +168,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
     });
   } catch (error) {
+    // Komunikat zostaje na serwerze. Błąd PostgREST niesie nazwy kolumn i ograniczeń - do
+    // przeglądarki idzie stała, do logu pełny błąd.
     console.error("Error creating preference:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Wystąpił błąd serwera",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
