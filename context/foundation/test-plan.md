@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-10-06
+> Last updated: 2026-10-07
 
 ## 1. Strategy
 
@@ -66,8 +66,8 @@ gdy artefakty pojawiają się na dysku.
 |---|---|---|---|---|---|---|
 | 1 | Integralność wartości i sumy dnia | Udowodnić, że suma dnia i wartości kalorii są prawdziwe, także gdy model zwraca śmieci albo spóźnioną odpowiedź | #1, #2 | unit + integration | complete | testing-diary-value-integrity |
 | 2 | Granice sesji i dostępu | Udowodnić, że wylogowanie kończy sesję, przekierowania i ścieżki publiczne są poprawne, a użytkownik nie dosięga cudzych rekordów | #3, #4 | integration + narrow e2e | complete | testing-session-and-access-boundaries |
-| 3 | Dane chronione i twarde limity | Udowodnić, że preferencje i przepisy przetrwają nietknięte, a każdy limit kończy się 400, nie 500 | #5, #6 | unit + integration | change opened | testing-protected-data-and-limits |
-| 4 | Bramki jakości | Zablokować poziom z faz 1–3: wymagane testy w CI i lokalny hook po edycji | cross-cutting | gates, post-edit hook | not started | — |
+| 3 | Dane chronione i twarde limity | Udowodnić, że preferencje i przepisy przetrwają nietknięte, a każdy limit kończy się 400, nie 500 | #5, #6 | unit + integration | complete | testing-protected-data-and-limits |
+| 4 | Bramki jakości | Zablokować poziom z faz 1–3: wymagane testy w CI i lokalny hook po edycji | cross-cutting | gates, post-edit hook | change opened | testing-quality-gates |
 
 ## 4. Stack
 
