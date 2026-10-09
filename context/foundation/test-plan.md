@@ -406,6 +406,8 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   `timeout: 90`) — `.claude/` jest w `.gitignore`, więc każdy dodaje wpis sam (`AGENTS.md`,
   „Commits & CI”). Dla `.ts`/`.tsx` w `src/` albo `tests/` woła Jest `--findRelatedTests <plik>`;
   zielono → exit 0, czerwono → końcówka wyjścia Jesta na stderr i exit 2, który wraca do agenta.
+  Gdy Jesta nie da się uruchomić (brak `node_modules/jest`, własny timeout 80 s, sygnał), hook
+  pisze „nie uruchomił Jesta” i kończy się exit 1 — nieblokująco, żeby nie udawać regresji.
   Edycja jest już wtedy zapisana — hook jej nie cofa. Zmierzone: ~4,7 s na `recipe-nutrition.ts`,
   ~0,1 s na przepuszczeniu. Skrypt leży poza `.claude/`, żeby był wersjonowany i lintowany
   (`nodeScriptsConfig` w `eslint.config.js` daje mu globale Node).
@@ -413,7 +415,10 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   rozszerzenia inne niż `.ts`/`.tsx` (`.astro`, `.css`, `.md`), plik nieistniejący i nieczytelne
   zdarzenie. Nie sprawdza typów (`src/types.ts` nie ma powiązanych testów), lintu ani E2E i nie
   uruchamia całej suity — to robi CI. Hook jest pętlą zwrotną, nie bramką.
-- **Uruchomienie ręczne**: `echo '{"tool_input":{"file_path":"src/lib/utils/recipe-nutrition.ts"},"cwd":"'"$PWD"'"}' | node scripts/hooks/related-tests.mjs; echo $?`.
+- **Uruchomienie ręczne**: `echo '{"tool_input":{"file_path":"src/lib/utils/recipe-nutrition.ts"}}' | node scripts/hooks/related-tests.mjs; echo $?`
+  — bez pola `cwd`: skrypt rozwiązuje wtedy ścieżkę względem katalogu projektu. W Git Bash `$PWD`
+  ma postać `/d/...`, którą Node na Windows czyta jako `D:\d\...`; plik wypada poza projekt i hook
+  kończy się zielono bez uruchomienia Jesta. Zielony wynik w ~0,1 s zamiast kilku sekund to ten błąd.
 
 ## 7. What We Deliberately Don't Test
 

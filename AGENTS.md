@@ -188,10 +188,9 @@ in Settings → Rules. The admin role keeps an `always` bypass, so a direct push
 owner or an agent on the owner's credentials — skips every check: a known gap, not a path to use.
 The local post-edit hook @scripts/hooks/related-tests.mjs runs the Jest tests related to an edited
 `.ts`/`.tsx` file in `src/` or `tests/` and returns a red result to the agent (exit 2); `.claude/`
-is gitignored, so enable it yourself with a `hooks.PostToolUse` entry (matcher
-`Edit|Write|MultiEdit`, `command: "node"`, `args: ["${CLAUDE_PROJECT_DIR}/scripts/hooks/related-tests.mjs"]`)
-in your local `.claude/settings.json`. It does not replace CI: `.astro` pages, types and E2E are
-caught only there.
+is gitignored, so enable it yourself in your local `.claude/settings.json` with the
+`hooks.PostToolUse` entry given in `context/foundation/test-plan.md` §6.7. It does not replace CI:
+`.astro` pages, types and E2E are caught only there.
 
 The `code-quality` job runs four gates in order: `lint` → `typecheck` → `format:check` →
 `test:security`. Two notes on the last two:

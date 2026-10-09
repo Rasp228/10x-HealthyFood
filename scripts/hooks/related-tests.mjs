@@ -61,25 +61,33 @@ function failureTail(output) {
   return (kept.length > 0 ? [...kept, "...", ...summary] : summary).join("\n");
 }
 
+// Awaria samego uruchomienia (brak Jesta, timeout, sygnał) to nie regresja: exit 1 nie blokuje
+// agenta, a exit 2 z „czerwonymi testami” podawałby fałszywy alarm przy każdej edycji.
+function launchFailure(reason) {
+  process.stderr.write(`Hook related-tests nie uruchomił Jesta: ${reason}\n`);
+  process.exit(1);
+}
+
 const target = resolveTarget(readEvent());
 if (!target) process.exit(0);
 
+const jestBin = path.join(projectDir, "node_modules", "jest", "bin", "jest.js");
+if (!existsSync(jestBin)) launchFailure(`brak ${path.relative(projectDir, jestBin)} (npm install?)`);
+
 // `npx` to w Windows `npx.cmd`, którego spawnSync bez powłoki nie uruchomi - wołamy więc
-// bieżący node z binarką Jesta.
-const result = spawnSync(
-  process.execPath,
-  [
-    path.join(projectDir, "node_modules", "jest", "bin", "jest.js"),
-    "--findRelatedTests",
-    target,
-    "--passWithNoTests",
-    "--silent",
-  ],
-  { cwd: projectDir, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
-);
+// bieżący node z binarką Jesta. Własny timeout poniżej 90 s z wpisu hooka: skrypt sam kończy
+// Jesta, zanim Claude Code zabije hook i zostawi proces potomny bez rodzica.
+const result = spawnSync(process.execPath, [jestBin, "--findRelatedTests", target, "--passWithNoTests", "--silent"], {
+  cwd: projectDir,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+  timeout: 80_000,
+});
 
 if (result.status === 0) process.exit(0);
+if (result.error) launchFailure(result.error.message);
+if (result.status === null) launchFailure(`Jest przerwany sygnałem ${result.signal}`);
 
-const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}${result.error ? `\n${result.error.message}` : ""}`;
+const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
 process.stderr.write(`Testy powiązane z ${path.relative(projectDir, target)} są czerwone:\n${failureTail(output)}\n`);
 process.exit(2);

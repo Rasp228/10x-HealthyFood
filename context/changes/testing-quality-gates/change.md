@@ -1,7 +1,7 @@
 ---
 change_id: testing-quality-gates
 title: Bramki jakości — wymagane checki PR i lokalny post-edit hook (Faza 4 test-planu)
-status: implemented
+status: impl_reviewed
 created: 2026-10-07
 updated: 2026-10-09
 archived_at: null
@@ -30,3 +30,15 @@ After creating the folder, follow the downstream continuation rule.
 - Wariant 2, HEAD `4b4f14b` (`number` przypisany do `string`): „Kontrola jakości kodu” `failure` na kroku „Sprawdzenie typów” (przebieg 37911513421), „Build produkcyjny”, „Testy jednostkowe”, „Testy E2E” `skipped`. UI: ten sam komunikat — `skipped` wymaganego checku nie odblokowuje merge.
 - PR zamknięty bez merge (`merged_at: null`), gałąź usunięta (404), `origin/master` bez `tests/unit/gate-proof.test.ts`.
 - Bez `gh` (decyzja z fazy 1): `mergeStateStatus = BLOCKED` nie odczytany — anonimowe API daje `mergeable_state: unstable`, bo nie stosuje rulesetu; dowodem odmowy jest komunikat UI. `bypass_actors` nie jest widoczne w publicznym API — powrót bypassu potwierdził użytkownik.
+
+## Wiersze Progress zaliczone dowodem zastępczym
+
+Tytułów wierszy w `plan.md` się nie zmienia, więc ich brzmienie jest szersze niż dowód. Przy
+czytaniu archiwum obowiązuje to, co niżej (przegląd wdrożenia, ustalenie F3):
+
+- **1.1** — niezaliczony: `gh` zainstalowany, ale nigdy niezalogowany.
+- **1.6** — `gh` zainstalowany i commity wypchnięte; logowania nie było (decyzja: kroki w UI).
+- **2.4**, **3.4** — `bypass_actors` z `actor_id: 5` potwierdził użytkownik w Settings → Rules;
+  publiczne API tego pola nie zwraca.
+- **3.1** — `mergeStateStatus = BLOCKED` nieodczytany (anonimowe API: `mergeable_state: unstable`);
+  dowodem odmowy jest komunikat UI „Merging is blocked due to failing merge requirements”.
