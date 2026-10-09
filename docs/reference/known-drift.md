@@ -349,12 +349,17 @@ defekty, nie zmienia zachowania produkcyjnego).
 
 ### Wspólne konto testowe: `session-boundaries.spec.ts` może wylogować równoległy przebieg
 
-Wszystkie specy Playwrighta logują się na jedno konto z `E2E_USERNAME` / `E2E_PASSWORD`.
+Specy Playwrighta działają na koncie A z `E2E_USERNAME` / `E2E_PASSWORD`: projekt `setup` loguje je
+raz i zapisuje sesję (`playwright/.auth/user.json`), którą projekt `chromium` wczytuje przez
+`storageState`. Od 2026-10-09 jest też konto B (`E2E_USERNAME_B` / `E2E_PASSWORD_B`), ale używają go
+tylko specy izolacji `tests/e2e/data-isolation-*.spec.ts` jako drugiego podmiotu — nie rozwiązuje
+ono opisanej tu kolizji.
 `tests/e2e/session-boundaries.spec.ts` klika „Wyloguj”, a `/api/auth/logout` woła `signOut()`
-z domyślnym zakresem `global` — GoTrue unieważnia wtedy **wszystkie** sesje tego konta, nie tylko
-sesję speca. W jednym przebiegu to nie szkodzi: `workers: 1` (`playwright.config.ts`) i każdy spec
-loguje się sam. Szkodzi dwóm przebiegom naraz: test w drugim przebiegu traci sesję w połowie
-i czerwienieje przekierowaniem na `/auth/login`, choć kod jest poprawny.
+z domyślnym zakresem `global` — GoTrue unieważnia wtedy **wszystkie** sesje konta A, nie tylko
+sesję speca. W jednym przebiegu to nie szkodzi: `workers: 1`, a spec biegnie we własnym projekcie
+`chromium-logout`, który zależy od `chromium`, więc startuje dopiero po wszystkich specach
+korzystających z zapisanej sesji. Szkodzi dwóm przebiegom naraz: test w drugim przebiegu traci
+sesję w połowie i czerwienieje przekierowaniem na `/auth/login`, choć kod jest poprawny.
 
 Kiedy: dwa przebiegi „Testy E2E” na tym samym koncie i tym samym projekcie Supabase (`integration`),
 o różnym `ref` — np. PR (`refs/pull/N/merge`) i push na `master`, albo PR-y z dwóch gałęzi.
@@ -367,9 +372,9 @@ Pomiar z tej zmiany (faza 1): przebieg 37906407186 na `master` — `13 passed`, 
 `retries: 2` w CI żaden test nie potrzebował powtórki. Kolizji jeszcze nie zaobserwowano; ryzyko
 jest wywnioskowane z mechanizmu, nie zmierzone, i rośnie z liczbą PR-ów.
 
-Kierunek naprawy: osobne konto testowe tylko dla `session-boundaries.spec.ts` (nowa para sekretów
-w środowisku `integration` i w `.env.test`), żeby globalne wylogowanie nie dosięgało kont innych
-speców. Doraźnie: sporadyczny czerwony z przekierowaniem na `/auth/login` w innym specu sprawdź
+Kierunek naprawy: osobne, trzecie konto testowe tylko dla `session-boundaries.spec.ts` (nowa para
+sekretów w środowisku `integration` i w `.env.test`), żeby globalne wylogowanie nie dosięgało kont
+innych speców. Konto B się do tego nie nadaje — wylogowanie go zerwałoby równoległe specy izolacji. Doraźnie: sporadyczny czerwony z przekierowaniem na `/auth/login` w innym specu sprawdź
 najpierw pod kątem równoległego przebiegu i uruchom job ponownie.
 
 Przyjęte świadomie (plan `testing-quality-gates`, „What We're NOT Doing”: bez naprawy niestabilności

@@ -148,6 +148,16 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
   collected. The spawn command must keep `--ignore-lock`, or Astro's project-wide lock makes the
   second dev server exit and Playwright reports "webServer exited early".
 
+### `E2E_USERNAME_B`, `E2E_PASSWORD_B`
+
+- **Read by**: `tests/e2e/helpers/second-account.ts` (`signInSecondAccount`), for the two-account
+  isolation specs `tests/e2e/data-isolation-*.spec.ts`; set in `.env.test` locally and passed to the
+  „Testy E2E” job in `.github/workflows/ci-cd.yml` from secrets of the `integration` environment.
+- **Contract**: a second real account on the same Supabase project as `E2E_USERNAME`. It is never
+  signed out (`signOut()` is global), so it must not be reused by a spec that clicks „Wyloguj”.
+- **Breaks**: renaming either in one place only makes every isolation spec throw before its first
+  request; a missing secret in CI fails the required „Testy E2E” check, not a skip.
+
 ## CI gates
 
 ### Script names — `lint`, `typecheck`, `format:check`, `test:security`

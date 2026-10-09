@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-10-09
+> Last updated: 2026-10-09 (§6.3 dowód RLS dwoma kontami e2e)
 
 ## 1. Strategy
 
@@ -208,12 +208,22 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   atrapa `select/eq/maybeSingle` + rejestr insertów), `tests/unit/recipes-route.test.ts` blok
   `DELETE /api/recipes/:id` (atrapa `delete/eq/then`, stan tabeli, dwa `test.failing` z wyrocznią 404).
 - **Uruchomienie**: `npx jest tests/unit/diary-entries-route.test.ts tests/unit/recipes-route.test.ts`.
-- **Nie wdrożone — dowód RLS**: izolacja tam, gdzie broni polityka bazy (GET/PATCH/DELETE wpisów,
-  cel dnia, preferencje), wymaga e2e na poziomie API z dwoma kontami: dwa konteksty Playwright
-  `request`, każdy zalogowany przez `POST /api/auth/login` z nagłówkiem `Origin` (`security.checkOrigin`),
-  B woła każdy czasownik z identyfikatorem A i dostaje 404 albo pustą listę, a stan A sprawdza się
-  z kontekstu A. Drugiego konta e2e nie ma (decyzja D4 planu `testing-session-and-access-boundaries`),
-  więc tego wzorca w repo jeszcze nie ma — dodaj go razem z drugim kontem.
+- **Dowód RLS — e2e dwoma kontami** (od 2026-10-09): izolacja tam, gdzie broni polityka bazy
+  (lista/PATCH/DELETE wpisów, cel dnia, preferencje), na poziomie API z prawdziwym Supabase.
+  A = sesja z `storageState` (`page.request`), B = `signInSecondAccount` z
+  `tests/e2e/helpers/second-account.ts` (`E2E_USERNAME_B` / `E2E_PASSWORD_B`, logowanie przez
+  `POST /api/auth/login` z `Origin` we własnym kontekście; B się nie wylogowuje — `signOut()` jest
+  globalne). B woła każdy czasownik z identyfikatorem A i dostaje 404 albo listę bez rekordu A;
+  stan A sprawdza się z kontekstu A; kontrola pozytywna — B tworzy i widzi własny rekord.
+  Sprzątanie przez właściciela z asercją (cel: przywrócenie wartości sprzed testu).
+- **Kontrola wyroczni e2e**: usunięcie wszystkich `.eq("user_id", …)` z kodu zostawia te specy
+  **zielone** — to jest dowód, że trzyma RLS, nie filtr. Czerwień daje zepsucie kontraktu trasy
+  (`deleteEntry` zawsze `true`, DELETE preferencji bez sprawdzenia → 204 zamiast 404) albo wyciek
+  przez wspólny stan serwera (cel z pamięci modułu → A widzi cel B). Wyłączenia RLS na wspólnym
+  projekcie `integration` się nie robi; dla `diary_entries` i `user_settings` pokrywają to
+  `supabase/checks/*-rls.sql` (uruchamiane ręcznie, dla `preferences` takiego pliku nie ma).
+- **Specy referencyjne**: `tests/e2e/data-isolation-diary.spec.ts`, `data-isolation-goal.spec.ts`,
+  `data-isolation-preferences.spec.ts`. Uruchomienie: `npm run test:e2e -- tests/e2e/data-isolation`.
 
 ### 6.4 Adding a middleware / session test
 
@@ -348,6 +358,10 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
 - §2 #4 pozostaje **częściowo otwarte**: dowiedziona jest tylko obrona w kodzie (cudzy przepis przy
   tworzeniu wpisu, stan wiersza przy DELETE przepisu). Izolacja RLS dwoma kontami nie ma automatycznego
   dowodu — drugiego konta e2e nie ma (D4), wzorzec opisany w §6.3 jako „Nie wdrożone”.
+  **Aktualizacja 2026-10-09** (`/10x-e2e #4`, poza fazą): drugie konto jest (`E2E_USERNAME_B`),
+  a izolację RLS wpisów dziennika, celu dnia i preferencji dowodzą trzy specy
+  `tests/e2e/data-isolation-*.spec.ts` (§6.3). Bez dowodu e2e zostają przepisy — tam obrona w kodzie
+  jest pokryta Jestem, a DELETE cudzego przepisu wciąż zgłasza 200 (D5).
 - Trzy defekty przypięte `test.failing` i opisane w `docs/reference/known-drift.md`, bez naprawy:
   wyjątek przy wymianie kodu weryfikacji daje 500 zamiast 302 (niezakodowany `Location`, „Middleware”),
   DELETE cudzego albo nieistniejącego przepisu zgłasza 200 („Własność rekordów”), klient wylogowania
