@@ -539,27 +539,27 @@ wynik pomiaru flaky z fazy 1.
 
 #### Automated
 
-- [x] 4.1 `npm run lint` i `npm run format:check` przechodzą ze skryptem w `scripts/hooks/`
-- [x] 4.2 Zielony przypadek (`recipe-nutrition.ts`) → exit 0
-- [x] 4.3 Czerwony przypadek (zepsuta asercja w `diary-totals.test.ts`) → exit 2 i stderr z nazwą testu
-- [x] 4.4 `.astro` → exit 0 bez uruchamiania Jesta
-- [x] 4.5 Plik spoza testów (`docs/reference/known-drift.md`) → exit 0 bez uruchamiania Jesta
-- [x] 4.6 Ścieżka względna (`src/middleware/index.ts`) → exit 0 i uruchomione testy middleware
-- [x] 4.7 `.claude/settings.json` ma `hooks.PostToolUse` i niezmienione `permissions`
+- [x] 4.1 `npm run lint` i `npm run format:check` przechodzą ze skryptem w `scripts/hooks/` — f743a72
+- [x] 4.2 Zielony przypadek (`recipe-nutrition.ts`) → exit 0 — f743a72
+- [x] 4.3 Czerwony przypadek (zepsuta asercja w `diary-totals.test.ts`) → exit 2 i stderr z nazwą testu — f743a72
+- [x] 4.4 `.astro` → exit 0 bez uruchamiania Jesta — f743a72
+- [x] 4.5 Plik spoza testów (`docs/reference/known-drift.md`) → exit 0 bez uruchamiania Jesta — f743a72
+- [x] 4.6 Ścieżka względna (`src/middleware/index.ts`) → exit 0 i uruchomione testy middleware — f743a72
+- [x] 4.7 `.claude/settings.json` ma `hooks.PostToolUse` i niezmienione `permissions` — f743a72
 
 #### Manual
 
-- [x] 4.8 W sesji Claude Code zepsuta edycja daje komunikat hooka, cofnięcie — ciszę
+- [x] 4.8 W sesji Claude Code zepsuta edycja daje komunikat hooka, cofnięcie — ciszę — f743a72
 
 ### Phase 5: Dokumentacja i cookbook
 
 #### Automated
 
-- [ ] 5.1 `npm run format:check` i `npm run lint` przechodzą
-- [ ] 5.2 `contract-surfaces.md` ma wpis o kontekstach wymaganych checków
-- [ ] 5.3 `test-plan.md` ma §6.7 i notatkę „§3 Phase 4” w §6.6
-- [ ] 5.4 `AGENTS.md` opisuje hook `related-tests.mjs`
+- [x] 5.1 `npm run format:check` i `npm run lint` przechodzą
+- [x] 5.2 `contract-surfaces.md` ma wpis o kontekstach wymaganych checków
+- [x] 5.3 `test-plan.md` ma §6.7 i notatkę „§3 Phase 4” w §6.6
+- [x] 5.4 `AGENTS.md` opisuje hook `related-tests.mjs`
 
 #### Manual
 
-- [ ] 5.5 Notatka fazy w §6.6 zawiera numer PR-a dowodowego i liczby z CI
+- [x] 5.5 Notatka fazy w §6.6 zawiera numer PR-a dowodowego i liczby z CI

@@ -160,6 +160,31 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Note**: `format:check` is `prettier --check .`. Never gate on `npm run format -- --check`, which
   expands to `prettier --write . --check`, writes fixes and exits 0.
 
+### Job names — required-check contexts
+
+- **Defined**: the `name:` of each job in `.github/workflows/ci-cd.yml:32,59,85,104` — „Kontrola
+  jakości kodu”, „Build produkcyjny”, „Testy jednostkowe”, „Testy E2E” — and, byte for byte, the
+  `context` entries of `required_status_checks` in `.github/rulesets/master.json` (ruleset
+  „master — wymagane checki”, pinned to the GitHub Actions app, `integration_id: 15368`). The job
+  ids (`unit-tests`, `e2e-tests`) never appear as contexts.
+- **Contract**: a PR into `master` merges only when all four check-runs exist and succeed. All four
+  are required because `needs` turns every later job into `skipped` when an earlier one fails, and
+  GitHub counts a skipped required check as passed — requiring only the test jobs would let a PR
+  with a red build through. `Status comment` is deliberately not a context: it is `skipped` on any
+  failure.
+- **Breaks**: renaming a job's `name:` without the same edit in the ruleset blocks every PR for
+  good — the required context is never produced again. Dropping one of the four contexts from the
+  ruleset brings back the `skipped` trap: on PR #4 a red „Kontrola jakości kodu” left the three
+  later checks `skipped`, and the merge stayed blocked because that first check is required too.
+- **Note**: the file is the source of truth; GitHub does not read it. After editing it, re-apply
+  with `gh api -X POST repos/Rasp228/10x-HealthyFood/rulesets --input .github/rulesets/master.json`
+  when no ruleset of that name exists, or with
+  `gh api -X PUT repos/Rasp228/10x-HealthyFood/rulesets/<id> --input .github/rulesets/master.json`
+  when it does (today id 24778393). So far it has been applied by hand in Settings → Rules, an
+  equivalent path — keep the UI and the file identical.
+  The anonymous REST API shows the rules (`rules/branches/master`) but not `bypass_actors` or a
+  PR's `mergeStateStatus`; checking those needs an authenticated `gh` or the UI.
+
 ### `GHSA-9wv6-86v2-598j`, `GHSA-vfj7-8cjw-p6xm`, `GHSA-hp3w-g68c-fv3c`
 
 - **Declared**: the `allowlist` in `audit-ci.jsonc`, with the reasoning inline; the same file

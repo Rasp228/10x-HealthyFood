@@ -365,6 +365,56 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   (przypięta jako 201), tytuł przepisu 100 ↔ 255 i 500 z `details` w `GET /api/recipes` (lista);
   do tego komunikaty konfliktu preferencji w `/profile` („Preferencje”).
 
+**§3 Phase 4 — Bramki jakości** (`testing-quality-gates`, 2026-10-09):
+
+- Bramka dowiedziona czerwonym PR-em #4 przy zdjętym bypassie, w dwóch wariantach: czerwony test
+  jednostkowy (HEAD `a8e6eae`, pozostałe joby zielone) i błąd typu (HEAD `4b4f14b`, „Kontrola
+  jakości kodu” `failure` na kroku „Sprawdzenie typów”, przebieg 37911513421; build, unit i E2E
+  `skipped`). Oba: „Merging is blocked due to failing merge requirements” w UI — `skipped` wymaganego
+  checku nie odblokował merge. PR zamknięty bez merge. Bez uwierzytelnionego `gh` (decyzja
+  użytkownika) dowodem jest komunikat UI, nie `mergeStateStatus` z API.
+- Baza CI: przebieg 37906407186 na `master` — 30 suit / 640 testów w Jest (równe lokalnemu
+  `npx jest`) i 13 testów E2E, 0 flaky mimo `retries: 2`. Korekta notatki fazy 2: spec
+  `session-boundaries` przeszedł już w CI, więc „czeka na push” jest nieaktualne.
+- Luka przyjęta świadomie: admin ma bypass `always`, więc bezpośredni push na `master` (także agenta
+  na poświadczeniach właściciela) omija wszystkie cztery checki. Kolizja wspólnego konta E2E przy
+  równoległych przebiegach opisana w `docs/reference/known-drift.md` („Testy E2E”), nienaprawiona.
+
+### 6.7 Quality gates and the post-edit hook
+
+- **Wymagane konteksty**: „Kontrola jakości kodu”, „Build produkcyjny”, „Testy jednostkowe”,
+  „Testy E2E” — `name:` jobów z `.github/workflows/ci-cd.yml`, nie ich id. Ruleset
+  „master — wymagane checki” w `.github/rulesets/master.json` wymaga PR-a (0 zatwierdzeń) i tych
+  czterech checków z aplikacji GitHub Actions (`integration_id: 15368`). Wszystkie cztery, bo
+  `needs` zamienia porażkę wcześniejszego etapu w `skipped` kolejnych, a pominięty wymagany check
+  liczy się jako zaliczony. Kontrakt nazw: `docs/reference/contract-surfaces.md` („CI gates”).
+- **Nowy job do wymaganych**: dopisz jego `name:` bajt w bajt jako kolejny wpis `{ context,
+  integration_id: 15368 }` w `master.json`, `npm run format`, potem nałóż ruleset —
+  `gh api -X PUT repos/Rasp228/10x-HealthyFood/rulesets/24778393 --input .github/rulesets/master.json`
+  (POST na `…/rulesets`, gdy rulesetu nie ma) albo ręcznie w Settings → Rules, jak dotąd. Zmiana
+  `name:` joba = ta sama zmiana w pliku i ponowne nałożenie, inaczej każdy PR zostaje zablokowany.
+  Sprawdź na PR-ze, że nowy check-run powstaje pod dokładnie tą nazwą.
+- **Liczba testów w logu CI**: zielony job nie mówi, ile testów biegło, a `test.failing` liczy się
+  jako *passed*. W logu „Testy jednostkowe” (krok „Uruchomienie testów jednostkowych”) szukaj
+  `Test Suites:` i `Tests:` i porównaj z lokalnym `npx jest` na tym samym commicie; w „Testy E2E”
+  — podsumowanie Playwrighta (`N passed`) i ewentualne `flaky` (CI ma `retries: 2`, więc test
+  zielony za powtórką widać tylko tam). Bez `gh`: log joba w zakładce Actions; z `gh`:
+  `gh run view <run-id> --log --job <job-id>`.
+- **Post-edit hook**: `scripts/hooks/related-tests.mjs`, uruchamiany z lokalnego wpisu
+  `hooks.PostToolUse` w `.claude/settings.json` (matcher `Edit|Write|MultiEdit`, forma exec
+  `command: "node"` + `args: ["${CLAUDE_PROJECT_DIR}/scripts/hooks/related-tests.mjs"]`,
+  `timeout: 90`) — `.claude/` jest w `.gitignore`, więc każdy dodaje wpis sam (`AGENTS.md`,
+  „Commits & CI”). Dla `.ts`/`.tsx` w `src/` albo `tests/` woła Jest `--findRelatedTests <plik>`;
+  zielono → exit 0, czerwono → końcówka wyjścia Jesta na stderr i exit 2, który wraca do agenta.
+  Edycja jest już wtedy zapisana — hook jej nie cofa. Zmierzone: ~4,7 s na `recipe-nutrition.ts`,
+  ~0,1 s na przepuszczeniu. Skrypt leży poza `.claude/`, żeby był wersjonowany i lintowany
+  (`nodeScriptsConfig` w `eslint.config.js` daje mu globale Node).
+- **Czego hook nie łapie**: przepuszcza bez Jesta pliki spoza `src/` i `tests/`, specy w `tests/e2e/`,
+  rozszerzenia inne niż `.ts`/`.tsx` (`.astro`, `.css`, `.md`), plik nieistniejący i nieczytelne
+  zdarzenie. Nie sprawdza typów (`src/types.ts` nie ma powiązanych testów), lintu ani E2E i nie
+  uruchamia całej suity — to robi CI. Hook jest pętlą zwrotną, nie bramką.
+- **Uruchomienie ręczne**: `echo '{"tool_input":{"file_path":"src/lib/utils/recipe-nutrition.ts"},"cwd":"'"$PWD"'"}' | node scripts/hooks/related-tests.mjs; echo $?`.
+
 ## 7. What We Deliberately Don't Test
 
 - **Zrzuty ekranu UI** — tokeny i lint (`uiTokensConfig`) już pilnują literałów, a zrzuty pękają

@@ -181,6 +181,18 @@ Conventional Commits with a scope, as in `fix(auth): password reset repair`. CI
 (@.github/workflows/ci-cd.yml) runs code-quality → build → unit-tests and e2e-tests in parallel;
 E2E runs against the `integration` environment. Do not add a job that bypasses code-quality.
 
+Changes reach `master` through a PR whose four CI jobs are required checks, declared in
+@.github/rulesets/master.json; after editing that file, re-apply it with `gh api` (POST/PUT, the
+exact commands and why job names are load-bearing are in @docs/reference/contract-surfaces.md) or
+in Settings → Rules. The admin role keeps an `always` bypass, so a direct push to `master` — by the
+owner or an agent on the owner's credentials — skips every check: a known gap, not a path to use.
+The local post-edit hook @scripts/hooks/related-tests.mjs runs the Jest tests related to an edited
+`.ts`/`.tsx` file in `src/` or `tests/` and returns a red result to the agent (exit 2); `.claude/`
+is gitignored, so enable it yourself with a `hooks.PostToolUse` entry (matcher
+`Edit|Write|MultiEdit`, `command: "node"`, `args: ["${CLAUDE_PROJECT_DIR}/scripts/hooks/related-tests.mjs"]`)
+in your local `.claude/settings.json`. It does not replace CI: `.astro` pages, types and E2E are
+caught only there.
+
 The `code-quality` job runs four gates in order: `lint` → `typecheck` → `format:check` →
 `test:security`. Two notes on the last two:
 
