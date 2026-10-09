@@ -186,11 +186,13 @@ Changes reach `master` through a PR whose four CI jobs are required checks, decl
 exact commands and why job names are load-bearing are in @docs/reference/contract-surfaces.md) or
 in Settings → Rules. The admin role keeps an `always` bypass, so a direct push to `master` — by the
 owner or an agent on the owner's credentials — skips every check: a known gap, not a path to use.
-The local post-edit hook @scripts/hooks/related-tests.mjs runs the Jest tests related to an edited
-`.ts`/`.tsx` file in `src/` or `tests/` and returns a red result to the agent (exit 2); `.claude/`
-is gitignored, so enable it yourself in your local `.claude/settings.json` with the
-`hooks.PostToolUse` entry given in `context/foundation/test-plan.md` §6.7. It does not replace CI:
-`.astro` pages, types and E2E are caught only there.
+Two local post-edit hooks check only the file the agent just edited and return a red result to it
+(exit 2): @scripts/hooks/lint-edited-file.mjs runs ESLint (Prettier for `.json`/`.css`/`.md`/`.yml`)
+and @scripts/hooks/related-tests.mjs runs the Jest tests related to a `.ts`/`.tsx` file in `src/` or
+`tests/`. `.claude/` is gitignored, so merge the `hooks` block of @scripts/hooks/settings.hooks.json
+into your local `.claude/settings.json` yourself; `tests/unit/agent-hooks.test.ts` proves both
+scripts and those commands. They do not replace CI: types (`npm run typecheck`), files rewritten
+through a shell command and E2E are caught only there.
 
 The `code-quality` job runs four gates in order: `lint` → `typecheck` → `format:check` →
 `test:security`. Two notes on the last two:

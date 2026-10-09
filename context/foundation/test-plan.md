@@ -404,11 +404,14 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   — podsumowanie Playwrighta (`N passed`) i ewentualne `flaky` (CI ma `retries: 2`, więc test
   zielony za powtórką widać tylko tam). Bez `gh`: log joba w zakładce Actions; z `gh`:
   `gh run view <run-id> --log --job <job-id>`.
-- **Post-edit hook**: `scripts/hooks/related-tests.mjs`, uruchamiany z lokalnego wpisu
-  `hooks.PostToolUse` w `.claude/settings.json` (matcher `Edit|Write|MultiEdit`, forma exec
-  `command: "node"` + `args: ["${CLAUDE_PROJECT_DIR}/scripts/hooks/related-tests.mjs"]`,
-  `timeout: 90`) — `.claude/` jest w `.gitignore`, więc każdy dodaje wpis sam (`AGENTS.md`,
-  „Commits & CI”). Dla `.ts`/`.tsx` w `src/` albo `tests/` woła Jest `--findRelatedTests <plik>`;
+- **Post-edit hook**: `scripts/hooks/related-tests.mjs` (i obok `lint-edited-file.mjs`: ESLint,
+  dla `.json`/`.css`/`.md`/`.yml` Prettier, tylko na edytowanym pliku), uruchamiane z lokalnego
+  wpisu `hooks.PostToolUse` w `.claude/settings.json` — wzór do scalenia w
+  `scripts/hooks/settings.hooks.json` (matcher `Write|Edit`, skrypt znajdowany przez
+  `git rev-parse --show-toplevel`, timeouty 30 i 90 s). `.claude/` jest w `.gitignore`, więc każdy
+  dodaje wpis sam (`AGENTS.md`, „Commits & CI”). Checkout bierze się z edytowanego pliku, nie
+  z `CLAUDE_PROJECT_DIR`, więc edycje w worktree też są sprawdzane; dowód obu skryptów
+  i komend: `tests/unit/agent-hooks.test.ts`. Dla `.ts`/`.tsx` w `src/` albo `tests/` woła Jest `--findRelatedTests <plik>`;
   zielono → exit 0, czerwono → końcówka wyjścia Jesta na stderr i exit 2, który wraca do agenta.
   Gdy Jesta nie da się uruchomić (brak `node_modules/jest`, własny timeout 80 s, sygnał), hook
   pisze „nie uruchomił Jesta” i kończy się exit 1 — nieblokująco, żeby nie udawać regresji.
@@ -417,7 +420,7 @@ wdrożenia zostanie dowieziona; do tego czasu brzmi „TBD — see §3 Phase <N>
   (`nodeScriptsConfig` w `eslint.config.js` daje mu globale Node).
 - **Czego hook nie łapie**: przepuszcza bez Jesta pliki spoza `src/` i `tests/`, specy w `tests/e2e/`,
   rozszerzenia inne niż `.ts`/`.tsx` (`.astro`, `.css`, `.md`), plik nieistniejący i nieczytelne
-  zdarzenie. Nie sprawdza typów (`src/types.ts` nie ma powiązanych testów), lintu ani E2E i nie
+  zdarzenie. Nie sprawdza typów (`src/types.ts` nie ma powiązanych testów) ani E2E (lint robi `lint-edited-file.mjs`) i nie
   uruchamia całej suity — to robi CI. Hook jest pętlą zwrotną, nie bramką.
 - **Uruchomienie ręczne**: `echo '{"tool_input":{"file_path":"src/lib/utils/recipe-nutrition.ts"}}' | node scripts/hooks/related-tests.mjs; echo $?`
   — bez pola `cwd`: skrypt rozwiązuje wtedy ścieżkę względem katalogu projektu. W Git Bash `$PWD`
