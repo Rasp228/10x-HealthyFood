@@ -555,11 +555,11 @@ wynik pomiaru flaky z fazy 1.
 
 #### Automated
 
-- [x] 5.1 `npm run format:check` i `npm run lint` przechodzą
-- [x] 5.2 `contract-surfaces.md` ma wpis o kontekstach wymaganych checków
-- [x] 5.3 `test-plan.md` ma §6.7 i notatkę „§3 Phase 4” w §6.6
-- [x] 5.4 `AGENTS.md` opisuje hook `related-tests.mjs`
+- [x] 5.1 `npm run format:check` i `npm run lint` przechodzą — 124dc32
+- [x] 5.2 `contract-surfaces.md` ma wpis o kontekstach wymaganych checków — 124dc32
+- [x] 5.3 `test-plan.md` ma §6.7 i notatkę „§3 Phase 4” w §6.6 — 124dc32
+- [x] 5.4 `AGENTS.md` opisuje hook `related-tests.mjs` — 124dc32
 
 #### Manual
 
-- [x] 5.5 Notatka fazy w §6.6 zawiera numer PR-a dowodowego i liczby z CI
+- [x] 5.5 Notatka fazy w §6.6 zawiera numer PR-a dowodowego i liczby z CI — 124dc32

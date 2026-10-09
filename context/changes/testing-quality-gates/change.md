@@ -1,7 +1,7 @@
 ---
 change_id: testing-quality-gates
 title: Bramki jakości — wymagane checki PR i lokalny post-edit hook (Faza 4 test-planu)
-status: implementing
+status: implemented
 created: 2026-10-07
 updated: 2026-10-09
 archived_at: null
