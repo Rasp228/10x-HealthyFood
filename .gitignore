@@ -50,3 +50,11 @@ supabase/.temp
 
 # failed type generation leaves this behind
 src/db/database.types.ts.tmp
+
+# Playwright
+playwright/.auth/
+blob-report/
+playwright/.cache/
+.playwright-cli/
+# playwright-cli: lokalny wybór przeglądarki (zależny od maszyny)
+.playwright/

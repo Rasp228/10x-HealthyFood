@@ -92,14 +92,30 @@ export default defineConfig({
     },
   },
 
-  // Projekty testowe - tylko Chromium dla Docker
+  // Projekty testowe - tylko Chromium dla Docker.
+  // `setup` loguje się raz przez UI i zapisuje sesję, którą `chromium` wczytuje przez storageState.
+  // `session-boundaries.spec.ts` wylogowuje konto testowe globalnie (`signOut()` z zakresem
+  // `global`), co unieważniłoby zapisaną sesję - dlatego biegnie we własnym projekcie, po `chromium`.
   projects: [
+    { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
+      testIgnore: /session-boundaries\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 720 },
+        storageState: "playwright/.auth/user.json",
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "chromium-logout",
+      testMatch: /session-boundaries\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 720 },
       },
+      dependencies: ["chromium"],
     },
   ],
 
