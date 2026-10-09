@@ -499,41 +499,41 @@ wynik pomiaru flaky z fazy 1.
 #### Automated
 
 - [ ] 1.1 `gh auth status` kończy się kodem 0, a `gh api repos/Rasp228/10x-HealthyFood --jq .permissions.admin` zwraca `true`
-- [x] 1.2 `git log origin/master..master --oneline` jest puste
-- [x] 1.3 Ostatni przebieg „Test & Build Master” na HEAD `master` ma `conclusion: success`
-- [x] 1.4 Log „Testy jednostkowe” zawiera `Tests: 640 passed, 640 total` (albo liczbę równą lokalnemu `npx jest`)
-- [x] 1.5 Log „Testy E2E” zawiera 13 testów; liczba flaky odczytana i zanotowana
+- [x] 1.2 `git log origin/master..master --oneline` jest puste — d989499
+- [x] 1.3 Ostatni przebieg „Test & Build Master” na HEAD `master` ma `conclusion: success` — d989499
+- [x] 1.4 Log „Testy jednostkowe” zawiera `Tests: 640 passed, 640 total` (albo liczbę równą lokalnemu `npx jest`) — d989499
+- [x] 1.5 Log „Testy E2E” zawiera 13 testów; liczba flaky odczytana i zanotowana — d989499
 
 #### Manual
 
-- [x] 1.6 Użytkownik zainstalował `gh`, zalogował się i wypchnął commity
+- [x] 1.6 Użytkownik zainstalował `gh`, zalogował się i wypchnął commity — d989499
 
 ### Phase 2: Ruleset w repo
 
 #### Automated
 
-- [x] 2.1 `npm run format:check` i `npm run lint` przechodzą
-- [x] 2.2 Lista rulesetów zawiera „master — wymagane checki”
-- [x] 2.3 `rules/branches/master` zwraca `pull_request`, `required_status_checks` (4 konteksty), `non_fast_forward`, `deletion`
-- [x] 2.4 Ruleset ma `bypass_actors` z `actor_id: 5`, `bypass_mode: "always"`
+- [x] 2.1 `npm run format:check` i `npm run lint` przechodzą — d989499
+- [x] 2.2 Lista rulesetów zawiera „master — wymagane checki” — d989499
+- [x] 2.3 `rules/branches/master` zwraca `pull_request`, `required_status_checks` (4 konteksty), `non_fast_forward`, `deletion` — d989499
+- [x] 2.4 Ruleset ma `bypass_actors` z `actor_id: 5`, `bypass_mode: "always"` — d989499
 
 #### Manual
 
-- [x] 2.5 W Settings → Rules widać aktywny ruleset z czterema checkami
+- [x] 2.5 W Settings → Rules widać aktywny ruleset z czterema checkami — d989499
 
 ### Phase 3: Dowód czerwonym PR-em
 
 #### Automated
 
-- [ ] 3.1 PR z czerwonym „Testy jednostkowe”: merge bez `--admin` odrzucony, `mergeStateStatus` = `BLOCKED`
-- [ ] 3.2 PR z czerwonym „Kontrola jakości kodu” i `skipped` testami: merge bez `--admin` odrzucony
-- [ ] 3.3 `master` nie zawiera `tests/unit/gate-proof.test.ts`
-- [ ] 3.4 Ruleset po fazie znów ma `bypass_actors` z `actor_id: 5`
-- [ ] 3.5 PR zamknięty bez merge, gałąź `chore/gate-proof` usunięta
+- [x] 3.1 PR z czerwonym „Testy jednostkowe”: merge bez `--admin` odrzucony, `mergeStateStatus` = `BLOCKED`
+- [x] 3.2 PR z czerwonym „Kontrola jakości kodu” i `skipped` testami: merge bez `--admin` odrzucony
+- [x] 3.3 `master` nie zawiera `tests/unit/gate-proof.test.ts`
+- [x] 3.4 Ruleset po fazie znów ma `bypass_actors` z `actor_id: 5`
+- [x] 3.5 PR zamknięty bez merge, gałąź `chore/gate-proof` usunięta
 
 #### Manual
 
-- [ ] 3.6 W UI PR-a przy wyłączonym bypassie widać „Merging is blocked”
+- [x] 3.6 W UI PR-a przy wyłączonym bypassie widać „Merging is blocked”
 
 ### Phase 4: Lokalny post-edit hook
 

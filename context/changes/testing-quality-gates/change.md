@@ -22,3 +22,11 @@ After creating the folder, follow the downstream continuation rule.
 - „Testy jednostkowe”: `Test Suites: 30 passed, 30 total`, `Tests: 640 passed, 640 total` — równe lokalnemu `npx jest` na `93c420b`.
 - „Testy E2E”: `13 passed (3.2m)`, 0 flaky (CI ma `retries: 2`, żaden test nie potrzebował powtórki). `session-boundaries.spec.ts` przeszedł w CI.
 - Faza 1 bez `gh` — decyzja użytkownika: kroki CI i ruleset wykonywane ręcznie w UI, weryfikacja przez publiczne API (`curl`).
+
+## Dowód czerwonym PR-em (faza 3, dla notatki §6.6 w fazie 5)
+
+- PR #4 (`chore/gate-proof` → `master`), bypass admina zdjęty w UI na czas obu prób, potem przywrócony (ruleset 24778393, `updated_at` 2026-10-09T09:31:06Z — przed zamknięciem PR-a o 09:31:16Z).
+- Wariant 1, HEAD `a8e6eae` (celowo fałszywa asercja): „Testy jednostkowe” `failure`, „Kontrola jakości kodu” i „Build produkcyjny” `success`. UI: „Merging is blocked due to failing merge requirements”.
+- Wariant 2, HEAD `4b4f14b` (`number` przypisany do `string`): „Kontrola jakości kodu” `failure` na kroku „Sprawdzenie typów” (przebieg 37911513421), „Build produkcyjny”, „Testy jednostkowe”, „Testy E2E” `skipped`. UI: ten sam komunikat — `skipped` wymaganego checku nie odblokowuje merge.
+- PR zamknięty bez merge (`merged_at: null`), gałąź usunięta (404), `origin/master` bez `tests/unit/gate-proof.test.ts`.
+- Bez `gh` (decyzja z fazy 1): `mergeStateStatus = BLOCKED` nie odczytany — anonimowe API daje `mergeable_state: unstable`, bo nie stosuje rulesetu; dowodem odmowy jest komunikat UI. `bypass_actors` nie jest widoczne w publicznym API — powrót bypassu potwierdził użytkownik.
