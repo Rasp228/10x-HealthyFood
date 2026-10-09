@@ -36,6 +36,19 @@ const commonjsConfig = tseslint.config({
   },
 });
 
+// Skrypty narzędziowe (np. hook `scripts/hooks/related-tests.mjs`) to moduły ES uruchamiane przez
+// Node - potrzebują jego globali, których `commonjsConfig` udziela tylko plikom `*.config.js`.
+const nodeScriptsConfig = tseslint.config({
+  files: ["scripts/**/*.mjs"],
+  languageOptions: {
+    sourceType: "module",
+    globals: {
+      process: "readonly",
+      console: "readonly",
+    },
+  },
+});
+
 const jsxA11yConfig = tseslint.config({
   files: ["**/*.{js,jsx,ts,tsx}"],
   extends: [jsxA11y.flatConfigs.recommended],
@@ -108,6 +121,7 @@ export default tseslint.config(
   },
   baseConfig,
   commonjsConfig,
+  nodeScriptsConfig,
   jsxA11yConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],

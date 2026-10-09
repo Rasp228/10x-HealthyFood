@@ -525,31 +525,31 @@ wynik pomiaru flaky z fazy 1.
 
 #### Automated
 
-- [x] 3.1 PR z czerwonym „Testy jednostkowe”: merge bez `--admin` odrzucony, `mergeStateStatus` = `BLOCKED`
-- [x] 3.2 PR z czerwonym „Kontrola jakości kodu” i `skipped` testami: merge bez `--admin` odrzucony
-- [x] 3.3 `master` nie zawiera `tests/unit/gate-proof.test.ts`
-- [x] 3.4 Ruleset po fazie znów ma `bypass_actors` z `actor_id: 5`
-- [x] 3.5 PR zamknięty bez merge, gałąź `chore/gate-proof` usunięta
+- [x] 3.1 PR z czerwonym „Testy jednostkowe”: merge bez `--admin` odrzucony, `mergeStateStatus` = `BLOCKED` — 6585443
+- [x] 3.2 PR z czerwonym „Kontrola jakości kodu” i `skipped` testami: merge bez `--admin` odrzucony — 6585443
+- [x] 3.3 `master` nie zawiera `tests/unit/gate-proof.test.ts` — 6585443
+- [x] 3.4 Ruleset po fazie znów ma `bypass_actors` z `actor_id: 5` — 6585443
+- [x] 3.5 PR zamknięty bez merge, gałąź `chore/gate-proof` usunięta — 6585443
 
 #### Manual
 
-- [x] 3.6 W UI PR-a przy wyłączonym bypassie widać „Merging is blocked”
+- [x] 3.6 W UI PR-a przy wyłączonym bypassie widać „Merging is blocked” — 6585443
 
 ### Phase 4: Lokalny post-edit hook
 
 #### Automated
 
-- [ ] 4.1 `npm run lint` i `npm run format:check` przechodzą ze skryptem w `scripts/hooks/`
-- [ ] 4.2 Zielony przypadek (`recipe-nutrition.ts`) → exit 0
-- [ ] 4.3 Czerwony przypadek (zepsuta asercja w `diary-totals.test.ts`) → exit 2 i stderr z nazwą testu
-- [ ] 4.4 `.astro` → exit 0 bez uruchamiania Jesta
-- [ ] 4.5 Plik spoza testów (`docs/reference/known-drift.md`) → exit 0 bez uruchamiania Jesta
-- [ ] 4.6 Ścieżka względna (`src/middleware/index.ts`) → exit 0 i uruchomione testy middleware
-- [ ] 4.7 `.claude/settings.json` ma `hooks.PostToolUse` i niezmienione `permissions`
+- [x] 4.1 `npm run lint` i `npm run format:check` przechodzą ze skryptem w `scripts/hooks/`
+- [x] 4.2 Zielony przypadek (`recipe-nutrition.ts`) → exit 0
+- [x] 4.3 Czerwony przypadek (zepsuta asercja w `diary-totals.test.ts`) → exit 2 i stderr z nazwą testu
+- [x] 4.4 `.astro` → exit 0 bez uruchamiania Jesta
+- [x] 4.5 Plik spoza testów (`docs/reference/known-drift.md`) → exit 0 bez uruchamiania Jesta
+- [x] 4.6 Ścieżka względna (`src/middleware/index.ts`) → exit 0 i uruchomione testy middleware
+- [x] 4.7 `.claude/settings.json` ma `hooks.PostToolUse` i niezmienione `permissions`
 
 #### Manual
 
-- [ ] 4.8 W sesji Claude Code zepsuta edycja daje komunikat hooka, cofnięcie — ciszę
+- [x] 4.8 W sesji Claude Code zepsuta edycja daje komunikat hooka, cofnięcie — ciszę
 
 ### Phase 5: Dokumentacja i cookbook
 
