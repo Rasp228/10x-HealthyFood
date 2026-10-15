@@ -809,14 +809,14 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 2.1 Testy mapowania przechodzą (401/403/404/402/429/timeout/idempotencja/brak ponowień 4xx)
-- [x] 2.2 Testy serwisów i tras AI bez zmian zielone
-- [x] 2.3 Brak mapErrorToCustomError i handleRequestError w openrouter.service.ts
-- [x] 2.4 Cały zestaw Jest, typecheck, lint, format
+- [x] 2.1 Testy mapowania przechodzą (401/403/404/402/429/timeout/idempotencja/brak ponowień 4xx) — 55a6240
+- [x] 2.2 Testy serwisów i tras AI bez zmian zielone — 55a6240
+- [x] 2.3 Brak mapErrorToCustomError i handleRequestError w openrouter.service.ts — 55a6240
+- [x] 2.4 Cały zestaw Jest, typecheck, lint, format — 55a6240
 
 #### Manual
 
-- [ ] 2.5 Harness R3: trzy różne linie dla 401/429/404 i jedno żądanie na 4xx
+- [x] 2.5 Harness R3: trzy różne linie dla 401/429/404 i jedno żądanie na 4xx — 55a6240
 
 ### Phase 3: Wycena kalorii — powód zamiast cichego null
 
