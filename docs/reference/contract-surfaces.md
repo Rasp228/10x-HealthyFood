@@ -148,7 +148,7 @@ source, message, stack, at })` line per event. `kind` is a closed enum
   `src/lib/validations/recipe/create-recipe.ts` (shared by `update-recipe.ts`). Changing a migration
   literal without its schema, or the reverse, turns a 400 into a 500 or rejects what the database
   would store. The UI and `/api/ai/save-recipe` cap the title at 100, not 255 — a known divergence
-  (@docs/reference/known-drift.md, "Przepisy"). The `preferences_unique_user_category_value`
+  (`docs/reference/known-drift.md`, "Przepisy"). The `preferences_unique_user_category_value`
   constraint on `(user_id, category, value)` surfaces from the preferences routes as 409 via
   Postgres code `23505`; dropping the constraint silently turns a 409 back into a second, identical
   row. Boundary and "+1" cases for all of these are in `tests/unit/preferences-route.test.ts` and

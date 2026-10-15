@@ -10,7 +10,7 @@ Every page is SSR (`output: "server"`). Opt individual pages into prerendering w
 `export const prerender = true`; API routes set it to `false` explicitly. A prerendered page that
 reads `locals.user` renders once at build time with no session.
 
-Middleware uses `defineMiddleware` from `astro:middleware` (@src/middleware/index.ts).
+Middleware uses `defineMiddleware` from `astro:middleware` (`src/middleware/index.ts`).
 
 React 19: `ref` is a regular prop — no `forwardRef`, no `propTypes`.
 
@@ -21,7 +21,7 @@ a project-wide lock, so a second `astro dev` prints "Dev server already running"
 including one spawned by a test harness. Use `astro dev status` / `astro dev stop`, or
 `--ignore-lock` when you deliberately want a second instance on another port.
 
-@playwright.config.ts carries `--ignore-lock` in its spawn command for exactly this reason; without
+`playwright.config.ts` carries `--ignore-lock` in its spawn command for exactly this reason; without
 it Playwright reports "Process from config.webServer exited early".
 
 ## Stale Vite pre-bundle after a dependency change
