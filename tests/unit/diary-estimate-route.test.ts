@@ -42,12 +42,31 @@ const getEntry = jest.spyOn(DiaryService.prototype, "getEntry");
 
 const getUser = jest.fn();
 
-/** Kontekst żądania w kształcie, którego trasa faktycznie dotyka: `params.id` i klient z `locals`. */
-const requestContext = (id = "1") =>
+/**
+ * Kontekst żądania w kształcie, którego trasa faktycznie dotyka: `params.id`, klient z `locals`
+ * i - gdy test go podaje - `requestId` ustawiany przez middleware.
+ */
+const requestContext = (id = "1", requestId?: string) =>
   ({
     params: { id },
-    locals: { supabase: { auth: { getUser } } },
+    locals: { supabase: { auth: { getUser } }, requestId },
   }) as unknown as Parameters<typeof POST>[0];
+
+/** Sparsowane linie JSON wypisane przez szpiega konsoli. */
+const logLines = (spy: jest.SpyInstance): Record<string, unknown>[] =>
+  spy.mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>);
+
+/** Pierwsza linia logu o podanym zdarzeniu albo `undefined`. */
+const lineFor = (spy: jest.SpyInstance, event: string): Record<string, unknown> | undefined =>
+  logLines(spy).find((line) => line.event === event);
+
+/**
+ * Trasa zostawia linie `estimate.completed` i ostrzeżenia przy każdym przebiegu. Wyciszone
+ * w `beforeEach`, bo `jest.setup.ts` podmienia `console.warn` w `beforeAll` - szpieg założony
+ * na poziomie modułu patrzyłby na funkcję, której nikt już nie woła.
+ */
+let consoleWarn: jest.SpyInstance;
+let consoleInfo: jest.SpyInstance;
 
 const storedEntry = (overrides: Partial<DiaryEntryDto> = {}): DiaryEntryDto => ({
   id: 1,
@@ -89,6 +108,13 @@ beforeEach(() => {
     storedEntry({ calories, calorie_origin: origin })
   );
   getEntry.mockResolvedValue(storedEntry());
+  consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  consoleInfo = jest.spyOn(console, "info").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  consoleWarn.mockRestore();
+  consoleInfo.mockRestore();
 });
 
 afterAll(() => {
@@ -117,7 +143,7 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
 
       await POST(requestContext());
 
-      expect(estimateFromRecipe).toHaveBeenCalledWith(RECIPE_CONTENT, "Owsianka bez cukru");
+      expect(estimateFromRecipe).toHaveBeenCalledWith(RECIPE_CONTENT, "Owsianka bez cukru", expect.any(Object));
       expect(estimateFromDescription).not.toHaveBeenCalled();
     });
 
@@ -198,7 +224,7 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
 
       await POST(requestContext());
 
-      expect(estimateFromDescription).toHaveBeenCalledWith("frytki", "około 200 g");
+      expect(estimateFromDescription).toHaveBeenCalledWith("frytki", "około 200 g", expect.any(Object));
       expect(estimateFromRecipe).not.toHaveBeenCalled();
       expect(savedCalories()).toBe(420);
       expect(savedOrigin()).toBe("ai_from_description");
@@ -226,7 +252,7 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
 
       await POST(requestContext());
 
-      expect(estimateFromDescription).toHaveBeenCalledWith("Owsianka", "2 porcje");
+      expect(estimateFromDescription).toHaveBeenCalledWith("Owsianka", "2 porcje", expect.any(Object));
     });
 
     it("zwykły wpis opisowy dalej wysyła amount_text, także pusty", async () => {
@@ -235,7 +261,7 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
 
       await POST(requestContext());
 
-      expect(estimateFromDescription).toHaveBeenCalledWith("frytki", null);
+      expect(estimateFromDescription).toHaveBeenCalledWith("frytki", null, expect.any(Object));
     });
 
     it("usunięty albo cudzy przepis schodzi na gałąź opisową, a nie na 404", async () => {
@@ -332,6 +358,151 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
       expect(CalorieEstimationServiceMock).not.toHaveBeenCalled();
       expect(estimateFromDescription).not.toHaveBeenCalled();
       expect(estimateFromRecipe).not.toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+  });
+  describe("logi wyceny", () => {
+    it("przekazuje serwisowi kontekst żądania: requestId, userId, entryId, gałąź i trasę", async () => {
+      markEstimationRequested.mockResolvedValue(recipeEntry());
+      estimateFromRecipe.mockResolvedValue(250);
+
+      await POST(requestContext("1", "req-1"));
+
+      expect(estimateFromRecipe.mock.calls[0][2]).toMatchObject({
+        requestId: "req-1",
+        userId: "user-1",
+        entryId: 1,
+        branch: "ai_from_recipe",
+        route: "diary.estimate",
+      });
+    });
+
+    it("udana wycena zostawia estimate.completed z czasem i wynikiem valued", async () => {
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext("1", "req-1"));
+
+      const line = lineFor(consoleInfo, "estimate.completed");
+      expect(line).toMatchObject({ requestId: "req-1", branch: "ai_from_description", result: "valued" });
+      expect(typeof line?.ms).toBe("number");
+    });
+
+    it("odpowiedź bez liczby zostawia estimate.completed z wynikiem empty", async () => {
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockResolvedValue(null);
+
+      await POST(requestContext());
+
+      expect(lineFor(consoleInfo, "estimate.completed")).toMatchObject({ result: "empty" });
+    });
+
+    it("iloczyn ponad 5000 kcal zostawia warn estimate.total_out_of_range z wartością porcji i porcjami", async () => {
+      const entry = recipeEntry({ portions: 2 });
+      markEstimationRequested.mockResolvedValue(entry);
+      estimateFromRecipe.mockResolvedValue(3000);
+      getEntry.mockResolvedValue(entry);
+
+      await POST(requestContext());
+
+      expect(lineFor(consoleWarn, "estimate.total_out_of_range")).toMatchObject({
+        level: "warn",
+        perPortion: 3000,
+        portions: 2,
+        branch: "ai_from_recipe",
+      });
+    });
+
+    it("zapis odcięty znacznikiem zostawia warn estimate.discarded_stale ze znacznikiem zlecenia", async () => {
+      // `applyEstimate` oddaje wiersz bez wartości: w międzyczasie ktoś unieważnił zlecenie.
+      markEstimationRequested.mockResolvedValue(storedEntry({ estimation_requested_at: "2026-09-29T10:00:00.000Z" }));
+      estimateFromDescription.mockResolvedValue(420);
+      applyEstimate.mockResolvedValue(storedEntry({ calories: null, estimation_requested_at: null }));
+
+      const response = await POST(requestContext());
+
+      expect(response.status).toBe(200);
+      expect(lineFor(consoleWarn, "estimate.discarded_stale")).toMatchObject({
+        requestedAt: "2026-09-29T10:00:00.000Z",
+        entryId: 1,
+      });
+    });
+
+    it("zapisana wartość nie zostawia ostrzeżenia o odciętym zapisie", async () => {
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext());
+
+      expect(lineFor(consoleWarn, "estimate.discarded_stale")).toBeUndefined();
+    });
+
+    it("usunięty przepis zostawia info estimate.recipe_missing_fallback przy przełączeniu na opis", async () => {
+      markEstimationRequested.mockResolvedValue(recipeEntry({ source_recipe_id: 7 }));
+      readOwnRecipeContent.mockRejectedValue(new RecipeNotFoundError());
+      estimateFromDescription.mockResolvedValue(420);
+
+      await POST(requestContext("1", "req-1"));
+
+      expect(lineFor(consoleInfo, "estimate.recipe_missing_fallback")).toMatchObject({
+        level: "info",
+        requestId: "req-1",
+        entryId: 1,
+        recipeId: 7,
+      });
+    });
+
+    it("awaria dostawcy loguje estimate.provider_failed ze statusem, modelem, gałęzią i czasem", async () => {
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockRejectedValue(new RateLimitError("Limit", { status: 429, model: "model-testowy" }));
+
+      await POST(requestContext("1", "req-1"));
+
+      expect(consoleError).toHaveBeenCalledTimes(1);
+      const line = lineFor(consoleError, "estimate.provider_failed");
+      expect(line).toMatchObject({
+        requestId: "req-1",
+        userId: "user-1",
+        entryId: 1,
+        branch: "ai_from_description",
+        route: "diary.estimate",
+        status: 429,
+        model: "model-testowy",
+      });
+      expect(typeof line?.ms).toBe("number");
+      expect((line?.error as { name: string }).name).toBe("RateLimitError");
+
+      consoleError.mockRestore();
+    });
+
+    it("brak klucza (code AI_MISCONFIGURED) daje 502 z tym kodem, a nie AI_UNAVAILABLE", async () => {
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      CalorieEstimationServiceMock.mockImplementation(() => {
+        throw new OpenRouterError("Konfiguracja OpenRouter jest niekompletna", { code: "AI_MISCONFIGURED" });
+      });
+
+      const response = await POST(requestContext());
+
+      expect(response.status).toBe(502);
+      await expect(response.json()).resolves.toMatchObject({ code: "AI_MISCONFIGURED" });
+      expect(lineFor(consoleError, "estimate.provider_failed")).toBeDefined();
+      expect(applyEstimate).not.toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+
+    it("500 z zewnętrznego catcha oddaje requestId i loguje estimate.failed z tym samym id", async () => {
+      const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      markEstimationRequested.mockRejectedValue(new Error("RLS odrzuciło zapis"));
+
+      const response = await POST(requestContext("1", "req-1"));
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+      expect(lineFor(consoleError, "estimate.failed")).toMatchObject({ requestId: "req-1", entryId: 1 });
 
       consoleError.mockRestore();
     });

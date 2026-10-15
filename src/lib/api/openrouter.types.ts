@@ -108,6 +108,11 @@ export interface OpenRouterErrorOptions {
   status?: number;
   /** Model, o który pytaliśmy. */
   model?: string;
+  /**
+   * Kod rozpoznawczy po naszej stronie, gdy status go nie niesie - np. `AI_MISCONFIGURED` przy
+   * braku klucza, którego trasa nie może mylić z chwilową niedostępnością dostawcy.
+   */
+  code?: string;
 }
 
 /**
@@ -116,6 +121,7 @@ export interface OpenRouterErrorOptions {
 export class OpenRouterError extends Error {
   status?: number;
   model?: string;
+  code?: string;
   cause?: unknown;
 
   constructor(message: string, options: OpenRouterErrorOptions = {}) {
@@ -123,6 +129,7 @@ export class OpenRouterError extends Error {
     this.name = "OpenRouterError";
     this.status = options.status;
     this.model = options.model;
+    this.code = options.code;
     this.cause = options.cause;
   }
 }

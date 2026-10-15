@@ -377,7 +377,7 @@ describe("POST /api/diary-entries/:id/estimate - wycena nie dotyka preferencji a
     const response = await postEstimate(context(db, { method: "POST", params: { id: "102" } }));
 
     expect(response.status).toBe(200);
-    expect(estimateFromRecipe).toHaveBeenCalledWith(RECIPE_WITHOUT_BLOCK, "Sałatka z ciecierzycą");
+    expect(estimateFromRecipe).toHaveBeenCalledWith(RECIPE_WITHOUT_BLOCK, "Sałatka z ciecierzycą", expect.any(Object));
     const after = db.snapshot();
     expectUntouched(before, after, ["preferences", "recipes", "user_settings"]);
     expect(withoutIds(after, "diary_entries", [102])).toEqual(withoutIds(before, "diary_entries", [102]));

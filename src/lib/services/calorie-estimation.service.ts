@@ -1,6 +1,15 @@
 import { OpenRouterService } from "../api/openrouter.service";
 import { OpenRouterError } from "../api/openrouter.types";
 import type { ChatResponse } from "../api/openrouter.types";
+import { logInfo, logWarn } from "../utils/log";
+import type { LogContext } from "../utils/log";
+
+/**
+ * Powód, dla którego odpowiedź modelu nie dała liczby. Każdy trafia do linii logu
+ * `estimate.unusable_response` - bez niego "brak wartości" był w logach niewidoczny.
+ * `model_declined` jest osobno: to odpowiedź, o którą prompt wprost prosi, nie usterka.
+ */
+type UnusableReason = "empty" | "no_json" | "invalid_json" | "no_field" | "not_number" | "out_of_range";
 
 /** Granice akceptowanej wartości - te same, co w `caloriesValueSchema` i w checku migracji. */
 const MIN_CALORIES = 0;
@@ -91,8 +100,13 @@ function createEstimationClient(): OpenRouterService {
       throw error;
     }
 
+    // `code`, bo trasa ma odróżnić brak klucza (do naprawy w konfiguracji wdrożenia) od chwilowej
+    // niedostępności dostawcy - oba dają 502, ale tylko jedno minie samo.
     const message = error instanceof Error ? error.message : "nieznany błąd";
-    throw new OpenRouterError(`Konfiguracja OpenRouter jest niekompletna: ${message}`);
+    throw new OpenRouterError(`Konfiguracja OpenRouter jest niekompletna: ${message}`, {
+      cause: error,
+      code: "AI_MISCONFIGURED",
+    });
   }
 }
 
@@ -130,18 +144,24 @@ export class CalorieEstimationService {
    *
    * @param content - Opis posiłku wpisany przez użytkownika
    * @param amountText - Ilość podana przez użytkownika albo `null`
+   * @param logContext - Kontekst żądania (`requestId`, `userId`, `entryId`, gałąź) doklejany do
+   *   linii logu, gdy odpowiedź nie da liczby. Opcjonalny, żeby wywołanie bez trasy dalej działało.
    * @returns Liczba całkowita z przedziału 0-5000 albo `null`, gdy odpowiedź modelu jest
    *   bezużyteczna (brak pola, wartość spoza zakresu, treść nie do sparsowania).
    * @throws {OpenRouterError} Gdy dostawca jest nieosiągalny albo odmówił (sieć, timeout, 401,
    *   429, 5xx). Te błędy celowo NIE są połykane: bez nich trasa nie miałaby z czego zbudować 502,
    *   a awaria dostawcy byłaby w logach nieodróżnialna od halucynacji modelu.
    */
-  async estimateFromDescription(content: string, amountText: string | null): Promise<number | null> {
+  async estimateFromDescription(
+    content: string,
+    amountText: string | null,
+    logContext: LogContext = {}
+  ): Promise<number | null> {
     const userMessage = [`Opis posiłku: ${content}`, `Ilość: ${amountText ?? "nie podano"}`].join("\n");
 
     const response = await this.openRouterService.sendMessage(userMessage, SYSTEM_MESSAGE);
 
-    return this.extractCalories(response);
+    return this.extractCalories(response, logContext);
   }
 
   /**
@@ -154,39 +174,59 @@ export class CalorieEstimationService {
    * @param recipeContent - Treść przepisu należącego do tego użytkownika
    * @param entryNote - Pole `content` wpisu, przekazane jako notatka korygująca przepis, a nie
    *   jako opis dania. Bywa samym tytułem przepisu - wtedy wiadomość systemowa każe je zignorować.
+   * @param logContext - Kontekst żądania doklejany do linii logu - jak w `estimateFromDescription`.
    * @returns Liczba całkowita z przedziału 0-5000 dla jednej porcji albo `null`, gdy odpowiedź
    *   modelu jest bezużyteczna.
    * @throws {OpenRouterError} Gdy dostawca jest nieosiągalny albo odmówił - dokładnie jak
    *   `estimateFromDescription`, bo trasa buduje z tego jedno 502 dla obu gałęzi.
    */
-  async estimateFromRecipe(recipeContent: string, entryNote: string | null): Promise<number | null> {
+  async estimateFromRecipe(
+    recipeContent: string,
+    entryNote: string | null,
+    logContext: LogContext = {}
+  ): Promise<number | null> {
     const userMessage = [`Treść przepisu:\n${recipeContent}`, `Notatka użytkownika: ${entryNote ?? "brak"}`].join(
       "\n\n"
     );
 
     const response = await this.openRouterService.sendMessage(userMessage, RECIPE_SYSTEM_MESSAGE);
 
-    return this.extractCalories(response);
+    return this.extractCalories(response, logContext);
   }
 
   /**
    * Wydobywa liczbę z surowej koperty OpenAI.
    *
-   * Schemat sam z siebie liczby nie gwarantuje: `processResponse` (`openrouter.service.ts:269`) to
-   * goły rzut typu bez walidacji, a `response_format` idzie na wyjściu jako
-   * `{ type: "json_object", schema }` (tamże, :136) - kształt, którego OpenRouter nie egzekwuje.
+   * Schemat sam z siebie liczby nie gwarantuje: `processResponse` (`validateChatEnvelope`
+   * w `openrouter.errors.ts`) sprawdza tylko kopertę - pole `error` i obecność `choices` - a nie
+   * treść wiadomości, a `response_format` idzie na wyjściu jako `{ type: "json_object", schema }`
+   * (`openrouter.service.ts`) - kształt, którego OpenRouter nie egzekwuje.
    * Model jest przy tym rozumujący, więc treść bywa poprzedzona preambułą i owinięta w ogrodzenia
    * markdown. `AIService` rozwiązuje to samo trzema prywatnymi metodami zaszytymi pod kształt
    * przepisu - nie ma czego zaimportować, więc te kilkanaście linii jest tu świadomie zdublowane.
    *
    * Każdy krok, który się nie uda, kończy się `null` - czyli "odpowiedź bezużyteczna", nie awarią
-   * dostawcy.
+   * dostawcy - i linią logu z powodem. Linia niesie długość treści, nigdy samą treść: odpowiedź
+   * modelu potrafi cytować opis posiłku, a ten nie wychodzi do logu.
    */
-  private extractCalories(response: ChatResponse): number | null {
-    const rawContent = response?.choices?.[0]?.message?.content;
+  private extractCalories(response: ChatResponse, logContext: LogContext): number | null {
+    const choice = response?.choices?.[0];
+    const rawContent = choice?.message?.content;
+
+    const diagnostics: LogContext = {
+      ...logContext,
+      finishReason: typeof choice?.finish_reason === "string" ? choice.finish_reason : undefined,
+      model: typeof response?.model === "string" ? response.model : undefined,
+      contentLength: typeof rawContent === "string" ? rawContent.length : 0,
+    };
+
+    const unusable = (reason: UnusableReason): null => {
+      logWarn("estimate.unusable_response", { ...diagnostics, reason });
+      return null;
+    };
 
     if (typeof rawContent !== "string" || rawContent.trim() === "") {
-      return null;
+      return unusable("empty");
     }
 
     // Najpierw ogrodzenie ```json ... ```, potem ostatni obiekt w treści: przy modelu rozumującym
@@ -200,30 +240,37 @@ export class CalorieEstimationService {
     }
 
     if (!candidate) {
-      return null;
+      return unusable("no_json");
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(candidate);
     } catch {
-      return null;
+      return unusable("invalid_json");
     }
 
     if (typeof parsed !== "object" || parsed === null || !("calories" in parsed)) {
-      return null;
+      return unusable("no_field");
     }
 
     const value = (parsed as { calories: unknown }).calories;
 
-    if (typeof value !== "number" || !Number.isFinite(value)) {
+    // `{"calories": null}` to odpowiedź, którą prompt wprost każe dać przy opisie nie do wyceny -
+    // info, nie warn, żeby kanał ostrzeżeń zostawił miejsce na prawdziwe usterki modelu.
+    if (value === null) {
+      logInfo("estimate.unusable_response", { ...diagnostics, reason: "model_declined" });
       return null;
+    }
+
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return unusable("not_number");
     }
 
     const rounded = Math.round(value);
 
     if (rounded < MIN_CALORIES || rounded > MAX_CALORIES) {
-      return null;
+      return unusable("out_of_range");
     }
 
     return rounded;

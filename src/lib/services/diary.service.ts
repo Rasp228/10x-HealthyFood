@@ -8,6 +8,8 @@ import type {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, TablesUpdate } from "../../db/database.types";
 import { resolveRecipeCalories } from "../utils/recipe-nutrition";
+import type { RecipeCalorieReason } from "../utils/recipe-nutrition";
+import { logInfo } from "../utils/log";
 
 /**
  * Wskazany przepis nie istnieje albo należy do kogoś innego.
@@ -93,15 +95,17 @@ export class DiaryService {
     // `estimation_requested_at` zostaje nietknięte - ten wpis nie zleca żadnego oszacowania.
     let calories = command.calories;
     let calorieOrigin: CalorieOriginEnum | null = command.calories === null ? null : "manual";
+    let unresolvedReason: RecipeCalorieReason | null = null;
 
     // Wartość ręczna wygrywa z przepisem (FR-004) - wtedy treści z kroku wyżej w ogóle nie
     // czytamy. Dla wpisu z przepisu liczy ją parser: brak rozpoznanego bloku zostawia oba pola
     // `null`, bo `diary_entries_value_has_origin` nie pozwala zapisać jednego bez drugiego.
     if (command.calories === null && recipeContent !== null && command.portions !== null) {
-      const { total } = resolveRecipeCalories(recipeContent, command.portions);
+      const { total, reason } = resolveRecipeCalories(recipeContent, command.portions);
 
       calories = total;
       calorieOrigin = total === null ? null : "recipe_nutrition";
+      unresolvedReason = total === null ? reason : null;
     }
 
     const { data, error } = await this.supabase
@@ -121,6 +125,18 @@ export class DiaryService {
 
     if (error) {
       throw error;
+    }
+
+    // Po zapisie, nie przed nim: dopiero teraz linia ma `entryId`, po którym da się ją złączyć
+    // z wierszem bez wartości.
+    if (unresolvedReason !== null) {
+      logInfo("diary.recipe_nutrition_unresolved", {
+        userId,
+        entryId: data.id,
+        recipeId: command.source_recipe_id,
+        reason: unresolvedReason,
+        portions: command.portions,
+      });
     }
 
     return data;
@@ -336,11 +352,21 @@ export class DiaryService {
       const portions = command.portions ?? current.portions;
 
       if (recipeContent !== null && portions !== null) {
-        const { total } = resolveRecipeCalories(recipeContent, portions);
+        const { total, reason } = resolveRecipeCalories(recipeContent, portions);
 
         if (total !== null) {
           changes.calories = total;
           changes.calorie_origin = "recipe_nutrition";
+        } else {
+          // Wpis zostaje bez wartości i pójdzie do modelu - linia mówi, czemu parser się poddał
+          // (`no_declared_block` albo `out_of_range`).
+          logInfo("diary.recipe_nutrition_unresolved", {
+            userId,
+            entryId,
+            recipeId: current.source_recipe_id,
+            reason,
+            portions,
+          });
         }
       }
     } else if (command.calories === null) {

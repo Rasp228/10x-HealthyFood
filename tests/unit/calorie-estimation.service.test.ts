@@ -61,9 +61,29 @@ const estimateRecipeFor = (content: string, entryNote: string | null = null): Pr
   return new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, entryNote);
 };
 
+/**
+ * Każda odpowiedź bez liczby zostawia linię logu. Wyciszone w każdym teście, żeby istniejące
+ * przypadki `toBeNull` nie zalewały wyjścia - blok "powód braku wartości w logu" czyta je wprost.
+ * W `beforeEach`, nie na poziomie modułu: `jest.setup.ts` podmienia `console.warn` w `beforeAll`,
+ * więc szpieg założony wcześniej patrzyłby na funkcję, której nikt już nie woła.
+ */
+let consoleWarn: jest.SpyInstance;
+let consoleInfo: jest.SpyInstance;
+
+/** Sparsowana linia JSON z podanego wywołania konsoli. */
+const logLine = (spy: jest.SpyInstance, call = 0): Record<string, unknown> =>
+  JSON.parse(spy.mock.calls[call][0] as string) as Record<string, unknown>;
+
 beforeEach(() => {
   jest.clearAllMocks();
   OpenRouterServiceMock.mockImplementation(() => ({ sendMessage, setResponseFormat }));
+  consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  consoleInfo = jest.spyOn(console, "info").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  consoleWarn.mockRestore();
+  consoleInfo.mockRestore();
 });
 
 describe("CalorieEstimationService", () => {
@@ -105,6 +125,22 @@ describe("CalorieEstimationService", () => {
       });
 
       expect(() => new CalorieEstimationService()).toThrow(OpenRouterError);
+    });
+
+    it("brak klucza niesie code AI_MISCONFIGURED, żeby trasa odróżniła go od chwilowej niedostępności", () => {
+      OpenRouterServiceMock.mockImplementation(() => {
+        throw new Error("Klucz API jest wymagany - podaj go w konfiguracji lub ustaw zmienną OPENROUTER_API_KEY");
+      });
+
+      let thrown: unknown = null;
+      try {
+        new CalorieEstimationService();
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(OpenRouterError);
+      expect((thrown as OpenRouterError).code).toBe("AI_MISCONFIGURED");
     });
 
     it("przepuszcza OpenRouterError z konstruktora klienta bez owijania go drugi raz", () => {
@@ -252,6 +288,88 @@ describe("CalorieEstimationService", () => {
       sendMessage.mockResolvedValue({ ...chatResponse('{"calories": 420}'), choices: [] });
 
       await expect(new CalorieEstimationService().estimateFromDescription("frytki", null)).resolves.toBeNull();
+    });
+  });
+
+  describe("powód braku wartości w logu", () => {
+    it.each([
+      ["empty", "   "],
+      ["no_json", "Nie jestem w stanie tego oszacować."],
+      ["invalid_json", "{calories: 420}"],
+      ["no_field", '{"kcal": 300}'],
+      ["not_number", '{"calories": "420"}'],
+      ["out_of_range", '{"calories": 5001}'],
+    ])("%s: null i jedna linia warn estimate.unusable_response z tym powodem", async (reason, content) => {
+      await expect(estimateFor(content)).resolves.toBeNull();
+
+      expect(consoleWarn).toHaveBeenCalledTimes(1);
+      expect(logLine(consoleWarn)).toMatchObject({
+        level: "warn",
+        event: "estimate.unusable_response",
+        reason,
+        model: "model-testowy",
+        finishReason: "stop",
+        contentLength: content.length,
+      });
+    });
+
+    it("koperta bez wyborów to powód empty z zerową długością treści", async () => {
+      sendMessage.mockResolvedValue({ ...chatResponse('{"calories": 420}'), choices: [] });
+
+      await new CalorieEstimationService().estimateFromDescription("frytki", null);
+
+      expect(logLine(consoleWarn)).toMatchObject({ reason: "empty", contentLength: 0 });
+    });
+
+    it('{"calories": null} to model_declined w info, nie w warn - prompt sam o taką odpowiedź prosi', async () => {
+      await expect(estimateFor('{"calories": null}')).resolves.toBeNull();
+
+      expect(consoleWarn).not.toHaveBeenCalled();
+      expect(consoleInfo).toHaveBeenCalledTimes(1);
+      expect(logLine(consoleInfo)).toMatchObject({
+        level: "info",
+        event: "estimate.unusable_response",
+        reason: "model_declined",
+      });
+    });
+
+    it("liczba z odpowiedzi nie zostawia żadnej linii", async () => {
+      await expect(estimateFor('{"calories": 420}')).resolves.toBe(420);
+
+      expect(consoleWarn).not.toHaveBeenCalled();
+      expect(consoleInfo).not.toHaveBeenCalled();
+    });
+
+    it("dokleja kontekst żądania z trasy do linii logu", async () => {
+      sendMessage.mockResolvedValue(chatResponse("Nie wiem."));
+
+      await new CalorieEstimationService().estimateFromRecipe(RECIPE_CONTENT, null, {
+        requestId: "req-1",
+        userId: "user-1",
+        entryId: 7,
+        branch: "ai_from_recipe",
+      });
+
+      expect(logLine(consoleWarn)).toMatchObject({
+        requestId: "req-1",
+        userId: "user-1",
+        entryId: 7,
+        branch: "ai_from_recipe",
+        reason: "no_json",
+      });
+    });
+
+    it("linia nie niesie treści odpowiedzi modelu ani opisu wpisu - tylko jej długość", async () => {
+      const content = "Sałatka z tuńczykiem to około czterystu kalorii, ale nie podam liczby.";
+      sendMessage.mockResolvedValue(chatResponse(content));
+
+      await new CalorieEstimationService().estimateFromDescription("sałatka z tuńczykiem", "miska");
+
+      const raw = consoleWarn.mock.calls[0][0] as string;
+      expect(raw).not.toContain("tuńczyk");
+      expect(raw).not.toContain("miska");
+      expect(raw).not.toContain(content);
+      expect(logLine(consoleWarn).contentLength).toBe(content.length);
     });
   });
 

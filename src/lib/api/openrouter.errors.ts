@@ -14,7 +14,9 @@ import {
   ContentFilterError,
   NetworkError,
   BudgetExceededError,
+  ResponseParsingError,
 } from "./openrouter.types";
+import type { ChatResponse } from "./openrouter.types";
 
 interface ProviderResponse {
   status: number;
@@ -93,4 +95,54 @@ export function isRetryable(error: OpenRouterError): boolean {
   }
 
   return error.status !== undefined && error.status >= 500 && error.status < 600;
+}
+
+/** Czyta `message` i `code` z pola `error` koperty - dostawca wkłada tam opis awarii upstreamu. */
+function describeProviderError(error: unknown): string {
+  if (error === null || typeof error !== "object") {
+    return String(error);
+  }
+
+  const { message, code } = error as { message?: unknown; code?: unknown };
+  const parts: string[] = [];
+
+  if (typeof message === "string" && message !== "") parts.push(message);
+  if ((typeof code === "string" && code !== "") || typeof code === "number") parts.push(`kod ${code}`);
+
+  return parts.length > 0 ? parts.join(", ") : "brak opisu";
+}
+
+/**
+ * Sprawdza kopertę odpowiedzi 200 od OpenRoutera, zanim ktokolwiek zacznie w niej szukać treści.
+ *
+ * OpenRouter potrafi oddać 200 z polem `error` (awaria dostawcy upstream) albo bez `choices`. To
+ * awaria dostawcy, nie bezużyteczna odpowiedź modelu - bez tej bramki trasa zapisałaby ją jako
+ * „model nic nie policzył”. Rzut `ResponseParsingError` (podklasa `OpenRouterError`) daje
+ * w trasach to samo 502, co każda inna awaria dostawcy.
+ *
+ * Wyjęte z `OpenRouterService.processResponse`, bo tamten moduł czyta `import.meta.env` i w ts-jest
+ * nie da się go załadować.
+ */
+export function validateChatEnvelope(response: unknown, model: string): ChatResponse {
+  if (response === null || typeof response !== "object" || Array.isArray(response)) {
+    throw new ResponseParsingError("Odpowiedź OpenRouter nie jest obiektem", { model });
+  }
+
+  const envelope = response as { error?: unknown; choices?: unknown };
+
+  if (envelope.error !== undefined && envelope.error !== null) {
+    throw new ResponseParsingError(
+      `OpenRouter zwrócił błąd w odpowiedzi 200: ${describeProviderError(envelope.error)}`,
+      {
+        model,
+        cause: envelope.error,
+      }
+    );
+  }
+
+  if (!Array.isArray(envelope.choices) || envelope.choices.length === 0) {
+    throw new ResponseParsingError("Odpowiedź OpenRouter nie zawiera żadnego wyboru (`choices`)", { model });
+  }
+
+  return response as ChatResponse;
 }

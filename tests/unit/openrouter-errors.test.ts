@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from "axios";
 import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import { isRetryable, mapAxiosError } from "@/lib/api/openrouter.errors";
+import { isRetryable, mapAxiosError, validateChatEnvelope } from "@/lib/api/openrouter.errors";
 import {
   AuthenticationError,
   BudgetExceededError,
@@ -8,6 +8,7 @@ import {
   NetworkError,
   OpenRouterError,
   RateLimitError,
+  ResponseParsingError,
 } from "@/lib/api/openrouter.types";
 
 /**
@@ -102,4 +103,55 @@ describe("isRetryable", () => {
   it("OpenRouterError bez statusu (np. brak konfiguracji) nie jest ponawiany", () => {
     expect(isRetryable(new OpenRouterError("Konfiguracja OpenRouter jest niekompletna"))).toBe(false);
   });
+});
+
+describe("validateChatEnvelope", () => {
+  const validEnvelope = {
+    id: "resp-1",
+    model: MODEL,
+    created: 1_700_000_000,
+    choices: [{ index: 0, message: { role: "assistant", content: '{"calories": 420}' }, finish_reason: "stop" }],
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+  };
+
+  it("przepuszcza poprawną kopertę bez zmian", () => {
+    expect(validateChatEnvelope(validEnvelope, MODEL)).toBe(validEnvelope);
+  });
+
+  it("200 z polem error to awaria dostawcy: ResponseParsingError z komunikatem i kodem dostawcy", () => {
+    const providerError = { message: "Upstream provider returned 503", code: 503 };
+
+    const thrown = (() => {
+      try {
+        validateChatEnvelope({ error: providerError }, MODEL);
+      } catch (error) {
+        return error;
+      }
+      return null;
+    })();
+
+    expect(thrown).toBeInstanceOf(ResponseParsingError);
+    // Podklasa OpenRouterError - trasy budują z niej istniejące 502 bez zmian.
+    expect(thrown).toBeInstanceOf(OpenRouterError);
+    const error = thrown as ResponseParsingError;
+    expect(error.message).toContain("Upstream provider returned 503");
+    expect(error.message).toContain("503");
+    expect(error.model).toBe(MODEL);
+    expect(error.cause).toBe(providerError);
+  });
+
+  it.each([
+    ["bez choices", { id: "resp-1" }],
+    ["z pustą tablicą choices", { ...validEnvelope, choices: [] }],
+    ["z choices, które nie są tablicą", { ...validEnvelope, choices: "nic" }],
+  ])("koperta %s daje ResponseParsingError z modelem", (_label, envelope) => {
+    expect(() => validateChatEnvelope(envelope, MODEL)).toThrow(ResponseParsingError);
+  });
+
+  it.each([null, undefined, "tekst", 42, []])(
+    "odpowiedź, która nie jest obiektem (%p), daje ResponseParsingError",
+    (value) => {
+      expect(() => validateChatEnvelope(value, MODEL)).toThrow(ResponseParsingError);
+    }
+  );
 });

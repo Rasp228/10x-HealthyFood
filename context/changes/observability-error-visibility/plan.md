@@ -822,10 +822,10 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [ ] 3.1 Testy serwisu wyceny przechodzą, łącznie z nowym blokiem powodów
-- [ ] 3.2 Testy trasy wyceny przechodzą
-- [ ] 3.3 Testy serwisu dziennika i danych chronionych zielone
-- [ ] 3.4 Cały zestaw Jest, typecheck, lint, format
+- [x] 3.1 Testy serwisu wyceny przechodzą, łącznie z nowym blokiem powodów
+- [x] 3.2 Testy trasy wyceny przechodzą
+- [x] 3.3 Testy serwisu dziennika i danych chronionych zielone
+- [x] 3.4 Cały zestaw Jest, typecheck, lint, format
 
 #### Manual
 

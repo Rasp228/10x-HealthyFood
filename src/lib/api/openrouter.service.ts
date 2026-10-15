@@ -10,8 +10,8 @@ import type {
   ChatResponse,
   ChatPayload,
 } from "./openrouter.types";
-import { OpenRouterError, ResponseParsingError } from "./openrouter.types";
-import { isRetryable, mapAxiosError } from "./openrouter.errors";
+import { OpenRouterError } from "./openrouter.types";
+import { isRetryable, mapAxiosError, validateChatEnvelope } from "./openrouter.errors";
 
 /**
  * Usługa OpenRouter do komunikacji z API OpenRouter
@@ -190,18 +190,11 @@ export class OpenRouterService {
   }
 
   /**
-   * Weryfikuje i formatuje odpowiedź z API
+   * Weryfikuje kopertę odpowiedzi: 200 z polem `error` albo bez `choices` to awaria dostawcy
+   * (`ResponseParsingError`), nie bezużyteczna odpowiedź modelu. Treści wiadomości nie sprawdza -
+   * to należy do wywołujących (`extractCalories`, `AIService.parseAIResponse`).
    */
   private processResponse(response: unknown): ChatResponse {
-    try {
-      const typedResponse = response as ChatResponse;
-
-      return typedResponse;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new ResponseParsingError(`Błąd przetwarzania odpowiedzi: ${error.message}`);
-      }
-      throw new ResponseParsingError("Nieznany błąd podczas przetwarzania odpowiedzi");
-    }
+    return validateChatEnvelope(response, this.defaultModel);
   }
 }

@@ -5,6 +5,8 @@ import { entryIdSchema } from "../../../../lib/validations/diary/update-entry";
 import { formatPortions } from "../../../../lib/utils/diary-portions";
 import { zodIssues } from "../../../../lib/utils/validation-errors";
 import { OpenRouterError } from "../../../../lib/api/openrouter.types";
+import { logError, logInfo, logWarn } from "../../../../lib/utils/log";
+import type { LogContext } from "../../../../lib/utils/log";
 
 export const prerender = false;
 
@@ -31,6 +33,10 @@ const MAX_TOTAL_CALORIES = 5000;
  * albo na liczbę wpisaną ręcznie. Jedyne wyjście inne niż 200 po walidacji to awaria dostawcy.
  */
 export const POST: APIRoute = async ({ params, locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie (kto, który wpis, która gałąź) - zewnętrzny catch
+  // loguje go w stanie z chwili awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "diary.estimate" };
+
   try {
     // Sprawdź autoryzację. Żądanie bez sesji zwykle nie dociera tutaj - middleware przekierowuje
     // ścieżki spoza PUBLIC_PATHS na /auth/login - ale 401 zostaje jako druga linia obrony.
@@ -58,6 +64,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
     }
 
     const entryId = idResult.data;
+    logContext.userId = user.id;
+    logContext.entryId = entryId;
+
     const diaryService = new DiaryService(locals.supabase);
 
     // Znacznik idzie do bazy PRZED wywołaniem modelu: to on pozwala przeglądarce odróżnić wpis,
@@ -89,6 +98,10 @@ export const POST: APIRoute = async ({ params, locals }) => {
       if (!(error instanceof RecipeNotFoundError)) {
         throw error;
       }
+
+      // Wpis wskazuje przepis, którego już nie ma (albo nie jest jego) - wycena schodzi na opis.
+      // Bez tej linii wartość "z opisu" przy wpisie z przepisu nie miałaby w logu wyjaśnienia.
+      logInfo("estimate.recipe_missing_fallback", { ...logContext, recipeId: entry.source_recipe_id });
     }
 
     let estimate: number | null;
@@ -96,6 +109,11 @@ export const POST: APIRoute = async ({ params, locals }) => {
     // Pochodzenie ustala ta sama gałąź, która policzy wartość. Inaczej wiersz dostałby etykietę
     // źródła, którego model w ogóle nie widział.
     const origin = recipeContent === null ? "ai_from_description" : "ai_from_recipe";
+    logContext.branch = origin;
+
+    // Czas od konstrukcji klienta do odpowiedzi modelu: z nim w logu widać, czy 502 to timeout
+    // na granicy 55 s, czy natychmiastowa odmowa.
+    const startedAt = Date.now();
 
     try {
       const estimationService = new CalorieEstimationService();
@@ -106,7 +124,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
         // Decyzja z planu `edit-and-delete-entry`, faza 1, pkt 4. Zwykły wpis opisowy bez zmian.
         const amountText = entry.portions !== null ? formatPortions(entry.portions) : entry.amount_text;
 
-        estimate = await estimationService.estimateFromDescription(entry.content, amountText);
+        estimate = await estimationService.estimateFromDescription(entry.content, amountText, logContext);
       } else {
         // Model odpowiada na jedno pytanie - ile ma JEDNA porcja - a mnożenie i zaokrąglenie robi
         // kod, tak samo jak `resolveRecipeCalories`.
@@ -120,22 +138,39 @@ export const POST: APIRoute = async ({ params, locals }) => {
         // tylko schemat tworzenia wpisu, kolumna w bazie jej nie pilnuje, a `null * cokolwiek`
         // to w JS `0`, nie `NaN` - przeszłoby bramkę zakresu i ograniczenie bazy, a wpis po cichu
         // dostałby 0 kcal z etykietą „oszacowane z przepisu".
-        const perPortion = await estimationService.estimateFromRecipe(recipeContent, entry.content);
-        const total = perPortion === null ? null : Math.round(perPortion * (entry.portions ?? 1));
+        const portions = entry.portions ?? 1;
+        const perPortion = await estimationService.estimateFromRecipe(recipeContent, entry.content, logContext);
+        const total = perPortion === null ? null : Math.round(perPortion * portions);
 
         estimate = total !== null && total >= MIN_TOTAL_CALORIES && total <= MAX_TOTAL_CALORIES ? total : null;
+
+        // Model dał poprawną wartość porcji, a dopiero iloczyn wypadł poza zakres - bez tej linii
+        // wyglądałoby to w logu jak model, który nic nie policzył.
+        if (total !== null && estimate === null) {
+          logWarn("estimate.total_out_of_range", { ...logContext, perPortion, portions });
+        }
       }
     } catch (error) {
       // Awaria dostawcy łapana PRZED zewnętrznym catchem trasy: inaczej byłaby w logach
       // nieodróżnialna od zwykłego 500. Wiersz zostaje ze znacznikiem i bez wartości - ta zmiana
       // nigdy go nie zeruje.
       if (error instanceof OpenRouterError) {
-        console.error("Błąd dostawcy AI podczas szacowania kalorii:", error);
+        // Status i model odróżniają 401 (klucz) od 429 (limit) i 404 (model), `ms` - timeout od
+        // natychmiastowej odmowy.
+        logError(
+          "estimate.provider_failed",
+          { ...logContext, model: error.model, status: error.status, ms: Date.now() - startedAt },
+          error
+        );
+
+        // Brak klucza to błąd konfiguracji wdrożenia, nie chwilowa niedostępność - "Policz ponownie"
+        // go nie naprawi, więc dostaje własny kod.
+        const code = error.code === "AI_MISCONFIGURED" ? "AI_MISCONFIGURED" : "AI_UNAVAILABLE";
 
         return new Response(
           JSON.stringify({
             error: "Usługa AI jest chwilowo niedostępna",
-            code: "AI_UNAVAILABLE",
+            code,
           }),
           { status: 502, headers: { "Content-Type": "application/json" } }
         );
@@ -143,6 +178,12 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
       throw error;
     }
+
+    logInfo("estimate.completed", {
+      ...logContext,
+      ms: Date.now() - startedAt,
+      result: estimate === null ? "empty" : "valued",
+    });
 
     // Odpowiedź bezużyteczna to nie awaria: oddajemy wiersz ze znacznikiem i bez wartości.
     //
@@ -174,13 +215,21 @@ export const POST: APIRoute = async ({ params, locals }) => {
       });
     }
 
+    // Zapis odcięty znacznikiem: w międzyczasie ktoś unieważnił zlecenie (edycja, "Zapisz
+    // i przelicz", nowsze zlecenie), więc opłacona wycena przepadła. Bez tej linii wyglądałoby to
+    // jak model, który nic nie policzył.
+    if (updated.calories === null) {
+      logWarn("estimate.discarded_stale", { ...logContext, requestedAt: entry.estimation_requested_at });
+    }
+
     return new Response(JSON.stringify(updated), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
     // Komunikat zostaje na serwerze. Awaria PostgREST niesie w treści nazwy kolumn, nazwy
-    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Błąd podczas zlecania wyceny kalorii:", error);
+    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała i `requestId`, po którym
+    // linię logu z pełnym błędem da się znaleźć.
+    logError("estimate.failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
