@@ -1,0 +1,24 @@
+---
+/**
+ * Strona błędu serwera. Astro renderuje ją, gdy strona rzuci wyjątek - middleware loguje go jako
+ * `request.unhandled` z `requestId` i rzuca dalej właśnie po to, żeby tu trafić.
+ *
+ * Bez treści błędu i bez danych użytkownika: `Astro.props.error` zostaje nieprzeczytane, bo
+ * komunikat wyjątku bywa techniczny (nazwy kolumn, ścieżki), a jego pełny opis jest już w logu.
+ */
+import AppLayout from "../layouts/AppLayout.astro";
+import { buttonVariants } from "../components/ui/button";
+---
+
+<AppLayout title="Błąd serwera - HealthyMeal">
+  <div class="flex flex-col items-center justify-center py-16 text-center">
+    <div class="mb-8 text-6xl font-bold text-muted-foreground">500</div>
+    <h1 class="mb-4 text-4xl font-bold">Coś poszło nie tak</h1>
+    <p class="mb-8 max-w-md text-muted-foreground">
+      Wystąpił błąd po naszej stronie. Odśwież stronę albo wróć za chwilę.
+    </p>
+    <a href="/" class={buttonVariants({ variant: "default" })}>
+      Strona główna
+    </a>
+  </div>
+</AppLayout>

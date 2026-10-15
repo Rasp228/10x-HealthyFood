@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
+import IslandErrorBoundary from "../common/IslandErrorBoundary";
 import DayNavigator from "./DayNavigator";
 import DiaryDaySummary from "./DiaryDaySummary";
 import DiaryEmptyState from "./DiaryEmptyState";
@@ -73,18 +74,32 @@ interface DiaryPageProps {
 }
 
 /**
- * Wyspa dziennika: spina wybór dnia z listą wpisów, trzyma żądania wyceny i powierzchnię toastów.
+ * Wyspa dziennika owinięta granicą błędów: wyjątek w renderze - także w hookach treści - daje
+ * komunikat i zgłoszenie `client.boundary`, a nie pustą stronę. Granica stoi nad treścią, a nie
+ * w niej, bo granica nie łapie błędów komponentu, który ją renderuje.
+ */
+export default function DiaryPage(props: DiaryPageProps) {
+  return (
+    <IslandErrorBoundary name="DiaryPage">
+      <DiaryPageContent {...props} />
+    </IslandErrorBoundary>
+  );
+}
+
+/**
+ * Treść wyspy dziennika: spina wybór dnia z listą wpisów, trzyma żądania wyceny i powierzchnię
+ * toastów.
  *
  * `<ToastContainer />` renderuje się tutaj, a nie w layoucie - wyspy Astro to osobne drzewa
  * Reacta, więc komponent wołający `showToast` bez kontenera po prostu nie ma czym go narysować.
  */
-export default function DiaryPage({ dailyGoal, goalError = false }: DiaryPageProps) {
+function DiaryPageContent({ dailyGoal, goalError = false }: DiaryPageProps) {
   const { day, today, setDay } = useSelectedDay();
   const { entries, isLoading, loadedDay, error, refetch } = useDiaryEntries(day);
   const { showToast } = useToast();
   // Wyspa jest właścicielem żądania w locie, bo to ona trzyma listę: po każdym zakończeniu wycena
   // każe odświeżyć wiersze i stan wpisu bierze się z danych, a nie z pamięci komponentu.
-  const { estimate, cancel, inFlightId, queuedIds, settledIds } = useCalorieEstimation(refetch);
+  const { estimate, cancel, inFlightId, queuedIds, settledIds, failedIds } = useCalorieEstimation(refetch);
   const [entryToEdit, setEntryToEdit] = useState<DiaryEntryDto | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<DiaryEntryDto | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -116,7 +131,9 @@ export default function DiaryPage({ dailyGoal, goalError = false }: DiaryPagePro
   const subscribeToTick = useMemo(() => createTickSubscriber(tickDeadline), [tickDeadline]);
   const now = useSyncExternalStore(subscribeToTick, getNowTick, getServerNowTick);
 
-  const entryState = (entry: DiaryEntryDto) => resolveEstimationState(entry, now, phaseFor(entry.id));
+  // Kod porażki z 502 rozróżnia "AI niedostępne" od "Nie policzono" - czyta go tylko faza `settled`.
+  const entryState = (entry: DiaryEntryDto) =>
+    resolveEstimationState(entry, now, phaseFor(entry.id), failedIds.get(entry.id) ?? null);
 
   /** Wpis zapisany przyciskiem "Zapisz i policz kalorie" dostaje wycenę od razu. */
   const handleCreated = (createdEntryId?: number) => {

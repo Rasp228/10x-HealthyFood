@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ESTIMATION_ABORT_MS } from "../../lib/utils/diary-estimation";
+import { reportClientError } from "../../lib/utils/client-error-reporter";
+import {
+  ESTIMATION_ABORT_MS,
+  isEstimationFailureCode,
+  type EstimationFailureCode,
+} from "../../lib/utils/diary-estimation";
 
 interface UseCalorieEstimationResult {
   /** Dokłada wpis do kolejki wycen. Wpis już w locie albo już w kolejce to no-op. */
@@ -9,6 +14,11 @@ interface UseCalorieEstimationResult {
   inFlightId: number | null;
   queuedIds: readonly number[];
   settledIds: ReadonlySet<number>;
+  /**
+   * Wpisy, których ostatnia wycena wróciła 502 z kodem "AI nie odpowiedziało". Kolejne `estimate`
+   * dla wpisu zdejmuje go stąd, więc "Policz ponownie" wraca do "Liczę...".
+   */
+  failedIds: ReadonlyMap<number, EstimationFailureCode>;
 }
 
 /**
@@ -33,6 +43,9 @@ export function useCalorieEstimation(onSettled: () => void): UseCalorieEstimatio
   const [inFlightId, setInFlightId] = useState<number | null>(null);
   const [queuedIds, setQueuedIds] = useState<readonly number[]>([]);
   const [settledIds, setSettledIds] = useState<ReadonlySet<number>>(() => new Set<number>());
+  const [failedIds, setFailedIds] = useState<ReadonlyMap<number, EstimationFailureCode>>(
+    () => new Map<number, EstimationFailureCode>()
+  );
 
   // Kolejka i wpis w locie żyją równolegle w refach, bo pętla drenująca czyta je między awaitami,
   // kiedy stan Reacta jest jeszcze sprzed przerenderowania.
@@ -98,23 +111,44 @@ export function useCalorieEstimation(onSettled: () => void): UseCalorieEstimatio
             signal: controller.signal,
           });
 
-          // Interfejs i tak czyta każdą z tych odpowiedzi jako "nie policzono", więc nie ma tu czego
-          // rzucać - ale milczenie kosztowało już raz. Bez tego logu 401, 404 i 502 przechodzą przez
-          // `finally` nieodróżnialne od modelu, który po prostu nie dał liczby, i wpis zatrzymany na
-          // "Nie policzono" nie ma jak powiedzieć, dlaczego.
+          // Nie ma tu czego rzucać - wpis i tak zostaje bez wartości z aktywnym polem - ale milczenie
+          // kosztowało już raz. Bez logu i zgłoszenia 401, 404 i 502 przechodzą przez `finally`
+          // nieodróżnialne od modelu, który po prostu nie dał liczby. 502 z kodem dostawcy dostaje
+          // przy wpisie "AI niedostępne" zamiast "Nie policzono".
           if (!response.ok) {
             const body = await response.json().catch(() => ({}));
+            const code: unknown = body.code;
 
             console.error(
               `Wycena kalorii dla wpisu ${entryId} nie powiodła się: HTTP ${response.status}`,
-              body.code ?? body.error ?? ""
+              code ?? body.error ?? ""
             );
+
+            // Do logu serwera przez reporter - bez numeru wpisu w `source`, żeby deduplikacja po
+            // `message + source` sklejała tę samą awarię dostawcy na kilku wpisach w jedno zgłoszenie.
+            reportClientError({
+              kind: "fetch",
+              message: `Wycena kalorii: HTTP ${response.status}${typeof code === "string" ? ` ${code}` : ""}`,
+              source: "POST /api/diary-entries/:id/estimate",
+            });
+
+            // Kod "AI nie odpowiedziało" zamienia przy wpisie "Nie policzono" na "AI niedostępne".
+            if (isEstimationFailureCode(code) && !disposedRef.current) {
+              setFailedIds((prev) => new Map(prev).set(entryId, code));
+            }
           }
         } catch (error) {
           // Anulowanie i timeout to normalne zakończenia tej ścieżki, nie awarie - wpis wraca do
           // "Nie policzono" z aktywnym polem, a to widać na liście bez żadnego komunikatu.
           if (!(error instanceof DOMException && error.name === "AbortError")) {
             console.error("Error estimating diary entry calories:", error);
+
+            reportClientError({
+              kind: "fetch",
+              message: `Wycena kalorii: ${error instanceof Error ? error.message : String(error)}`,
+              stack: error instanceof Error ? error.stack : undefined,
+              source: "POST /api/diary-entries/:id/estimate",
+            });
           }
         } finally {
           clearTimeout(timeoutId);
@@ -159,6 +193,16 @@ export function useCalorieEstimation(onSettled: () => void): UseCalorieEstimatio
         return next;
       });
 
+      // Nowe zlecenie zdejmuje "AI niedostępne" - wynik poprzedniej porażki nie mówi nic o tej próbie.
+      setFailedIds((prev) => {
+        if (!prev.has(entryId)) return prev;
+
+        const next = new Map(prev);
+        next.delete(entryId);
+
+        return next;
+      });
+
       void drain();
     },
     [drain]
@@ -177,5 +221,5 @@ export function useCalorieEstimation(onSettled: () => void): UseCalorieEstimatio
     setQueuedIds(queueRef.current);
   }, []);
 
-  return { estimate, cancel, inFlightId, queuedIds, settledIds };
+  return { estimate, cancel, inFlightId, queuedIds, settledIds, failedIds };
 }

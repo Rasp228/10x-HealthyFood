@@ -1,6 +1,7 @@
 import {
   ESTIMATION_ABORT_MS,
   ESTIMATION_TIMEOUT_MS,
+  isEstimationFailureCode,
   resolveEstimationState,
   type EstimationRequestPhase,
 } from "@/lib/utils/diary-estimation";
@@ -93,6 +94,49 @@ describe("resolveEstimationState", () => {
 
     it("'settled' bez znacznika daje 'idle' - nie ma czego ponawiać", () => {
       expect(resolve(entry(), "settled")).toBe("idle");
+    });
+  });
+
+  describe("kod porażki AI (502)", () => {
+    const freshRow = () => entry({ estimation_requested_at: requestedMsAgo(2_000) });
+
+    it("'settled' z AI_UNAVAILABLE daje 'unavailable', nie 'stale'", () => {
+      expect(resolveEstimationState(freshRow(), NOW, "settled", "AI_UNAVAILABLE")).toBe("unavailable");
+    });
+
+    it("'settled' z AI_MISCONFIGURED daje 'unavailable'", () => {
+      expect(resolveEstimationState(freshRow(), NOW, "settled", "AI_MISCONFIGURED")).toBe("unavailable");
+    });
+
+    it("'unavailable' także bez znacznika - kod porażki jest wiedzą o żądaniu, nie o wierszu", () => {
+      expect(resolveEstimationState(entry(), NOW, "settled", "AI_UNAVAILABLE")).toBe("unavailable");
+    });
+
+    it("po wyczyszczeniu kodu ten sam wiersz wraca do 'stale'", () => {
+      expect(resolveEstimationState(freshRow(), NOW, "settled", null)).toBe("stale");
+    });
+
+    it("ponowna wycena ('live') wygrywa z kodem porażki - wpis pokazuje 'Liczę...'", () => {
+      expect(resolveEstimationState(freshRow(), NOW, "live", "AI_UNAVAILABLE")).toBe("estimating");
+    });
+
+    it("liczba w wierszu wygrywa z kodem porażki", () => {
+      const row = entry({ calories: 300, calorie_origin: "manual", estimation_requested_at: requestedMsAgo(2_000) });
+
+      expect(resolveEstimationState(row, NOW, "settled", "AI_UNAVAILABLE")).toBe("valued");
+    });
+
+    it("kod bez fazy 'settled' nie zmienia stanu - po przeładowaniu rozstrzyga znacznik", () => {
+      expect(resolveEstimationState(freshRow(), NOW, "none", "AI_UNAVAILABLE")).toBe("estimating");
+    });
+  });
+
+  describe("isEstimationFailureCode", () => {
+    it("przepuszcza tylko dwa kody 502 trasy wyceny", () => {
+      expect(isEstimationFailureCode("AI_UNAVAILABLE")).toBe(true);
+      expect(isEstimationFailureCode("AI_MISCONFIGURED")).toBe(true);
+      expect(isEstimationFailureCode("AI_PARSE_ERROR")).toBe(false);
+      expect(isEstimationFailureCode(undefined)).toBe(false);
     });
   });
 

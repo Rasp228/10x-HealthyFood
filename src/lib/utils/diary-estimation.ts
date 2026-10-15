@@ -40,8 +40,25 @@ export const AI_NOTICE_RECIPE = "Treść przepisu i Twój opis zostaną wysłane
  */
 export type EstimationRequestPhase = "live" | "settled" | "none";
 
-/** Cztery stany, w jakich może być wartość kaloryczna wpisu z punktu widzenia interfejsu. */
-export type EstimationState = "valued" | "estimating" | "stale" | "idle";
+/**
+ * Kody, którymi trasa `/estimate` mówi 502 "dostawca modelu nie odpowiedział": `AI_UNAVAILABLE`
+ * (odmowa, limit, sieć) i `AI_MISCONFIGURED` (brak klucza po stronie serwera). Tylko te dwa
+ * zamieniają "Nie policzono" na "AI niedostępne" - inne porażki (401, 404) zostają zwykłym `stale`.
+ */
+export const ESTIMATION_FAILURE_CODES = ["AI_UNAVAILABLE", "AI_MISCONFIGURED"] as const;
+
+export type EstimationFailureCode = (typeof ESTIMATION_FAILURE_CODES)[number];
+
+export function isEstimationFailureCode(value: unknown): value is EstimationFailureCode {
+  return typeof value === "string" && (ESTIMATION_FAILURE_CODES as readonly string[]).includes(value);
+}
+
+/**
+ * Pięć stanów, w jakich może być wartość kaloryczna wpisu z punktu widzenia interfejsu.
+ * `unavailable` to `stale` z wiedzą, dlaczego: model nie odpowiedział, więc użytkownik ma co
+ * zgłosić, zamiast zgadywać, czy wpis był po prostu nie do policzenia.
+ */
+export type EstimationState = "valued" | "estimating" | "stale" | "unavailable" | "idle";
 
 /**
  * Stan wartości wpisu: czysta funkcja wiersza, chwili i wiedzy wyspy o żądaniu.
@@ -58,15 +75,22 @@ export type EstimationState = "valued" | "estimating" | "stale" | "idle";
  *
  * Znacznik nie do odczytania (`NaN` z `Date.parse`) wychodzi stąd jako `stale`: lepiej pokazać
  * aktywne pole i "Policz ponownie" niż zawiesić wpis na "Liczę..." bez końca.
+ *
+ * `failureCode` liczy się tylko przy `settled`: kod jest wiedzą tej wyspy o żądaniu, które już
+ * wróciło, a nie o wierszu. Sprawdzany przed znacznikiem: trasa zapisuje go przed wywołaniem
+ * modelu, ale gdyby tej kolejności zabrakło, wpis i tak ma powiedzieć, że AI nie odpowiedziało.
  */
 export function resolveEstimationState(
   entry: DiaryEntryDto,
   now: number,
-  phase: EstimationRequestPhase
+  phase: EstimationRequestPhase,
+  failureCode: EstimationFailureCode | null = null
 ): EstimationState {
   if (entry.calories !== null) return "valued";
 
   if (phase === "live") return "estimating";
+
+  if (phase === "settled" && failureCode !== null) return "unavailable";
 
   if (entry.estimation_requested_at === null) return "idle";
 

@@ -35,5 +35,7 @@ if (!user) {
       <slot />
     </main>
     <slot name="modals" />
+    {/* Błędy przeglądarki do `/api/client-errors`. `AuthLayout` go nie ma: strony auth są publiczne, a trasa wymaga sesji. */}
+    <script src="../lib/utils/install-client-error-reporter.ts"></script>
   </body>
 </html>

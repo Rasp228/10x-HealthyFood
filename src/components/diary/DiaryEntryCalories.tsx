@@ -36,7 +36,7 @@ const ORIGIN_LABELS: Record<CalorieOriginEnum, string> = {
 /**
  * Wartość kaloryczna jednego wpisu we wszystkich swoich stanach.
  *
- * Osobny komponent, bo tych stanów jest cztery i rozsypane po liście przestałyby się zgadzać po
+ * Osobny komponent, bo tych stanów jest pięć i rozsypane po liście przestałyby się zgadzać po
  * pierwszej zmianie. Kolejne pochodzenie (`ai_from_recipe`) weszło tu bez ruszania
  * `DiaryEntryList` - dokładnie tak, jak ten podział zakładał.
  *
@@ -125,6 +125,16 @@ export default function DiaryEntryCalories({
       ) : state === "estimating" ? (
         <Badge variant="outline" className="border-info/30 bg-info/10 text-info" data-testid="diary-entry-estimating">
           {isQueued && !isInFlight ? "W kolejce…" : "Liczę…"}
+        </Badge>
+      ) : state === "unavailable" ? (
+        // Wycena wróciła 502 z kodem dostawcy: wpis mówi, że AI nie odpowiedziało, zamiast udawać,
+        // że model nie umiał policzyć. Przycisk "Policz ponownie" i pole ręczne zostają jak przy `stale`.
+        <Badge
+          variant="outline"
+          className="border-warning/30 bg-warning/10 text-warning"
+          data-testid="diary-entry-ai-unavailable"
+        >
+          AI niedostępne
         </Badge>
       ) : (
         <Badge variant="secondary" className="text-muted-foreground" data-testid="diary-entry-calories-missing">

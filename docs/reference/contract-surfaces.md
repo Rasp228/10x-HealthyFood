@@ -57,6 +57,30 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Breaks**: a new public page or auth endpoint not listed here redirects to `/auth/login`. A
   trailing-slash or casing mismatch fails the same way, because the check is exact.
 
+### `POST /api/client-errors`
+
+- **Defined**: `src/pages/api/client-errors.ts`; schema and limits in
+  `src/lib/validations/client-errors/report.ts` (`MAX_CLIENT_ERROR_EVENTS = 5`,
+  `MAX_CLIENT_ERROR_BODY_BYTES = 16 KB`, `message` ≤ 500, `stack` ≤ 4000 characters).
+- **Called by**: `src/lib/utils/client-error-reporter.ts` only — `navigator.sendBeacon` with a
+  `text/plain` string body, falling back to `fetch(..., { keepalive: true })`. Callers of the
+  reporter: the global `error` / `unhandledrejection` handlers installed by
+  `src/lib/utils/install-client-error-reporter.ts` (a `<script src>` in `MainLayout` and
+  `AppLayout`, not `AuthLayout`), `IslandErrorBoundary` (`kind: "boundary"`) and
+  `useCalorieEstimation` (`kind: "fetch"`).
+- **Contract**: not in `PUBLIC_PATHS` — a guest is redirected by the middleware, and the route
+  answers 401 without `locals.user`. Body over 16 KB → 413 (checked on `content-length` and on
+  the read text, before `JSON.parse`); schema failure, more than 5 events or a non-JSON body →
+  400 via `zodIssues`; otherwise 204 and one `logWarn("client.<kind>", { requestId, userId, path,
+source, message, stack, at })` line per event. `kind` is a closed enum
+  (`error` / `unhandledrejection` / `boundary` / `fetch`), so a client cannot mint new event names.
+  No rate limit beyond those per-request caps; the reporter itself sends at most 5 events per
+  document load, deduplicated on `message + source`.
+- **Breaks**: renaming the path or adding it to `PUBLIC_PATHS` without the reporter silently drops
+  every browser error (`sendBeacon` never reports failure to the page). Lowering a limit on the
+  route without the reporter's trimming (which shares the constants) turns whole batches into
+  400s. Adding a `kind` changes the log event vocabulary — update the enum, not the route.
+
 ## Validation
 
 ### `zodIssues` / `zodMessage` / `ValidationIssue`

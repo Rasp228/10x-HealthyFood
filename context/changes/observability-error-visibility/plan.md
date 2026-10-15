@@ -851,26 +851,26 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 5.1 Testy tras auth przechodzą (client/rate_limited/unavailable/zły JSON)
-- [x] 5.2 Testy lookupów, dziennika, ustawień, AI i useAI zielone
-- [x] 5.3 Brak drugiego auth.getUser() w trasach dziennika i ustawień
-- [x] 5.4 Cały zestaw Jest, typecheck, lint, format
-- [x] 5.5 E2E zielone
+- [x] 5.1 Testy tras auth przechodzą (client/rate_limited/unavailable/zły JSON) — 8225de7
+- [x] 5.2 Testy lookupów, dziennika, ustawień, AI i useAI zielone — 8225de7
+- [x] 5.3 Brak drugiego auth.getUser() w trasach dziennika i ustawień — 8225de7
+- [x] 5.4 Cały zestaw Jest, typecheck, lint, format — 8225de7
+- [x] 5.5 E2E zielone — 8225de7
 
 #### Manual
 
-- [ ] 5.6 Złe hasło vs odcięty dostawca: różne komunikaty i linia auth.login_failed
-- [ ] 5.7 /api/health pokazuje version i stan bazy
+- [x] 5.6 Złe hasło vs odcięty dostawca: różne komunikaty i linia auth.login_failed — 8225de7
+- [x] 5.7 /api/health pokazuje version i stan bazy — 8225de7
 
 ### Phase 6: Przeglądarka — ujście błędów, error boundary, „AI niedostępne”
 
 #### Automated
 
-- [ ] 6.1 Testy trasy błędów klienta przechodzą
-- [ ] 6.2 Testy stanu wyceny przechodzą
-- [ ] 6.3 Lint widoku /diary z regułą tokenów czysty
-- [ ] 6.4 Cały zestaw Jest, typecheck, format
-- [ ] 6.5 E2E zielone
+- [x] 6.1 Testy trasy błędów klienta przechodzą
+- [x] 6.2 Testy stanu wyceny przechodzą
+- [x] 6.3 Lint widoku /diary z regułą tokenów czysty
+- [x] 6.4 Cały zestaw Jest, typecheck, format
+- [x] 6.5 E2E zielone
 
 #### Manual
 

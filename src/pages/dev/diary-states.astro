@@ -21,6 +21,7 @@
  */
 import MainLayout from "../../layouts/MainLayout.astro";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import { IslandErrorFallback } from "../../components/common/IslandErrorBoundary";
 import Toast from "../../components/feedback/Toast";
 import DiaryDaySummary from "../../components/diary/DiaryDaySummary";
 import DiaryEmptyState from "../../components/diary/DiaryEmptyState";
@@ -151,6 +152,15 @@ const rows: RowState[] = [
     state: "stale",
   },
   {
+    title: "AI niedostępne - wycena wróciła 502 (AI_UNAVAILABLE / AI_MISCONFIGURED)",
+    entry: entry({
+      content: "Gulasz wołowy",
+      amount_text: "1 talerz",
+      estimation_requested_at: "2000-01-05T07:30:00.000Z",
+    }),
+    state: "unavailable",
+  },
+  {
     title: "Bez wartości (idle)",
     entry: entry({ content: "Jabłko", amount_text: "1 sztuka" }),
     state: "idle",
@@ -268,6 +278,11 @@ const fixedFrame = "relative overflow-hidden rounded-lg border border-dashed [tr
           <DiaryEntryFieldErrorDemo client:load entry={fieldErrorEntry} />
         </div>
       </div>
+    </section>
+
+    <section>
+      <h2 class={sectionTitle}>Wyspa po wyjątku renderu (fallback granicy błędów)</h2>
+      <IslandErrorFallback />
     </section>
 
     <section>
