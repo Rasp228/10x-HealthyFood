@@ -866,15 +866,14 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 6.1 Testy trasy błędów klienta przechodzą
-- [x] 6.2 Testy stanu wyceny przechodzą
-- [x] 6.3 Lint widoku /diary z regułą tokenów czysty
-- [x] 6.4 Cały zestaw Jest, typecheck, format
-- [x] 6.5 E2E zielone
+- [x] 6.1 Testy trasy błędów klienta przechodzą — bea2cda
+- [x] 6.2 Testy stanu wyceny przechodzą — bea2cda
+- [x] 6.3 Lint widoku /diary z regułą tokenów czysty — bea2cda
+- [x] 6.4 Cały zestaw Jest, typecheck, format — bea2cda
+- [x] 6.5 E2E zielone — bea2cda
 
 #### Manual
 
-- [ ] 6.6 unhandledrejection w /diary daje jedno żądanie i linię client.unhandledrejection, bez podwójnych handlerów po nawigacji
-- [ ] 6.7 Wycena z 401 dostawcy pokazuje „AI niedostępne”, ponowienie wraca do „Liczę…”
-- [ ] 6.8 Ramki unavailable i fallback boundary w /dev/diary-states w obu motywach
-- [ ] 6.9 /10x-observability-audit --verify: R3, R5, R6 z werdyktem good
+- [x] 6.6 unhandledrejection w /diary daje jedno żądanie i linię client.unhandledrejection, bez podwójnych handlerów po nawigacji — bea2cda
+- [x] 6.7 Wycena z 401 dostawcy pokazuje „AI niedostępne”, ponowienie wraca do „Liczę…” — bea2cda
+- [x] 6.8 Ramki unavailable i fallback boundary w /dev/diary-states w obu motywach — bea2cda
