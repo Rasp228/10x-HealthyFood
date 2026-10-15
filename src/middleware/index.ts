@@ -1,4 +1,6 @@
+import { isAuthApiError, isAuthSessionMissingError } from "@supabase/supabase-js";
 import { createSupabaseServerInstance } from "../db/supabase.client.ts";
+import { logError, logWarn } from "../lib/utils/log.ts";
 import { defineMiddleware } from "astro:middleware";
 
 // Public paths - Auth API endpoints & Server-Rendered Astro Pages
@@ -19,6 +21,11 @@ const PUBLIC_PATHS = [
 ];
 
 export const onRequest = defineMiddleware(async ({ locals, url, request, redirect }, next) => {
+  // Identyfikator żądania jako pierwszy: łączy linię logu z wierszem żądania w panelu Vercela
+  // (`x-vercel-id`), a lokalnie i w testach - z losowym UUID.
+  const requestId = request.headers.get("x-vercel-id") ?? crypto.randomUUID();
+  locals.requestId = requestId;
+
   // Jeden klient na żądanie. `flushCookies` musi objąć KAŻDE wyjście z middleware - to jedyny
   // moment, w którym wolno jeszcze dopisać Set-Cookie (patrz komentarz w supabase.client.ts).
   const { supabase, flushCookies } = createSupabaseServerInstance({
@@ -54,7 +61,10 @@ export const onRequest = defineMiddleware(async ({ locals, url, request, redirec
       console.error("Błąd podczas przetwarzania kodu:", error);
       // Clear any existing session
       await supabase.auth.signOut();
-      return flushCookies(redirect("/auth/verify?error=Wystąpił błąd podczas weryfikacji"));
+      // Kodowanie konieczne: `redirect` wkłada ścieżkę do `Location` bez kodowania, a „ą” spoza
+      // Latin-1 wywraca konstruktor `Headers` - zamiast przekierowania byłoby 500 bez ciasteczek.
+      const errorParam = encodeURIComponent("Wystąpił błąd podczas weryfikacji");
+      return flushCookies(redirect(`/auth/verify?error=${errorParam}`));
     }
   }
 
@@ -71,7 +81,21 @@ export const onRequest = defineMiddleware(async ({ locals, url, request, redirec
   // ciasteczka sesji `getUser()` kończy się lokalnie, bez zapytania do Supabase.
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+
+  // Brak sesji (`AuthSessionMissingError`) to zwykły gość, nie błąd - nie logujemy go. Odrzucony
+  // token (`AuthApiError` 4xx) to ostrzeżenie; reszta (5xx GoTrue, sieć) to awaria, która inaczej
+  // wyglądałaby jak ciche wylogowanie. Decyzja dostępu poniżej zostaje bez zmian.
+  if (userError && !isAuthSessionMissingError(userError)) {
+    const context = { requestId, path: url.pathname, method: request.method };
+
+    if (isAuthApiError(userError) && userError.status >= 400 && userError.status < 500) {
+      logWarn("auth.session_invalid", context, userError);
+    } else {
+      logError("auth.get_user_failed", context, userError);
+    }
+  }
 
   if (user && user.email) {
     locals.user = {
@@ -83,5 +107,26 @@ export const onRequest = defineMiddleware(async ({ locals, url, request, redirec
     return flushCookies(redirect("/auth/login"));
   }
 
-  return flushCookies(await next());
+  try {
+    return flushCookies(await next());
+  } catch (error) {
+    logError(
+      "request.unhandled",
+      { requestId, path: url.pathname, method: request.method, userId: locals.user?.id },
+      error
+    );
+
+    // Trasa API dostaje 500 JSON z `requestId` - przez `flushCookies`, żeby wyjątek nie zgubił
+    // zrotowanego tokenu. Strona rzuca dalej, żeby Astro wyrenderowało swoją stronę błędu.
+    if (url.pathname.startsWith("/api/")) {
+      return flushCookies(
+        new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    }
+
+    throw error;
+  }
 });

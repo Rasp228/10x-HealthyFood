@@ -21,8 +21,8 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 ### `flushCookies`
 
 - **Defined**: `src/db/supabase.client.ts` (returned from `createSupabaseServerInstance`)
-- **Used by**: every return path in `src/middleware/index.ts` — five `redirect()` calls and the
-  awaited `next()`.
+- **Used by**: every return path in `src/middleware/index.ts` — five `redirect()` calls, the
+  awaited `next()` and the 500 JSON returned when `next()` throws on an `/api/` path.
 - **Breaks**: a return that skips it loses the rotated session cookie. No exception at the call
   site; the write lands after the response was sent and is logged, and the user appears signed out
   on the next request. See @context/foundation/lessons.md.
@@ -35,6 +35,19 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
   email.
 - **Breaks**: renaming either field breaks every API route at once. `user` being optional is
   deliberate — public paths reach a handler without it.
+
+### `locals.requestId`
+
+- **Typed**: `App.Locals.requestId: string` in `src/env.d.ts`.
+- **Set**: first thing in `src/middleware/index.ts`, before the Supabase client —
+  `request.headers.get("x-vercel-id") ?? crypto.randomUUID()`.
+- **Read by**: the middleware's own log lines (`auth.session_invalid`, `auth.get_user_failed`,
+  `request.unhandled`) and the body of its 500 JSON (`{ error, requestId }`); routes and services
+  that log pass it into the `LogContext` of `src/lib/utils/log.ts`.
+- **Breaks**: renaming the field or the `requestId` key in log lines breaks the join between a log
+  line and the request row in the Vercel dashboard, and the id a user quotes from an error
+  response no longer matches anything in the logs. Dropping the `x-vercel-id` read keeps every
+  line unique but uncorrelated with Vercel's request log.
 
 ### `PUBLIC_PATHS`
 

@@ -8,6 +8,8 @@
 import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
+import { AuthApiError, AuthRetryableFetchError, AuthSessionMissingError } from "@supabase/supabase-js";
+
 import { onRequest } from "@/middleware/index";
 
 /**
@@ -63,23 +65,30 @@ type MiddlewareNext = Parameters<typeof onRequest>[1];
 interface MiddlewareRun {
   response: Response;
   next: jest.Mock;
-  locals: { user?: { id: string; email: string } };
+  locals: { requestId?: string; user?: { id: string; email: string } };
+}
+
+interface RunOptions {
+  headers?: Record<string, string>;
+  /** Zastępuje domyślną dalszą część łańcucha - np. trasą, która rzuca. */
+  next?: () => Promise<Response>;
 }
 
 /** Odpowiedź, którą zwraca dalsza część łańcucha - po niej poznajemy przepuszczenie. */
 const PASSED_BODY = "strona-docelowa";
 
 /** Woła middleware z ręcznie zbudowanym kontekstem, w kształcie, którego faktycznie dotyka. */
-async function runMiddleware(pathWithQuery: string): Promise<MiddlewareRun> {
+async function runMiddleware(pathWithQuery: string, options: RunOptions = {}): Promise<MiddlewareRun> {
   const url = new URL(pathWithQuery, "http://localhost");
   const locals: MiddlewareRun["locals"] = {};
-  const next = jest.fn(async () => new Response(PASSED_BODY, { status: 200 }));
+  const next = jest.fn(options.next ?? (async () => new Response(PASSED_BODY, { status: 200 })));
   // Ten sam kształt co `redirect` w Astro 7 (`core/fetch/fetch-state.js`): `Location` trafia do
   // nagłówka bez kodowania, więc znak spoza Latin-1 wywraca konstruktor `Headers` tak samo jak
   // w produkcji. Atrapa, która by kodowała, ukryłaby błąd zamiast go pokazać.
   const redirect = (path: string) => new Response(null, { status: 302, headers: { Location: path } });
 
-  const context = { locals, url, request: new Request(url), redirect } as unknown as MiddlewareContext;
+  const request = new Request(url, { headers: options.headers });
+  const context = { locals, url, request, redirect } as unknown as MiddlewareContext;
   const response = (await onRequest(context, next as unknown as MiddlewareNext)) as Response;
 
   return { response, next, locals };
@@ -272,32 +281,19 @@ describe("middleware - każde wyjście niesie ciasteczka sesji", () => {
   });
 
   /**
-   * Znany defekt (`docs/reference/known-drift.md`, „Middleware”): gałąź `catch` przekierowuje na
-   * `/auth/verify?error=Wystąpił błąd…` z niezakodowanym tekstem, a `Location` z „ą” (kod 261) nie
-   * przechodzi przez `Headers` - `TypeError: Cannot convert argument to a ByteString`. Zamiast 302
-   * z ciasteczkami użytkownik dostaje 500. Ten sam konstruktor stoi w `redirect` Astro, więc to nie
-   * artefakt atrapy.
-   *
-   * Ten `it` przypina **obecne zachowanie**. Po zakodowaniu komunikatu w middleware
-   * (`encodeURIComponent`, jak w pozostałych gałęziach) zrobi się czerwony - wtedy go usuń.
+   * Gałąź `catch` koduje komunikat jak pozostałe dwie. Niezakodowane „ą” w `Location` wywraca
+   * konstruktor `Headers` (ten sam co w `redirect` Astro) i zamiast 302 z ciasteczkami byłoby 500.
    */
-  it("wyjątek przy wymianie kodu dziś wywraca przekierowanie na niezakodowanym Location (obecne zachowanie)", async () => {
-    mockExchangeCodeForSession.mockRejectedValue(new Error("sieć"));
-
-    await expect(runMiddleware("/auth/verify?code=abc")).rejects.toThrow(/ByteString/);
-  });
-
-  /**
-   * `it.failing` celowo: **wyrocznia** dla tego samego wyjścia - 302 na `/auth/verify?error=…`
-   * z ciasteczkami. Po naprawie zrobi się czerwony - wtedy zamień go na zwykłe `it`.
-   */
-  it.failing("wyjątek przy wymianie kodu przekierowuje z błędem, z ciasteczkami", async () => {
+  it("wyjątek przy wymianie kodu przekierowuje z błędem, z ciasteczkami", async () => {
     mockExchangeCodeForSession.mockRejectedValue(new Error("sieć"));
 
     const { response, next } = await runMiddleware("/auth/verify?code=abc");
 
+    expect(mockSignOut).toHaveBeenCalled();
     expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toMatch(/^\/auth\/verify\?error=/);
+    expect(response.headers.get("Location")).toBe(
+      `/auth/verify?error=${encodeURIComponent("Wystąpił błąd podczas weryfikacji")}`
+    );
     expect(next).not.toHaveBeenCalled();
     expectCookieMarker(response);
   });
@@ -329,5 +325,118 @@ describe("middleware - każde wyjście niesie ciasteczka sesji", () => {
     expectPassedThrough(run);
     expect(await run.response.text()).toBe(PASSED_BODY);
     expectCookieMarker(run.response);
+  });
+});
+
+/** Pierwsza linia logu z danego kanału, sparsowana - asercje czytają pola, nie cały napis. */
+const parsedLogLine = (spy: jest.SpyInstance, call = 0) => JSON.parse(spy.mock.calls[call][0] as string);
+
+describe("middleware - requestId", () => {
+  it("bierze identyfikator z nagłówka x-vercel-id", async () => {
+    const run = await runMiddleware("/auth/login", { headers: { "x-vercel-id": "fra1::abc-123" } });
+
+    expect(run.locals.requestId).toBe("fra1::abc-123");
+  });
+
+  it("bez nagłówka nadaje losowy UUID", async () => {
+    const run = await runMiddleware("/auth/login");
+
+    expect(run.locals.requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  });
+});
+
+describe("middleware - błąd getUser()", () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  it("brak sesji (AuthSessionMissingError) to zwykły gość - bez logu", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: new AuthSessionMissingError() });
+
+    const run = await runMiddleware("/diary");
+
+    expectRedirectToLogin(run);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("awaria GoTrue (5xx) daje linię auth.get_user_failed i przekierowanie z ciasteczkami", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: new AuthRetryableFetchError("Service Unavailable", 503),
+    });
+
+    const run = await runMiddleware("/diary", { headers: { "x-vercel-id": "req-503" } });
+
+    expectRedirectToLogin(run);
+    expect(run.response.headers.get("Set-Cookie")).toContain(mockCookieMarker);
+    const line = parsedLogLine(console.error as unknown as jest.SpyInstance);
+    expect(line).toMatchObject({
+      level: "error",
+      event: "auth.get_user_failed",
+      requestId: "req-503",
+      path: "/diary",
+      method: "GET",
+      error: { name: "AuthRetryableFetchError", status: 503 },
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("odrzucony token (AuthApiError 4xx) daje ostrzeżenie auth.session_invalid", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: new AuthApiError("Invalid Refresh Token", 400, "refresh_token_not_found"),
+    });
+
+    const run = await runMiddleware("/diary", { headers: { "x-vercel-id": "req-400" } });
+
+    expectRedirectToLogin(run);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(parsedLogLine(warnSpy)).toMatchObject({
+      level: "warn",
+      event: "auth.session_invalid",
+      requestId: "req-400",
+      error: { code: "refresh_token_not_found", status: 400 },
+    });
+  });
+});
+
+describe("middleware - wyjątek z dalszej części łańcucha", () => {
+  const throwingRoute = async (): Promise<Response> => {
+    throw new Error("trasa wybuchła");
+  };
+
+  beforeEach(() => {
+    signedIn({ id: "user-1", email: "jan@example.com" });
+  });
+
+  it("trasa API: 500 JSON z requestId, z ciasteczkami i z linią request.unhandled", async () => {
+    const { response } = await runMiddleware("/api/x", {
+      headers: { "x-vercel-id": "req-api" },
+      next: throwingRoute,
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Content-Type")).toBe("application/json");
+    expect(await response.json()).toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-api" });
+    expect(response.headers.get("Set-Cookie")).toContain(mockCookieMarker);
+    expect(parsedLogLine(console.error as unknown as jest.SpyInstance)).toMatchObject({
+      event: "request.unhandled",
+      requestId: "req-api",
+      path: "/api/x",
+      userId: "user-1",
+      error: { name: "Error", message: "trasa wybuchła" },
+    });
+  });
+
+  it("strona: wyjątek propaguje do Astro, a linia request.unhandled zostaje", async () => {
+    await expect(runMiddleware("/diary", { next: throwingRoute })).rejects.toThrow("trasa wybuchła");
+
+    expect(parsedLogLine(console.error as unknown as jest.SpyInstance)).toMatchObject({
+      event: "request.unhandled",
+      path: "/diary",
+    });
   });
 });

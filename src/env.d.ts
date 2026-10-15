@@ -7,6 +7,8 @@ declare global {
   namespace App {
     interface Locals {
       supabase: SupabaseClient<Database>;
+      /** Ustawiany jako pierwszy w middleware: `x-vercel-id` albo losowy UUID. */
+      requestId: string;
       user?: {
         email: string;
         id: string;
