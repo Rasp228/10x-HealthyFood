@@ -1,10 +1,10 @@
 ---
 change_id: observability-error-visibility
 title: Widoczność błędów produkcyjnych w dzienniku i wycenie kalorii AI
-status: impl_reviewed
+status: archived
 created: 2026-10-14
 updated: 2026-10-15
-archived_at: null
+archived_at: 2026-10-15T11:54:53Z
 ---
 
 ## Notes
