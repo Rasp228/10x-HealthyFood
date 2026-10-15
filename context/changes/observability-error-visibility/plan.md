@@ -795,24 +795,24 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 1.1 Testy modułu logowania przechodzą (Error, obiekt PostgREST, łańcuch cause, napis, pominięcie email)
-- [x] 1.2 Testy middleware przechodzą, łącznie z dawnym it.failing jako it
-- [x] 1.3 Cały zestaw Jest zielony
-- [x] 1.4 Typecheck bez błędów
-- [x] 1.5 Lint i format czyste
+- [x] 1.1 Testy modułu logowania przechodzą (Error, obiekt PostgREST, łańcuch cause, napis, pominięcie email) — 21951ac
+- [x] 1.2 Testy middleware przechodzą, łącznie z dawnym it.failing jako it — 21951ac
+- [x] 1.3 Cały zestaw Jest zielony — 21951ac
+- [x] 1.4 Typecheck bez błędów — 21951ac
+- [x] 1.5 Lint i format czyste — 21951ac
 
 #### Manual
 
-- [x] 1.6 Zepsute ciasteczko na /diary daje linię JSON auth.session_invalid z requestId i redirect na /auth/login
+- [x] 1.6 Zepsute ciasteczko na /diary daje linię JSON auth.session_invalid z requestId i redirect na /auth/login — 21951ac
 
 ### Phase 2: OpenRouter — jedno mapowanie błędu
 
 #### Automated
 
-- [ ] 2.1 Testy mapowania przechodzą (401/403/404/402/429/timeout/idempotencja/brak ponowień 4xx)
-- [ ] 2.2 Testy serwisów i tras AI bez zmian zielone
-- [ ] 2.3 Brak mapErrorToCustomError i handleRequestError w openrouter.service.ts
-- [ ] 2.4 Cały zestaw Jest, typecheck, lint, format
+- [x] 2.1 Testy mapowania przechodzą (401/403/404/402/429/timeout/idempotencja/brak ponowień 4xx)
+- [x] 2.2 Testy serwisów i tras AI bez zmian zielone
+- [x] 2.3 Brak mapErrorToCustomError i handleRequestError w openrouter.service.ts
+- [x] 2.4 Cały zestaw Jest, typecheck, lint, format
 
 #### Manual
 

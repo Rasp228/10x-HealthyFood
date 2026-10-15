@@ -5,7 +5,7 @@
  */
 
 import { AIResponseParseError, AIService } from "@/lib/services/ai.service";
-import { OpenRouterError } from "@/lib/api/openrouter.types";
+import { AuthenticationError, OpenRouterError } from "@/lib/api/openrouter.types";
 import { POST } from "@/pages/api/ai/modify-recipe";
 import type { ModifiedRecipeDto } from "@/types";
 
@@ -34,6 +34,7 @@ const requestContext = (body: unknown = { recipe_id: 7, additional_params: "mnie
       body: JSON.stringify(body),
     }),
     locals: {
+      requestId: "req-1",
       supabase: {
         auth: { getUser },
         from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ single: recipeSingle }) }) }) }),
@@ -108,6 +109,24 @@ describe("POST /api/ai/modify-recipe", () => {
       error: "Usługa AI jest chwilowo niedostępna",
       code: "AI_UNAVAILABLE",
     });
+  });
+
+  it("awaria dostawcy loguje jedną linię JSON ze statusem i modelem", async () => {
+    modifyRecipe.mockRejectedValue(new AuthenticationError("Zły klucz", { status: 401, model: "model-testowy" }));
+
+    await POST(requestContext());
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const line = JSON.parse(consoleError.mock.calls[0][0]);
+    expect(line).toMatchObject({
+      event: "ai.provider_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      route: "ai.modify_recipe",
+      status: 401,
+      model: "model-testowy",
+    });
+    expect(line.error.name).toBe("AuthenticationError");
   });
 
   it("AIResponseParseError z serwisu daje 502 AI_PARSE_ERROR", async () => {

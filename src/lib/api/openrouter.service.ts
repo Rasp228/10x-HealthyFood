@@ -10,17 +10,8 @@ import type {
   ChatResponse,
   ChatPayload,
 } from "./openrouter.types";
-import {
-  OpenRouterError,
-  AuthenticationError,
-  RateLimitError,
-  ModelUnavailableError,
-  TokenLimitError,
-  ContentFilterError,
-  NetworkError,
-  ResponseParsingError,
-  BudgetExceededError,
-} from "./openrouter.types";
+import { OpenRouterError, ResponseParsingError } from "./openrouter.types";
+import { isRetryable, mapAxiosError } from "./openrouter.errors";
 
 /**
  * Usługa OpenRouter do komunikacji z API OpenRouter
@@ -69,16 +60,16 @@ export class OpenRouterService {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": typeof window !== "undefined" ? window.location.origin : "https://api.example.com",
-        "X-Title": "OpenRouter Service Integration",
+        // Atrybucja w OpenRouterze: produkcyjny adres aplikacji z Vercela. `process.env`, nie
+        // `import.meta.env` - bez nowej zależności od zmiennych z czasu budowania.
+        "HTTP-Referer": (typeof process !== "undefined" && process.env.SITE_URL) || "http://localhost",
+        "X-Title": "HealthyMeal",
       },
     });
 
-    // Dodanie interceptora dla obsługi błędów
-    this.httpClient.interceptors.response.use(
-      (response: AxiosResponse) => response,
-      (error: unknown) => this.handleRequestError(error)
-    );
+    // Bez interceptora błędów: mapuje wyłącznie `executeRequest` (`mapAxiosError`), raz. Interceptor
+    // oddawał podklasę `OpenRouterError` bez `.response`, więc każde 4xx wyglądało na błąd sieci
+    // i było ponawiane.
   }
 
   /**
@@ -148,9 +139,9 @@ export class OpenRouterService {
         throw error;
       }
       if (error instanceof Error) {
-        throw new OpenRouterError(`Nieoczekiwany błąd: ${error.message}`);
+        throw new OpenRouterError(`Nieoczekiwany błąd: ${error.message}`, { cause: error, model: this.defaultModel });
       }
-      throw new OpenRouterError("Wystąpił nieznany błąd");
+      throw new OpenRouterError("Wystąpił nieznany błąd", { cause: error, model: this.defaultModel });
     }
   }
 
@@ -162,106 +153,40 @@ export class OpenRouterService {
   }
 
   /**
-   * Wykonuje właściwe żądanie do API OpenRouter
+   * Wykonuje właściwe żądanie do API OpenRouter.
+   * Błąd mapujemy raz (`mapAxiosError`) i ten sam obiekt - ze `status`, `model` i `cause` -
+   * dochodzi do trasy. Ponawiamy tylko błędy sieci i 5xx (`isRetryable`).
    */
   private async executeRequest(endpoint: string, payload: ChatPayload): Promise<AxiosResponse> {
     let attempt = 0;
-    let lastError: Error | null = null;
+    let lastError: OpenRouterError | null = null;
 
     while (attempt < this.retries) {
       try {
         return await this.httpClient.post(endpoint, payload);
       } catch (error) {
-        if (error instanceof Error) {
-          lastError = error;
+        lastError = mapAxiosError(error, this.defaultModel);
 
-          // Sprawdzenie, czy błąd kwalifikuje się do ponowienia próby
-          if (this.isRetryableError(error)) {
-            attempt++;
-            // Exponential backoff: wait 2^attempt * 100ms
-            const delay = Math.pow(2, attempt) * 100;
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          } else {
-            // Dla błędów, których nie da się naprawić przez ponowienie próby
-            throw this.mapErrorToCustomError(error);
-          }
-        } else {
-          throw new OpenRouterError("Wystąpił nieznany błąd");
+        // Dla błędów, których nie da się naprawić przez ponowienie próby
+        if (!isRetryable(lastError)) {
+          throw lastError;
+        }
+
+        attempt++;
+        if (attempt < this.retries) {
+          // Exponential backoff: wait 2^attempt * 100ms
+          const delay = Math.pow(2, attempt) * 100;
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
     // Jeśli wszystkie próby nie powiodły się
     if (lastError) {
-      throw this.mapErrorToCustomError(lastError);
+      throw lastError;
     }
 
-    throw new OpenRouterError("Maksymalna liczba prób została wyczerpana");
-  }
-
-  /**
-   * Sprawdza, czy błąd kwalifikuje się do ponowienia próby
-   */
-  private isRetryableError(error: Error): boolean {
-    // Błędy sieciowe i błędy serwera (5xx) mogą być ponawiane
-    const axiosError = error as { response?: { status: number } };
-    if (!axiosError.response) return true; // Brak odpowiedzi (np. timeout)
-    return axiosError.response.status >= 500 && axiosError.response.status < 600;
-  }
-
-  /**
-   * Mapuje błędy HTTP na dedykowane klasy błędów
-   */
-  private mapErrorToCustomError(error: Error): OpenRouterError {
-    const axiosError = error as {
-      response?: {
-        status: number;
-        data?: {
-          error?: {
-            message?: string;
-          };
-        };
-      };
-    };
-
-    if (!axiosError.response) {
-      return new NetworkError();
-    }
-
-    const { status, data } = axiosError.response;
-
-    switch (status) {
-      case 401:
-      case 403:
-        return new AuthenticationError(data?.error?.message || "Błąd uwierzytelniania");
-      case 429:
-        return new RateLimitError(data?.error?.message || "Przekroczono limit zapytań");
-      case 404:
-        return new ModelUnavailableError(this.defaultModel, data?.error?.message);
-      case 400:
-        if (data?.error?.message?.includes("token")) {
-          return new TokenLimitError(data.error.message);
-        }
-        if (data?.error?.message?.includes("content")) {
-          return new ContentFilterError(data.error.message);
-        }
-        return new OpenRouterError(data?.error?.message || "Błąd żądania");
-      case 402:
-        return new BudgetExceededError(data?.error?.message);
-      default:
-        return new OpenRouterError(data?.error?.message || `Błąd HTTP ${status}`);
-    }
-  }
-
-  /**
-   * Obsługuje błędy żądania
-   */
-  private handleRequestError(error: unknown): Promise<never> {
-    if (error instanceof Error) {
-      const customError = this.mapErrorToCustomError(error);
-      return Promise.reject(customError);
-    }
-    return Promise.reject(new OpenRouterError("Wystąpił nieznany błąd"));
+    throw new OpenRouterError("Maksymalna liczba prób została wyczerpana", { model: this.defaultModel });
   }
 
   /**

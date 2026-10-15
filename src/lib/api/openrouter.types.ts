@@ -97,67 +97,88 @@ export interface ChatResponse {
 }
 
 /**
+ * Opcje błędu OpenRoutera. `cause` odpowiada `ErrorOptions`, ale deklarujemy je sami: testy
+ * kompilują się z `lib: ES2020` (`tsconfig.test.json`), gdzie ani `ErrorOptions`, ani pole `cause`
+ * na `Error` jeszcze nie istnieją.
+ */
+export interface OpenRouterErrorOptions {
+  /** Oryginalny błąd (np. błąd axios z `code` `ECONNABORTED`/`ENOTFOUND`) - trafia do logu. */
+  cause?: unknown;
+  /** Status HTTP odpowiedzi OpenRoutera, gdy odpowiedź w ogóle przyszła. */
+  status?: number;
+  /** Model, o który pytaliśmy. */
+  model?: string;
+}
+
+/**
  * Hierarchia klas błędów
  */
 export class OpenRouterError extends Error {
-  constructor(message: string) {
+  status?: number;
+  model?: string;
+  cause?: unknown;
+
+  constructor(message: string, options: OpenRouterErrorOptions = {}) {
     super(message);
     this.name = "OpenRouterError";
+    this.status = options.status;
+    this.model = options.model;
+    this.cause = options.cause;
   }
 }
 
 export class AuthenticationError extends OpenRouterError {
-  constructor(message = "Błąd uwierzytelniania API") {
-    super(message);
+  constructor(message = "Błąd uwierzytelniania API", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "AuthenticationError";
   }
 }
 
 export class RateLimitError extends OpenRouterError {
-  constructor(message = "Przekroczono limit zapytań API") {
-    super(message);
+  constructor(message = "Przekroczono limit zapytań API", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "RateLimitError";
   }
 }
 
 export class ModelUnavailableError extends OpenRouterError {
-  constructor(model: string, message?: string) {
-    super(message || `Model ${model} jest niedostępny`);
+  constructor(model: string, message?: string, options?: OpenRouterErrorOptions) {
+    super(message || `Model ${model} jest niedostępny`, { model, ...options });
     this.name = "ModelUnavailableError";
   }
 }
 
 export class TokenLimitError extends OpenRouterError {
-  constructor(message = "Przekroczono limit tokenów dla tego kontekstu") {
-    super(message);
+  constructor(message = "Przekroczono limit tokenów dla tego kontekstu", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "TokenLimitError";
   }
 }
 
 export class ContentFilterError extends OpenRouterError {
-  constructor(message = "Treść została zablokowana przez filtry zawartości") {
-    super(message);
+  constructor(message = "Treść została zablokowana przez filtry zawartości", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "ContentFilterError";
   }
 }
 
 export class NetworkError extends OpenRouterError {
-  constructor(message = "Błąd sieci podczas komunikacji z API") {
-    super(message);
+  constructor(message = "Błąd sieci podczas komunikacji z API", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "NetworkError";
   }
 }
 
 export class ResponseParsingError extends OpenRouterError {
-  constructor(message = "Błąd podczas przetwarzania odpowiedzi API") {
-    super(message);
+  constructor(message = "Błąd podczas przetwarzania odpowiedzi API", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "ResponseParsingError";
   }
 }
 
 export class BudgetExceededError extends OpenRouterError {
-  constructor(message = "Przekroczono budżet API") {
-    super(message);
+  constructor(message = "Przekroczono budżet API", options?: OpenRouterErrorOptions) {
+    super(message, options);
     this.name = "BudgetExceededError";
   }
 }

@@ -4,6 +4,7 @@ import { AIResponseParseError, AIService } from "../../../lib/services/ai.servic
 import { OpenRouterError } from "../../../lib/api/openrouter.types";
 import type { AIErrorResponse, GeneratedRecipeDto } from "../../../types";
 import { zodMessage } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
 
 export const prerender = false;
 
@@ -63,7 +64,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Awaria dostawcy i nieczytelna odpowiedź modelu łapane PRZED zewnętrznym catchem - inaczej
       // byłyby nieodróżnialne od zwykłego 500 (wzorzec: `diary-entries/[id]/estimate.ts`).
       if (error instanceof OpenRouterError) {
-        console.error("Błąd dostawcy AI podczas generowania przepisu:", error);
+        // Status i model w linii logu odróżniają 401 (klucz) od 429 (limit) i 404 (model).
+        logError(
+          "ai.provider_failed",
+          {
+            requestId: locals.requestId,
+            userId: userId,
+            route: "ai.generate_recipe",
+            model: error.model,
+            status: error.status,
+          },
+          error
+        );
         const errorResponse: AIErrorResponse = {
           error: "Usługa AI jest chwilowo niedostępna",
           code: "AI_UNAVAILABLE",

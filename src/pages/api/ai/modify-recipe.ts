@@ -4,6 +4,7 @@ import { AIResponseParseError, AIService } from "../../../lib/services/ai.servic
 import { OpenRouterError } from "../../../lib/api/openrouter.types";
 import type { AIErrorResponse, ModifiedRecipeDto } from "../../../types";
 import { zodMessage } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
 
 export const prerender = false;
 
@@ -90,7 +91,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } catch (error) {
       // Mapowanie jak w `generate-recipe.ts` i `diary-entries/[id]/estimate.ts`.
       if (error instanceof OpenRouterError) {
-        console.error("Błąd dostawcy AI podczas modyfikacji przepisu:", error);
+        // Status i model w linii logu odróżniają 401 (klucz) od 429 (limit) i 404 (model).
+        logError(
+          "ai.provider_failed",
+          {
+            requestId: locals.requestId,
+            userId: user.id,
+            route: "ai.modify_recipe",
+            model: error.model,
+            status: error.status,
+          },
+          error
+        );
         const errorResponse: AIErrorResponse = {
           error: "Usługa AI jest chwilowo niedostępna",
           code: "AI_UNAVAILABLE",

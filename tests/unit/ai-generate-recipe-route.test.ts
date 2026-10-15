@@ -30,7 +30,7 @@ const requestContext = (body: unknown = { additional_params: "wegańskie", base_
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
-    locals: { supabase: { auth: { getUser } } },
+    locals: { requestId: "req-1", supabase: { auth: { getUser } } },
   }) as unknown as Parameters<typeof POST>[0];
 
 const GENERATED: GeneratedRecipeDto = {
@@ -86,6 +86,24 @@ describe("POST /api/ai/generate-recipe", () => {
       error: "Usługa AI jest chwilowo niedostępna",
       code: "AI_UNAVAILABLE",
     });
+  });
+
+  it("awaria dostawcy loguje jedną linię JSON ze statusem i modelem", async () => {
+    generateRecipe.mockRejectedValue(new RateLimitError("Limit", { status: 429, model: "model-testowy" }));
+
+    await POST(requestContext());
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const line = JSON.parse(consoleError.mock.calls[0][0]);
+    expect(line).toMatchObject({
+      event: "ai.provider_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      route: "ai.generate_recipe",
+      status: 429,
+      model: "model-testowy",
+    });
+    expect(line.error.name).toBe("RateLimitError");
   });
 
   it("AIResponseParseError z serwisu daje 502 AI_PARSE_ERROR", async () => {
