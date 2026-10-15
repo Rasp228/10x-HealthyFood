@@ -55,6 +55,19 @@ describe("serializeError", () => {
     });
   });
 
+  it("DETAIL „Failing row contains” traci wartości wiersza, także w cause", () => {
+    const checkViolation = {
+      message: 'new row for relation "diary_entries" violates check constraint "diary_entries_value_has_origin"',
+      code: "23514",
+      details: "Failing row contains (1, user-a, 2026-10-15, owsianka z bananem, 1 miska, …).",
+    };
+
+    const serialized = serializeError(new Error("createEntry: violates", { cause: checkViolation }));
+
+    expect(serialized.cause?.details).toBe("Failing row contains (redacted)");
+    expect(JSON.stringify(serialized)).not.toContain("owsianka");
+  });
+
   it("status liczbowy zostaje", () => {
     expect(serializeError({ name: "AuthApiError", message: "x", status: 503 })).toMatchObject({ status: 503 });
   });
@@ -145,6 +158,13 @@ describe("logError / logWarn / logInfo", () => {
 
     expect(parsedLine(errorSpy)).not.toHaveProperty("email");
     expect(errorSpy.mock.calls[0][0]).not.toContain("jan@example.com");
+  });
+
+  it("każdy klucz z email w nazwie jest pomijany", () => {
+    logError("x", { requestId: "req-5", userEmail: "jan@example.com", EMAIL: "ola@example.com" }, new Error("x"));
+
+    expect(errorSpy.mock.calls[0][0]).not.toMatch(/@example\.com/);
+    expect(parsedLine(errorSpy)).toMatchObject({ requestId: "req-5" });
   });
 
   it("kontekst nie nadpisuje pól linii", () => {

@@ -143,7 +143,7 @@ describe("POST /api/ai/generate-recipe", () => {
     const body = await response.text();
 
     expect(response.status).toBe(500);
-    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR" });
+    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR", requestId: "req-1" });
     expect(body).not.toContain("logs_insert_own");
   });
 

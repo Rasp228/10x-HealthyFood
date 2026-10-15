@@ -62,7 +62,7 @@ describe("dbError", () => {
     expect(serialized).toMatchObject({
       name: "DatabaseError",
       code: "23514",
-      cause: { code: "23514", details: "Failing row contains (...)" },
+      cause: { code: "23514", details: "Failing row contains (redacted)" },
     });
     expect(serialized.stack).toEqual(expect.any(String));
   });

@@ -70,7 +70,11 @@ describe("POST /api/ai/save-recipe - 500 bez wycieku szczegółów", () => {
 
     expect(response.status).toBe(500);
     const body = await response.text();
-    expect(JSON.parse(body)).toEqual({ error: "Nie udało się utworzyć przepisu", code: "SERVER_ERROR" });
+    expect(JSON.parse(body)).toEqual({
+      error: "Nie udało się utworzyć przepisu",
+      code: "SERVER_ERROR",
+      requestId: "req-1",
+    });
     expect(body).not.toContain(DB_MESSAGE);
   });
 
@@ -83,7 +87,11 @@ describe("POST /api/ai/save-recipe - 500 bez wycieku szczegółów", () => {
 
     expect(response.status).toBe(500);
     const body = await response.text();
-    expect(JSON.parse(body)).toEqual({ error: "Nie udało się zaktualizować przepisu", code: "SERVER_ERROR" });
+    expect(JSON.parse(body)).toEqual({
+      error: "Nie udało się zaktualizować przepisu",
+      code: "SERVER_ERROR",
+      requestId: "req-1",
+    });
     expect(body).not.toContain(DB_MESSAGE);
   });
 

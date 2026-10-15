@@ -129,9 +129,11 @@ export default function DiaryEntryCalories({
       ) : state === "unavailable" ? (
         // Wycena wróciła 502 z kodem dostawcy: wpis mówi, że AI nie odpowiedziało, zamiast udawać,
         // że model nie umiał policzyć. Przycisk "Policz ponownie" i pole ręczne zostają jak przy `stale`.
+        // Tekst w `text-foreground`, nie `text-warning`: ten token ma na `warning/10` tylko ~4.4:1
+        // (kolor ikony, global.css), a mały tekst wymaga 4.5:1 - jak w toastach.
         <Badge
           variant="outline"
-          className="border-warning/30 bg-warning/10 text-warning"
+          className="border-warning/30 bg-warning/10 text-foreground"
           data-testid="diary-entry-ai-unavailable"
         >
           AI niedostępne

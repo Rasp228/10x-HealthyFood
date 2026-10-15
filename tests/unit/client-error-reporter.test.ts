@@ -129,4 +129,25 @@ describe("installGlobalHandlers", () => {
     expect(sentEvents()).toEqual([expect.objectContaining({ kind: "unhandledrejection", message: "probe" })]);
     addEventListener.mockRestore();
   });
+
+  it("odrzucenie zwykłym obiektem wysyła typ i nazwy pól, bez wartości", async () => {
+    const { installGlobalHandlers } = await loadReporter();
+    const listeners: ((event: Event) => void)[] = [];
+    const addEventListener = jest
+      .spyOn(window, "addEventListener")
+      .mockImplementation((type: string, listener: EventListenerOrEventListenerObject) => {
+        if (type === "unhandledrejection") listeners.push(listener as (event: Event) => void);
+      });
+
+    installGlobalHandlers();
+
+    const reason = { content: "owsianka z bananem", amount_text: "1 miska" };
+    listeners.forEach((listener) => listener(Object.assign(new Event("unhandledrejection"), { reason })));
+    jest.runOnlyPendingTimers();
+
+    const [event] = sentEvents();
+    expect(event.message).toContain("content, amount_text");
+    expect(JSON.stringify(sentEvents())).not.toContain("owsianka");
+    addEventListener.mockRestore();
+  });
 });

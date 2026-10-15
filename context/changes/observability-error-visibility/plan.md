@@ -622,7 +622,7 @@ jest widoczny (P9). Jedno kliknięcie nie mnoży wywołań modelu po 504 (P11).
 
 #### Manual Verification:
 
-- Logowanie z błędnym hasłem nadal pokazuje „Nieprawidłowy email lub hasło.”; logowanie z odciętym `SUPABASE_URL` (np. zła wartość w `.env` lokalnie) pokazuje komunikat o niedostępności usługi i linię `auth.login_failed` w logu
+- Logowanie z błędnym hasłem nadal pokazuje „Nieprawidłowy email lub hasło.”; logowanie z odciętym `SUPABASE_URL` (np. zła wartość w `.env` lokalnie) pokazuje komunikat o niedostępności usługi i linię `auth.unavailable` (ze `step: "signInWithPassword"`) w logu; `auth.login_failed` to tylko zewnętrzny `catch`
 - `/api/health` po zalogowaniu pokazuje `version` i `services.database: "ok"`
 
 **Implementation Note**: Po automatycznej weryfikacji zatrzymaj się na potwierdzenie ręcznych kroków przed fazą 6.

@@ -128,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (error instanceof AIResponseParseError) {
-        console.error("Nieczytelna odpowiedź AI podczas modyfikacji przepisu:", error);
+        logError("ai.response_unparseable", logContext, error);
         const errorResponse: AIErrorResponse = {
           error: "AI zwróciło odpowiedź, której nie da się odczytać",
           code: "AI_PARSE_ERROR",

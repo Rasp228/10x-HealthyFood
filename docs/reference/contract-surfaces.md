@@ -26,6 +26,12 @@ Conventions themselves (which directory a file belongs in, which pattern to foll
 - **Breaks**: a return that skips it loses the rotated session cookie. No exception at the call
   site; the write lands after the response was sent and is logged, and the user appears signed out
   on the next request. See @context/foundation/lessons.md.
+- **Exception**: when `next()` throws on a page (not `/api/`), the middleware rethrows without
+  `flushCookies`, so Astro can render its error page. Cookies rotated in that pass are dropped;
+  Astro renders the 500 page through the middleware again, and that second `getUser()` re-rotates
+  and flushes onto the error response. It costs a second GoTrue round trip and relies on GoTrue
+  accepting the already-rotated refresh token within its reuse interval. Do not copy this rethrow
+  to any other exit.
 
 ### `locals.supabase` / `locals.user`
 

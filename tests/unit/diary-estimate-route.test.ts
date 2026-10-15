@@ -442,6 +442,18 @@ describe("POST /api/diary-entries/[id]/estimate", () => {
       });
     });
 
+    it("wartość wpisana ręcznie w trakcie wyceny: warn discarded_stale i completed z wynikiem discarded", async () => {
+      markEstimationRequested.mockResolvedValue(storedEntry());
+      estimateFromDescription.mockResolvedValue(420);
+      // Znacznik odciął zapis, a w wierszu stoi liczba użytkownika - nie `null`.
+      applyEstimate.mockResolvedValue(storedEntry({ calories: 300, calorie_origin: "manual" }));
+
+      await POST(requestContext());
+
+      expect(lineFor(consoleWarn, "estimate.discarded_stale")).toBeDefined();
+      expect(lineFor(consoleInfo, "estimate.completed")).toMatchObject({ result: "discarded" });
+    });
+
     it("zapisana wartość nie zostawia ostrzeżenia o odciętym zapisie", async () => {
       markEstimationRequested.mockResolvedValue(storedEntry());
       estimateFromDescription.mockResolvedValue(420);

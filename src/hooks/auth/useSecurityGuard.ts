@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isAbortError, reportClientError } from "../../lib/utils/client-error-reporter";
 
 /**
  * Hook zabezpieczający przed dostępem do stron chronionych po wylogowaniu
@@ -16,6 +17,15 @@ export const useSecurityGuard = () => {
         }
       } catch (error) {
         console.error("Błąd sprawdzania autoryzacji:", error);
+        // Wylogowanie przy błędzie sieci zostaje (P6), ale przestaje być niewidoczne: zgłoszenie
+        // trafia do `/api/client-errors`, a bufor reportera wysyła `pagehide` przed przekierowaniem.
+        if (!isAbortError(error)) {
+          reportClientError({
+            kind: "fetch",
+            message: `Sprawdzenie sesji nie powiodło się: ${error instanceof Error ? error.message : String(error)}`,
+            source: "GET /api/auth/me",
+          });
+        }
         // W przypadku błędu połączenia, przekieruj na login
         window.location.replace("/auth/login");
       }

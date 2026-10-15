@@ -151,11 +151,14 @@ function describeThrown(value: unknown): { message: string; stack?: string } {
 
   if (typeof value === "string") return { message: value };
 
-  try {
-    return { message: JSON.stringify(value) ?? String(value) };
-  } catch {
-    return { message: String(value) };
+  // Bez wartości: odrzucony obiekt bywa ciałem odpowiedzi albo danymi formularza, a te nie
+  // należą do logu. Typ i nazwy pól wystarczą, żeby znaleźć miejsce, które go odrzuciło.
+  if (value !== null && typeof value === "object") {
+    const keys = Object.keys(value).slice(0, 10);
+    return { message: `Odrzucenie wartością typu object (pola: ${keys.length > 0 ? keys.join(", ") : "brak"})` };
   }
+
+  return { message: `Odrzucenie wartością typu ${value === null ? "null" : typeof value}` };
 }
 
 function handleError(event: ErrorEvent) {

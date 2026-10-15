@@ -5,6 +5,7 @@ import { OpenRouterError } from "../../../lib/api/openrouter.types";
 import type { AIErrorResponse, GeneratedRecipeDto } from "../../../types";
 import { zodMessage } from "../../../lib/utils/validation-errors";
 import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 export const prerender = false;
 
@@ -15,6 +16,8 @@ const generateRecipeSchema = z.object({
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "ai.generate_recipe" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -31,6 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const userId = user.id;
+    logContext.userId = userId;
 
     // Pobierz i zwaliduj dane wejściowe
     const rawData = await request.json();
@@ -65,17 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // byłyby nieodróżnialne od zwykłego 500 (wzorzec: `diary-entries/[id]/estimate.ts`).
       if (error instanceof OpenRouterError) {
         // Status i model w linii logu odróżniają 401 (klucz) od 429 (limit) i 404 (model).
-        logError(
-          "ai.provider_failed",
-          {
-            requestId: locals.requestId,
-            userId: userId,
-            route: "ai.generate_recipe",
-            model: error.model,
-            status: error.status,
-          },
-          error
-        );
+        logError("ai.provider_failed", { ...logContext, model: error.model, status: error.status }, error);
         const errorResponse: AIErrorResponse = {
           error: "Usługa AI jest chwilowo niedostępna",
           code: "AI_UNAVAILABLE",
@@ -87,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (error instanceof AIResponseParseError) {
-        console.error("Nieczytelna odpowiedź AI podczas generowania przepisu:", error);
+        logError("ai.response_unparseable", logContext, error);
         const errorResponse: AIErrorResponse = {
           error: "AI zwróciło odpowiedź, której nie da się odczytać",
           code: "AI_PARSE_ERROR",
@@ -108,12 +102,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     // Komunikat zostaje na serwerze: błąd bazy niesie nazwy tabel i polityk RLS - do przeglądarki
-    // idzie stała, do logu pełny błąd.
-    console.error("Błąd podczas generowania przepisu:", error);
+    // idzie stała i `requestId`, do logu pełny błąd.
+    logError("ai.generate_recipe_failed", logContext, error);
 
     const errorResponse: AIErrorResponse = {
       error: "Błąd wewnętrzny serwera",
       code: "SERVER_ERROR",
+      requestId: locals.requestId,
     };
     return new Response(JSON.stringify(errorResponse), {
       status: 500,

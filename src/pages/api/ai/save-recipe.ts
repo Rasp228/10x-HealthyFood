@@ -143,10 +143,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .single();
 
       if (updateError) {
-        console.error("Błąd podczas aktualizacji przepisu:", updateError);
+        logError("ai.save_recipe_failed", logContext, dbError(updateError, "saveRecipe.update"));
         const errorResponse: AIErrorResponse = {
           error: "Nie udało się zaktualizować przepisu",
           code: "SERVER_ERROR",
+          requestId: locals.requestId,
         };
         return new Response(JSON.stringify(errorResponse), {
           status: 500,
@@ -177,10 +178,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { data: newRecipe, error } = await locals.supabase.from("recipes").insert(recipeData).select().single();
 
     if (error) {
-      console.error("Błąd podczas tworzenia przepisu:", error);
+      logError("ai.save_recipe_failed", logContext, dbError(error, "saveRecipe.insert"));
       const errorResponse: AIErrorResponse = {
         error: "Nie udało się utworzyć przepisu",
         code: "SERVER_ERROR",
+        requestId: locals.requestId,
       };
       return new Response(JSON.stringify(errorResponse), {
         status: 500,
@@ -199,8 +201,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     // Komunikat zostaje na serwerze, jak w `generate-recipe.ts`: błąd bazy niesie nazwy tabel
-    // i polityk RLS - do przeglądarki idzie stała i `requestId`, do logu pełny błąd. Tak samo
-    // w obu 500 wyżej.
+    // i polityk RLS - do przeglądarki idzie stała i `requestId`, do logu pełny błąd. Oba 500 wyżej
+    // (update, insert) robią to samo, tylko z komunikatem kroku.
     logError("ai.save_recipe_failed", logContext, error);
 
     const errorResponse: AIErrorResponse = {

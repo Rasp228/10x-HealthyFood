@@ -179,11 +179,8 @@ export const POST: APIRoute = async ({ params, locals }) => {
       throw error;
     }
 
-    logInfo("estimate.completed", {
-      ...logContext,
-      ms: Date.now() - startedAt,
-      result: estimate === null ? "empty" : "valued",
-    });
+    // Czas samego modelu - zapis i odczyt poniżej do niego nie wchodzą.
+    const ms = Date.now() - startedAt;
 
     // Odpowiedź bezużyteczna to nie awaria: oddajemy wiersz ze znacznikiem i bez wartości.
     //
@@ -192,6 +189,8 @@ export const POST: APIRoute = async ({ params, locals }) => {
     // raportowałaby wtedy `calories: null` wbrew bazie - przeglądarka i tak robi re-GET, ale to
     // ciało odpowiedzi jest kontraktem, który dziedziczą S-04 i S-05.
     if (estimate === null) {
+      logInfo("estimate.completed", { ...logContext, ms, result: "empty" });
+
       const current = await diaryService.getEntry(user.id, entryId);
 
       if (!current) {
@@ -216,9 +215,14 @@ export const POST: APIRoute = async ({ params, locals }) => {
     }
 
     // Zapis odcięty znacznikiem: w międzyczasie ktoś unieważnił zlecenie (edycja, "Zapisz
-    // i przelicz", nowsze zlecenie), więc opłacona wycena przepadła. Bez tej linii wyglądałoby to
-    // jak model, który nic nie policzył.
-    if (updated.calories === null) {
+    // i przelicz", wartość wpisana ręcznie, nowsze zlecenie), więc opłacona wycena przepadła.
+    // Rozpoznajemy to po wierszu, który nie niesie tej wyceny - samo `calories === null` przegapiłoby
+    // wartość ręczną. Bez tej linii wyglądałoby to jak model, który nic nie policzył.
+    const discarded = updated.calories !== estimate || updated.calorie_origin !== origin;
+
+    logInfo("estimate.completed", { ...logContext, ms, result: discarded ? "discarded" : "valued" });
+
+    if (discarded) {
       logWarn("estimate.discarded_stale", { ...logContext, requestedAt: entry.estimation_requested_at });
     }
 

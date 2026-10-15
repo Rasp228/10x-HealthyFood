@@ -34,12 +34,16 @@ type LogLevel = "error" | "warn" | "info";
 
 /** Ile poziomów `cause` serializujemy pod błędem głównym - łańcuch bywa cykliczny. */
 const MAX_CAUSE_DEPTH = 3;
+const FAILING_ROW_PREFIX = "Failing row contains";
+
+/** Pola linii, których kontekst nie może nadpisać. */
+const DROPPED_CONTEXT_KEYS = new Set(["level", "event", "time", "env", "commit", "error"]);
 
 /**
- * Pola linii, których kontekst nie może nadpisać, oraz `email`: adres to dana osobowa, a do
- * korelacji wystarcza `userId`.
+ * Każdy klucz z „email” w nazwie (`email`, `userEmail`, …): adres to dana osobowa, a do korelacji
+ * wystarcza `userId`.
  */
-const DROPPED_CONTEXT_KEYS = new Set(["level", "event", "time", "env", "commit", "error", "email"]);
+const EMAIL_KEY = /email/i;
 
 function deploymentIdentity(): { env: string; commit: string } {
   const env = typeof process !== "undefined" ? process.env : undefined;
@@ -82,9 +86,13 @@ function serializeAtDepth(error: unknown, depth: number): SerializedError {
   }
 
   // `details` i `hint` z PostgREST zdradzają nazwy kolumn i ograniczeń - trafiają tylko do logu,
-  // nigdy do ciała odpowiedzi.
+  // nigdy do ciała odpowiedzi. Wyjątek: DETAIL naruszenia CHECK/NOT NULL to
+  // `Failing row contains (…)` z całym wierszem, czyli z treścią wpisu użytkownika - zostaje
+  // sam prefiks, wartości do logu nie idą.
   const details = readString(source, "details");
-  if (details) serialized.details = details;
+  if (details) {
+    serialized.details = details.startsWith(FAILING_ROW_PREFIX) ? `${FAILING_ROW_PREFIX} (redacted)` : details;
+  }
 
   const hint = readString(source, "hint");
   if (hint) serialized.hint = hint;
@@ -109,7 +117,7 @@ function write(level: LogLevel, event: string, context: LogContext, error: unkno
   const safeContext: Record<string, LogScalar> = {};
 
   for (const [key, value] of Object.entries(context)) {
-    if (!DROPPED_CONTEXT_KEYS.has(key.toLowerCase())) {
+    if (!DROPPED_CONTEXT_KEYS.has(key.toLowerCase()) && !EMAIL_KEY.test(key)) {
       safeContext[key] = value;
     }
   }
