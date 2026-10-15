@@ -1,10 +1,17 @@
 import type { APIRoute } from "astro";
 import type { UserStatsDto } from "../../../types";
+import { dbError } from "../../../lib/utils/db-error";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 export const prerender = false;
 
 // Handler GET - pobieranie statystyk użytkownika
 export const GET: APIRoute = async ({ locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie - zewnętrzny catch loguje go w stanie z chwili
+  // awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "users.stats" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -20,6 +27,8 @@ export const GET: APIRoute = async ({ locals }) => {
       );
     }
 
+    logContext.userId = user.id;
+
     // Pobierz statystyki przepisów dla użytkownika
     const { data: recipes, error } = await locals.supabase
       .from("recipes")
@@ -27,7 +36,7 @@ export const GET: APIRoute = async ({ locals }) => {
       .eq("user_id", user.id);
 
     if (error) {
-      throw error;
+      throw dbError(error, "users.stats");
     }
 
     // Oblicz statystyki
@@ -55,15 +64,14 @@ export const GET: APIRoute = async ({ locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Obsługa błędów
-    const errorMessage = error instanceof Error ? error.message : "Nieznany błąd";
+    // Komunikat zostaje na serwerze. Awaria PostgREST niesie w treści nazwy kolumn, nazwy
+    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała i `requestId`, po którym
+    // linię logu z pełnym błędem da się znaleźć.
+    logError("users.stats_failed", logContext, error);
 
-    return new Response(
-      JSON.stringify({
-        error: "Błąd podczas pobierania statystyk",
-        details: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

@@ -29,13 +29,13 @@ const requestContext = (id = "1", body: unknown = { calories: 450 }, rawBody?: s
       headers: { "Content-Type": "application/json" },
       body: rawBody ?? JSON.stringify(body),
     }),
-    locals: { supabase: { auth: { getUser } } },
+    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const deleteContext = (id = "1") =>
   ({
     params: { id },
-    locals: { supabase: { auth: { getUser } } },
+    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const storedEntry = (overrides: Partial<DiaryEntryDto> = {}): DiaryEntryDto => ({
@@ -137,14 +137,25 @@ describe("PATCH /api/diary-entries/[id]", () => {
     await expect(response.json()).resolves.toEqual({ error: "Wpis nie został znaleziony" });
   });
 
-  it("500 bez szczegółów awarii", async () => {
+  it("500 bez szczegółów awarii, z requestId i linią logu bez wartości pól", async () => {
     const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
     updateEntry.mockRejectedValue(new Error('violates check constraint "diary_entries_value_has_origin"'));
 
-    const response = await PATCH(requestContext());
+    const response = await PATCH(requestContext("1", { content: "Tajna owsianka", calories: 450 }));
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera" });
+    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const line = consoleError.mock.calls[0][0] as string;
+    expect(JSON.parse(line)).toMatchObject({
+      event: "diary_entries.patch_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      entryId: 1,
+      fields: "content,calories",
+    });
+    // Nazwy pól tak, wartości nie - treść posiłku nie trafia do logu.
+    expect(line).not.toContain("Tajna owsianka");
 
     consoleError.mockRestore();
   });
@@ -191,7 +202,12 @@ describe("DELETE /api/diary-entries/[id]", () => {
     const response = await DELETE(deleteContext());
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera" });
+    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+    expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+      event: "diary_entries.delete_failed",
+      requestId: "req-1",
+      entryId: 1,
+    });
 
     consoleError.mockRestore();
   });

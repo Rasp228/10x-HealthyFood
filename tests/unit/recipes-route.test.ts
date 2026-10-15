@@ -104,6 +104,36 @@ describe("GET /api/recipes", () => {
 
     expect(response.status).toBe(200);
   });
+
+  it("awaria bazy → 500 z requestId, bez details, z linią logu recipes.get_failed", async () => {
+    const SECRET = "column recipes.secret_column does not exist";
+    const failure = { data: null, error: { code: "42703", message: SECRET, details: SECRET, hint: null }, count: null };
+    const failingBuilder: Record<string, unknown> = {};
+    for (const method of ["select", "eq", "ilike", "or", "order", "limit"]) {
+      failingBuilder[method] = () => failingBuilder;
+    }
+    failingBuilder.then = (resolve: (value: unknown) => unknown) => resolve(failure);
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const response = await GET({
+      url: new URL("http://localhost/api/recipes"),
+      locals: { supabase: { auth: { getUser }, from: () => failingBuilder }, requestId: "req-1" },
+    } as unknown as RouteContext);
+
+    expect(response.status).toBe(500);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+    expect(text).not.toContain("secret_column");
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+      event: "recipes.get_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      error: { name: "DatabaseError", code: "42703" },
+    });
+
+    consoleError.mockRestore();
+  });
 });
 
 describe("DELETE /api/recipes/:id", () => {
@@ -231,6 +261,12 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
   /** Największa wartość `serial` (int4) - literał typu kolumny `id`. */
   const INT4_MAX = 2147483647;
   const SECRET = "value too long for type character varying(255) on relation recipes";
+  /** `requestId`, który w prawdziwym żądaniu ustawia middleware. */
+  const REQUEST_ID = "req-1";
+
+  /** Linie JSON z `console.error`, sparsowane - asercje czytają pola, nie cały napis. */
+  const loggedLines = (spy: jest.SpyInstance) =>
+    spy.mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>);
 
   const seed = (): TableState => ({
     recipes: [
@@ -266,7 +302,7 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
       request: new Request(url, { method: init.method, headers: { "Content-Type": "application/json" }, body }),
       params: init.id === undefined ? {} : { id: init.id },
       url: new URL(url),
-      locals: { supabase },
+      locals: { supabase, requestId: REQUEST_ID },
     } as unknown as APIContext;
   };
 
@@ -339,10 +375,17 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
 
       expect(response.status).toBe(500);
       const text = await response.text();
-      expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera" });
+      expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
       expect(text).not.toContain("character varying");
-      // Pełny błąd ląduje w logu serwera.
-      expect(consoleError).toHaveBeenCalledWith(expect.any(String), failure.error);
+      expect(text).not.toContain(failure.error.code);
+      // Pełny błąd ląduje w logu serwera: jedna linia JSON z tym samym `requestId` i kodem PostgREST.
+      expect(loggedLines(consoleError)).toEqual([
+        expect.objectContaining({
+          event: "recipes.post_failed",
+          requestId: REQUEST_ID,
+          error: expect.objectContaining({ code: failure.error.code }),
+        }),
+      ]);
     });
   });
 
@@ -407,9 +450,16 @@ describe("zapis przepisów - sufity bazy na serwerze", () => {
 
       expect(response.status).toBe(500);
       const text = await response.text();
-      expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera" });
+      expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
       expect(text).not.toContain("character varying");
-      expect(consoleError).toHaveBeenCalledWith(expect.any(String), failure.error);
+      expect(text).not.toContain(failure.error.code);
+      expect(loggedLines(consoleError)).toEqual([
+        expect.objectContaining({
+          event: "recipe.put_failed",
+          requestId: REQUEST_ID,
+          error: expect.objectContaining({ code: failure.error.code }),
+        }),
+      ]);
     });
   });
 

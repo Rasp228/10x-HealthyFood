@@ -11,6 +11,7 @@ import { OpenRouterError } from "../api/openrouter.types";
 import type { JSONSchema, ChatResponse } from "../api/openrouter.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
+import { dbError } from "../utils/db-error";
 
 /**
  * Model odpowiedział, ale z jego treści nie da się odczytać przepisu (pusta treść, same białe
@@ -536,7 +537,7 @@ export class AIService {
     const { data, error } = await this.supabase.from("preferences").select("*").eq("user_id", userId);
 
     if (error) {
-      throw new Error(`Błąd podczas pobierania preferencji: ${error.message}`);
+      throw dbError(error, "Błąd podczas pobierania preferencji");
     }
 
     return data || [];

@@ -822,25 +822,25 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 3.1 Testy serwisu wyceny przechodzą, łącznie z nowym blokiem powodów
-- [x] 3.2 Testy trasy wyceny przechodzą
-- [x] 3.3 Testy serwisu dziennika i danych chronionych zielone
-- [x] 3.4 Cały zestaw Jest, typecheck, lint, format
+- [x] 3.1 Testy serwisu wyceny przechodzą, łącznie z nowym blokiem powodów — d9f7294
+- [x] 3.2 Testy trasy wyceny przechodzą — d9f7294
+- [x] 3.3 Testy serwisu dziennika i danych chronionych zielone — d9f7294
+- [x] 3.4 Cały zestaw Jest, typecheck, lint, format — d9f7294
 
 #### Manual
 
-- [ ] 3.5 Harness R3: 200 z error daje 502 z ResponseParsingError, śmieć daje warn no_json bez treści
-- [ ] 3.6 Wycena z prawdziwym modelem daje linię estimate.completed z ms
+- [x] 3.5 Harness R3: 200 z error daje 502 z ResponseParsingError, śmieć daje warn no_json bez treści — d9f7294
+- [x] 3.6 Wycena z prawdziwym modelem daje linię estimate.completed z ms — d9f7294
 
 ### Phase 4: Błędy bazy i kontekst w trasach
 
 #### Automated
 
-- [ ] 4.1 Testy helpera błędów bazy przechodzą
-- [ ] 4.2 Testy serwisów i tras w obszarze zielone
-- [ ] 4.3 Brak „Nieznany błąd” w src/pages/api
-- [ ] 4.4 Brak gołego throw error w diary.service.ts
-- [ ] 4.5 Cały zestaw Jest, typecheck, lint, format
+- [x] 4.1 Testy helpera błędów bazy przechodzą
+- [x] 4.2 Testy serwisów i tras w obszarze zielone
+- [x] 4.3 Brak „Nieznany błąd” w src/pages/api
+- [x] 4.4 Brak gołego throw error w diary.service.ts
+- [x] 4.5 Cały zestaw Jest, typecheck, lint, format
 
 #### Manual
 

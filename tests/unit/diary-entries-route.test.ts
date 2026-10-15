@@ -5,7 +5,7 @@
  * Ten sam powód co w `diary-estimate-route.test.ts`.
  */
 
-import { POST } from "@/pages/api/diary-entries/index";
+import { GET, POST } from "@/pages/api/diary-entries/index";
 
 type RouteContext = Parameters<typeof POST>[0];
 type Row = Record<string, unknown>;
@@ -218,5 +218,97 @@ describe("POST /api/diary-entries - granice pól", () => {
     expect(response.status).toBe(201);
     expect(inserted).toHaveLength(1);
     expect(inserted[0]).toMatchObject({ entry_date: "2999-01-01" });
+  });
+});
+
+/**
+ * Awaria bazy: do przeglądarki stałe ciało z `requestId`, bez treści błędu PostgREST, a do logu
+ * jedna linia JSON z tym samym `requestId`, kodem błędu i stosem z serwisu (`dbError`).
+ */
+describe("diary-entries - awaria bazy", () => {
+  const REQUEST_ID = "req-1";
+  const SECRET = 'new row violates check constraint "diary_entries_value_has_origin"';
+
+  /** Atrapa, w której każde zapytanie do `diary_entries` kończy się podanym błędem PostgREST. */
+  const failingSupabase = (error: Row) => {
+    const failure = { data: null, error, count: null };
+    const chain: Record<string, unknown> = {};
+    for (const method of ["select", "insert", "eq", "order"]) {
+      chain[method] = () => chain;
+    }
+    chain.single = async () => failure;
+    chain.then = (resolve: (value: unknown) => unknown) => resolve(failure);
+
+    return {
+      auth: { getUser: async () => ({ data: { user: { id: USER_A, email: `${USER_A}@example.com` } } }) },
+      from: () => chain,
+    };
+  };
+
+  const loggedLines = (spy: jest.SpyInstance) =>
+    spy.mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>);
+
+  let consoleError: jest.SpyInstance;
+
+  beforeEach(() => {
+    // W `beforeEach`, bo `jest.setup.ts` podmienia metody `console` w `beforeAll`.
+    consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    consoleError.mockRestore();
+  });
+
+  it("GET → 500 z requestId, bez details, z linią diary_entries.get_failed", async () => {
+    const supabase = failingSupabase({ code: "42501", message: SECRET, details: SECRET, hint: null });
+
+    const response = await GET({
+      url: new URL("http://localhost/api/diary-entries?date=2026-10-06"),
+      locals: { supabase, requestId: REQUEST_ID },
+    } as unknown as RouteContext);
+
+    expect(response.status).toBe(500);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
+    expect(text).not.toContain("diary_entries_value_has_origin");
+
+    const lines = loggedLines(consoleError);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      event: "diary_entries.get_failed",
+      requestId: REQUEST_ID,
+      userId: USER_A,
+      entryDate: "2026-10-06",
+      error: { name: "DatabaseError", code: "42501" },
+    });
+    expect((lines[0].error as { stack: string }).stack).toContain("getEntriesForDay");
+  });
+
+  it.each([
+    ["23514 (diary_entries_value_has_origin)", "23514"],
+    ["23503 (przepis usunięty w trakcie)", "23503"],
+  ])("POST z błędem %s → 500, a linia logu ma code", async (_label, code) => {
+    const supabase = failingSupabase({ code, message: SECRET, details: SECRET, hint: null });
+
+    const response = await POST({
+      request: new Request("http://localhost/api/diary-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(describedEntry()),
+      }),
+      locals: { supabase, requestId: REQUEST_ID },
+    } as unknown as RouteContext);
+
+    expect(response.status).toBe(500);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
+    expect(text).not.toContain(code);
+    expect(loggedLines(consoleError)).toEqual([
+      expect.objectContaining({
+        event: "diary_entries.post_failed",
+        requestId: REQUEST_ID,
+        error: expect.objectContaining({ code }),
+      }),
+    ]);
   });
 });

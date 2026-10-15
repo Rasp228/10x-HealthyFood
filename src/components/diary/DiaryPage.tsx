@@ -68,6 +68,8 @@ const getServerNowTick = () => 0;
 interface DiaryPageProps {
   /** Cel z SSR (`diary.astro`); `null`, gdy celu nie ustawiono albo odczyt się nie udał. */
   dailyGoal: number | null;
+  /** Odczyt celu w SSR się nie udał - podsumowanie dnia mówi to zamiast rysować brak celu. */
+  goalError?: boolean;
 }
 
 /**
@@ -76,7 +78,7 @@ interface DiaryPageProps {
  * `<ToastContainer />` renderuje się tutaj, a nie w layoucie - wyspy Astro to osobne drzewa
  * Reacta, więc komponent wołający `showToast` bez kontenera po prostu nie ma czym go narysować.
  */
-export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
+export default function DiaryPage({ dailyGoal, goalError = false }: DiaryPageProps) {
   const { day, today, setDay } = useSelectedDay();
   const { entries, isLoading, loadedDay, error, refetch } = useDiaryEntries(day);
   const { showToast } = useToast();
@@ -249,7 +251,7 @@ export default function DiaryPage({ dailyGoal }: DiaryPageProps) {
       </div>
 
       <div className="flex flex-col gap-6">
-        {showSummary && <DiaryDaySummary entries={entries} dailyGoal={dailyGoal} />}
+        {showSummary && <DiaryDaySummary entries={entries} dailyGoal={dailyGoal} goalError={goalError} />}
 
         <DiaryEntryForm day={day} onCreated={handleCreated} />
 

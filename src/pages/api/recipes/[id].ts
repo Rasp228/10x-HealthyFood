@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 import { positiveIdParamSchema } from "../../../lib/validations/common/id";
 import { updateRecipeSchema } from "../../../lib/validations/recipe/update-recipe";
 
@@ -21,14 +23,17 @@ const invalidIdResponse = (details: ValidationIssue[]) =>
     headers: { "Content-Type": "application/json" },
   });
 
-const internalErrorResponse = () =>
-  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+/** Stałe ciało 500 z `requestId`, po którym linię logu z pełnym błędem da się znaleźć. */
+const internalErrorResponse = (requestId: string | undefined) =>
+  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId }), {
     status: 500,
     headers: { "Content-Type": "application/json" },
   });
 
 // Handler GET - pobieranie pojedynczego przepisu
 export const GET: APIRoute = async ({ params, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "recipe.get" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -41,6 +46,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    logContext.userId = user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const idResult = recipeIdSchema.safeParse(params.id);
@@ -71,14 +78,16 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Zwróć przepis
     return new Response(JSON.stringify(recipe), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Error fetching recipe:", error);
-    return internalErrorResponse();
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała i `requestId`, do logu pełny błąd.
+    logError("recipe.get_failed", logContext, error);
+    return internalErrorResponse(locals.requestId);
   }
 };
 
 // Handler PUT - aktualizacja przepisu
 export const PUT: APIRoute = async ({ params, request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "recipe.put" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -91,6 +100,8 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    logContext.userId = user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const idResult = recipeIdSchema.safeParse(params.id);
@@ -148,14 +159,16 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Jak w GET: do przeglądarki stała, do logu pełny błąd.
-    console.error("Error updating recipe:", error);
-    return internalErrorResponse();
+    // Jak w GET: do przeglądarki stała i `requestId`, do logu pełny błąd.
+    logError("recipe.put_failed", logContext, error);
+    return internalErrorResponse(locals.requestId);
   }
 };
 
 // Handler DELETE - usuwanie przepisu
 export const DELETE: APIRoute = async ({ params, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "recipe.delete" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -168,6 +181,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    logContext.userId = user.id;
 
     // Pobierz ID przepisu z parametrów ścieżki
     const idResult = recipeIdSchema.safeParse(params.id);
@@ -190,8 +205,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Jak w GET: do przeglądarki stała, do logu pełny błąd.
-    console.error("Error deleting recipe:", error);
-    return internalErrorResponse();
+    // Jak w GET: do przeglądarki stała i `requestId`, do logu pełny błąd.
+    logError("recipe.delete_failed", logContext, error);
+    return internalErrorResponse(locals.requestId);
   }
 };

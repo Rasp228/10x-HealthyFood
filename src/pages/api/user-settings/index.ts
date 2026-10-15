@@ -3,11 +3,17 @@ import type { DailyGoalDto } from "../../../types";
 import { UserSettingsService } from "../../../lib/services/user-settings.service";
 import { updateDailyGoalSchema } from "../../../lib/validations/user-settings/update-goal";
 import { zodIssues } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 export const prerender = false;
 
 // Handler GET - dzienny cel kaloryczny użytkownika
 export const GET: APIRoute = async ({ locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie - zewnętrzny catch loguje go w stanie z chwili
+  // awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "user_settings.get" };
+
   try {
     // Sprawdź autoryzację. Żądanie bez sesji zwykle nie dociera tutaj - middleware przekierowuje
     // ścieżki spoza PUBLIC_PATHS na /auth/login - ale 401 zostaje jako druga linia obrony.
@@ -22,15 +28,18 @@ export const GET: APIRoute = async ({ locals }) => {
       });
     }
 
+    logContext.userId = user.id;
+
     const userSettingsService = new UserSettingsService(locals.supabase);
     const result: DailyGoalDto = { daily_calorie_goal: await userSettingsService.getDailyGoal(user.id) };
 
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Błąd podczas odczytu celu dziennego:", error);
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała i `requestId`, po którym linię
+    // logu z pełnym błędem da się znaleźć.
+    logError("user_settings.get_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -39,6 +48,8 @@ export const GET: APIRoute = async ({ locals }) => {
 
 // Handler PUT - ustawienie albo wyczyszczenie (`null`) dziennego celu
 export const PUT: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "user_settings.put" };
+
   try {
     // Druga linia obrony za middleware, tak jak w GET.
     const {
@@ -68,6 +79,9 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       );
     }
 
+    logContext.userId = user.id;
+    logContext.goal = validationResult.data.daily_calorie_goal;
+
     const userSettingsService = new UserSettingsService(locals.supabase);
     const result: DailyGoalDto = {
       daily_calorie_goal: await userSettingsService.setDailyGoal(user.id, validationResult.data.daily_calorie_goal),
@@ -75,10 +89,10 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    // Jak w GET: do przeglądarki stała, do logu pełny błąd.
-    console.error("Błąd podczas zapisu celu dziennego:", error);
+    // Jak w GET: do przeglądarki stała i `requestId`, do logu pełny błąd.
+    logError("user_settings.put_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

@@ -10,6 +10,7 @@ import type { Database, TablesUpdate } from "../../db/database.types";
 import { resolveRecipeCalories } from "../utils/recipe-nutrition";
 import type { RecipeCalorieReason } from "../utils/recipe-nutrition";
 import { logInfo } from "../utils/log";
+import { dbError } from "../utils/db-error";
 
 /**
  * Wskazany przepis nie istnieje albo należy do kogoś innego.
@@ -71,7 +72,7 @@ export class DiaryService {
       .order("id", { ascending: true });
 
     if (error) {
-      throw error;
+      throw dbError(error, "getEntriesForDay");
     }
 
     return {
@@ -124,7 +125,7 @@ export class DiaryService {
       .single();
 
     if (error) {
-      throw error;
+      throw dbError(error, "createEntry");
     }
 
     // Po zapisie, nie przed nim: dopiero teraz linia ma `entryId`, po którym da się ją złączyć
@@ -170,7 +171,7 @@ export class DiaryService {
       .maybeSingle();
 
     if (error) {
-      throw error;
+      throw dbError(error, "readOwnRecipeContent");
     }
 
     if (!recipe) {
@@ -206,7 +207,7 @@ export class DiaryService {
       .maybeSingle();
 
     if (error) {
-      throw error;
+      throw dbError(error, "markEstimationRequested");
     }
 
     if (updated) {
@@ -269,7 +270,7 @@ export class DiaryService {
       .maybeSingle();
 
     if (error) {
-      throw error;
+      throw dbError(error, "applyEstimate");
     }
 
     if (updated) {
@@ -342,8 +343,10 @@ export class DiaryService {
       try {
         recipeContent = await this.readOwnRecipeContent(userId, current.source_recipe_id);
       } catch (error) {
+        // Poza `RecipeNotFoundError` odczyt rzuca tylko `DatabaseError`, który helper oddaje bez
+        // zmian - prefiks `readOwnRecipeContent` zostaje w komunikacie.
         if (!(error instanceof RecipeNotFoundError)) {
-          throw error;
+          throw dbError(error, "updateEntry");
         }
       }
 
@@ -399,7 +402,7 @@ export class DiaryService {
       .maybeSingle();
 
     if (error) {
-      throw error;
+      throw dbError(error, "updateEntry");
     }
 
     return data;
@@ -424,7 +427,7 @@ export class DiaryService {
       .select("id");
 
     if (error) {
-      throw error;
+      throw dbError(error, "deleteEntry");
     }
 
     return (data ?? []).length > 0;
@@ -450,7 +453,7 @@ export class DiaryService {
       .maybeSingle();
 
     if (error) {
-      throw error;
+      throw dbError(error, "getEntry");
     }
 
     return data;

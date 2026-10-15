@@ -73,4 +73,21 @@ describe("DiaryDaySummary", () => {
     expect(screen.getByTestId("diary-day-count").textContent).toBe("Wszystkie wpisy dnia: 0.");
     expect(screen.queryByTestId("diary-day-missing")).not.toBeInTheDocument();
   });
+
+  it("błąd odczytu celu: komunikat zamiast paska - awaria nie udaje braku celu", () => {
+    const entries = [entry({ id: 1, calories: 500, calorie_origin: "manual" })];
+
+    render(<DiaryDaySummary entries={entries} dailyGoal={null} goalError />);
+
+    expect(screen.getByTestId("diary-goal-error").textContent).toBe("Nie udało się wczytać dziennego celu");
+    expect(screen.queryByTestId("diary-goal-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("diary-day-total").textContent).toBe("500 kcal");
+  });
+
+  it("bez błędu odczytu celu komunikatu nie ma", () => {
+    render(<DiaryDaySummary entries={[entry({ id: 1, calories: 500, calorie_origin: "manual" })]} dailyGoal={2000} />);
+
+    expect(screen.queryByTestId("diary-goal-error")).not.toBeInTheDocument();
+    expect(screen.getByTestId("diary-goal-progress")).toBeInTheDocument();
+  });
 });

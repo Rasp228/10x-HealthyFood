@@ -3,6 +3,8 @@ import type { CreatePreferenceCommand, PreferencesDto } from "../../../types";
 import { listPreferencesSchema } from "../../../lib/validations/preferences/list-preferences";
 import { upsertPreferenceSchema } from "../../../lib/validations/preferences/upsert-preference";
 import { zodIssues } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 /** Kod Postgresa dla naruszenia unikatu - tu `preferences_unique_user_category_value`. */
 const UNIQUE_VIOLATION = "23505";
@@ -11,6 +13,8 @@ export const prerender = false;
 
 // GET /api/preferences
 export const GET: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "preferences.get" };
+
   try {
     const { supabase } = locals;
 
@@ -24,6 +28,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         status: 401,
       });
     }
+
+    logContext.userId = user.id;
 
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -75,10 +81,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       },
     });
   } catch (error) {
-    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Error fetching preferences:", error);
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała i `requestId`, do logu pełny błąd.
+    logError("preferences.get_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -87,6 +93,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST /api/preferences
 export const POST: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "preferences.post" };
+
   try {
     const { supabase } = locals;
 
@@ -100,6 +108,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 401,
       });
     }
+
+    logContext.userId = user.id;
 
     // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera: bez tego `catch`
     // wyjątek z `request.json()` trafiłby do zewnętrznego catcha i wróciłby jako 500. `null` nie
@@ -170,9 +180,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     // Komunikat zostaje na serwerze. Błąd PostgREST niesie nazwy kolumn i ograniczeń - do
     // przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Error creating preference:", error);
+    logError("preferences.post_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

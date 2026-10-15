@@ -55,6 +55,9 @@ interface ContextInit {
   search?: string;
 }
 
+/** `requestId`, który w prawdziwym żądaniu ustawia middleware. */
+const REQUEST_ID = "req-1";
+
 /** Kontekst żądania w kształcie, którego trasy dotykają: `request`, `params`, `url` i klient z `locals`. */
 const context = (supabase: Supabase, init: ContextInit) => {
   const url = `http://localhost/api/preferences${init.search ?? ""}`;
@@ -64,11 +67,15 @@ const context = (supabase: Supabase, init: ContextInit) => {
     request: new Request(url, { method: init.method, headers: { "Content-Type": "application/json" }, body }),
     params: init.params ?? {},
     url: new URL(url),
-    locals: { supabase },
+    locals: { supabase, requestId: REQUEST_ID },
   } as unknown as APIContext;
 };
 
 const json = async (response: Response) => (await response.json()) as Record<string, unknown>;
+
+/** Linie JSON z `console.error`, sparsowane - asercje czytają pola, nie cały napis. */
+const loggedLines = (spy: jest.SpyInstance) =>
+  spy.mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>);
 
 let consoleError: jest.SpyInstance;
 
@@ -219,10 +226,17 @@ describe("POST /api/preferences", () => {
 
     expect(response.status).toBe(500);
     const text = await response.text();
-    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera" });
+    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
     expect(text).not.toContain("constraint");
-    // Pełny błąd ląduje w logu serwera.
-    expect(consoleError).toHaveBeenCalledWith(expect.any(String), failure.error);
+    expect(text).not.toContain(failure.error.code);
+    // Pełny błąd ląduje w logu serwera: jedna linia JSON z tym samym `requestId` i kodem PostgREST.
+    expect(loggedLines(consoleError)).toEqual([
+      expect.objectContaining({
+        event: "preferences.post_failed",
+        requestId: REQUEST_ID,
+        error: expect.objectContaining({ code: failure.error.code }),
+      }),
+    ]);
   });
 
   it("bez sesji → 401", async () => {

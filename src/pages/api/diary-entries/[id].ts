@@ -3,6 +3,8 @@ import type { DiaryEntryDto, UpdateDiaryEntryCommand } from "../../../types";
 import { DiaryService, EntryShapeError } from "../../../lib/services/diary.service";
 import { entryIdSchema, updateDiaryEntrySchema } from "../../../lib/validations/diary/update-entry";
 import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 export const prerender = false;
 
@@ -19,6 +21,10 @@ export const prerender = false;
  * schematu.
  */
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie - zewnętrzny catch loguje go w stanie z chwili
+  // awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "diary_entries.patch" };
+
   try {
     // Sprawdź autoryzację. Żądanie bez sesji zwykle nie dociera tutaj - middleware przekierowuje
     // ścieżki spoza PUBLIC_PATHS na /auth/login - ale 401 zostaje jako druga linia obrony.
@@ -61,6 +67,10 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     }
 
     const command: UpdateDiaryEntryCommand = validationResult.data;
+    logContext.userId = user.id;
+    logContext.entryId = idResult.data;
+    // Same nazwy zmienianych pól, bez wartości: treść posiłku nie ma czego szukać w logu.
+    logContext.fields = Object.keys(command).join(",");
 
     const diaryService = new DiaryService(locals.supabase);
     let entry: DiaryEntryDto | null;
@@ -93,10 +103,11 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     return new Response(JSON.stringify(entry), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
     // Komunikat zostaje na serwerze. Awaria PostgREST niesie w treści nazwy kolumn, nazwy
-    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Błąd podczas edycji wpisu dziennika:", error);
+    // ograniczeń i brzmienie polityk RLS - do przeglądarki idzie stała i `requestId`, po którym
+    // linię logu z pełnym błędem da się znaleźć.
+    logError("diary_entries.patch_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -110,6 +121,8 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
  * Potwierdzenie usunięcia jest sprawą interfejsu, nie trasy.
  */
 export const DELETE: APIRoute = async ({ params, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "diary_entries.delete" };
+
   try {
     // Druga linia obrony za middleware, tak jak w PATCH.
     const {
@@ -135,6 +148,9 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       );
     }
 
+    logContext.userId = user.id;
+    logContext.entryId = idResult.data;
+
     const diaryService = new DiaryService(locals.supabase);
     const deleted = await diaryService.deleteEntry(user.id, idResult.data);
 
@@ -147,10 +163,10 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     return new Response(null, { status: 204 });
   } catch (error) {
-    // Jak w PATCH: do przeglądarki stała, do logu pełny błąd.
-    console.error("Błąd podczas usuwania wpisu dziennika:", error);
+    // Jak w PATCH: do przeglądarki stała i `requestId`, do logu pełny błąd.
+    logError("diary_entries.delete_failed", logContext, error);
 
-    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+    return new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId: locals.requestId }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

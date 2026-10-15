@@ -3,6 +3,8 @@ import type { UpdatePreferenceCommand } from "../../../types";
 import { positiveIdParamSchema } from "../../../lib/validations/common/id";
 import { upsertPreferenceSchema } from "../../../lib/validations/preferences/upsert-preference";
 import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
 
 /** Kod Postgresa dla naruszenia unikatu - tu `preferences_unique_user_category_value`. */
 const UNIQUE_VIOLATION = "23505";
@@ -23,8 +25,9 @@ const invalidIdResponse = (details: ValidationIssue[]) =>
     headers: { "Content-Type": "application/json" },
   });
 
-const internalErrorResponse = () =>
-  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera" }), {
+/** Stałe ciało 500 z `requestId`, po którym linię logu z pełnym błędem da się znaleźć. */
+const internalErrorResponse = (requestId: string | undefined) =>
+  new Response(JSON.stringify({ error: "Błąd wewnętrzny serwera", requestId }), {
     status: 500,
     headers: { "Content-Type": "application/json" },
   });
@@ -33,6 +36,8 @@ export const prerender = false;
 
 // PUT /api/preferences/[id]
 export const PUT: APIRoute = async ({ params, request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "preference.put" };
+
   try {
     const { supabase } = locals;
 
@@ -46,6 +51,8 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
         status: 401,
       });
     }
+
+    logContext.userId = user.id;
 
     const idResult = preferenceIdSchema.safeParse(params.id);
 
@@ -117,14 +124,16 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       },
     });
   } catch (error) {
-    // Komunikat zostaje na serwerze - do przeglądarki idzie stała, do logu pełny błąd.
-    console.error("Error updating preference:", error);
-    return internalErrorResponse();
+    // Komunikat zostaje na serwerze - do przeglądarki idzie stała i `requestId`, do logu pełny błąd.
+    logError("preference.put_failed", logContext, error);
+    return internalErrorResponse(locals.requestId);
   }
 };
 
 // DELETE /api/preferences/[id]
 export const DELETE: APIRoute = async ({ params, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "preference.delete" };
+
   try {
     const { supabase } = locals;
 
@@ -138,6 +147,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
         status: 401,
       });
     }
+
+    logContext.userId = user.id;
 
     const idResult = preferenceIdSchema.safeParse(params.id);
 
@@ -172,8 +183,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       status: 204,
     });
   } catch (error) {
-    // Jak w PUT: do przeglądarki stała, do logu pełny błąd.
-    console.error("Error deleting preference:", error);
-    return internalErrorResponse();
+    // Jak w PUT: do przeglądarki stała i `requestId`, do logu pełny błąd.
+    logError("preference.delete_failed", logContext, error);
+    return internalErrorResponse(locals.requestId);
   }
 };

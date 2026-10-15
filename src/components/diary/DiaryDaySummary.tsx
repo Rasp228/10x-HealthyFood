@@ -8,6 +8,11 @@ interface DiaryDaySummaryProps {
   entries: DiaryEntryDto[];
   /** Dzienny cel w kcal; `null` albo brak - pasek się nie rysuje. */
   dailyGoal?: number | null;
+  /**
+   * Odczyt celu na serwerze się nie udał. Wtedy zamiast paska stoi komunikat - bez niego awaria
+   * wyglądałaby jak „celu nie ustawiono”.
+   */
+  goalError?: boolean;
 }
 
 /**
@@ -19,7 +24,7 @@ interface DiaryDaySummaryProps {
  * Tło najwyżej `primary/3`: przy `/5` `text-muted-foreground` w jasnym motywie spada do ~4.4:1,
  * przy `/3` trzyma ~4.5:1 (WCAG 1.4.3).
  */
-export default function DiaryDaySummary({ entries, dailyGoal = null }: DiaryDaySummaryProps) {
+export default function DiaryDaySummary({ entries, dailyGoal = null, goalError = false }: DiaryDaySummaryProps) {
   const { calorieTotal, missingCount, entryCount } = summarizeDay(entries);
 
   return (
@@ -28,8 +33,14 @@ export default function DiaryDaySummary({ entries, dailyGoal = null }: DiaryDayS
       <p className="text-4xl font-bold tracking-tight tabular-nums" data-testid="diary-day-total">
         {calorieTotal} kcal
       </p>
-      {dailyGoal !== null && (
-        <DailyGoalProgress calorieTotal={calorieTotal} goal={dailyGoal} missingCount={missingCount} />
+      {goalError ? (
+        <p className="mt-3 text-sm text-destructive" data-testid="diary-goal-error">
+          Nie udało się wczytać dziennego celu
+        </p>
+      ) : (
+        dailyGoal !== null && (
+          <DailyGoalProgress calorieTotal={calorieTotal} goal={dailyGoal} missingCount={missingCount} />
+        )
       )}
       {missingCount > 0 ? (
         <p className="mt-1 text-xs text-muted-foreground" data-testid="diary-day-missing">

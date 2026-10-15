@@ -19,7 +19,7 @@ type RouteContext = Parameters<typeof PUT>[0];
 /** Kontekst żądania w kształcie, którego trasa faktycznie dotyka. */
 const getContext = () =>
   ({
-    locals: { supabase: { auth: { getUser } } },
+    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const putContext = (body: unknown = { daily_calorie_goal: 2000 }, rawBody?: string) =>
@@ -29,7 +29,7 @@ const putContext = (body: unknown = { daily_calorie_goal: 2000 }, rawBody?: stri
       headers: { "Content-Type": "application/json" },
       body: rawBody ?? JSON.stringify(body),
     }),
-    locals: { supabase: { auth: { getUser } } },
+    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 beforeEach(() => {
@@ -78,7 +78,12 @@ describe("GET /api/user-settings", () => {
     const response = await GET(getContext());
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera" });
+    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+    expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+      event: "user_settings.get_failed",
+      requestId: "req-1",
+      userId: "user-1",
+    });
 
     consoleError.mockRestore();
   });
@@ -143,7 +148,13 @@ describe("PUT /api/user-settings", () => {
     const response = await PUT(putContext());
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera" });
+    await expect(response.json()).resolves.toEqual({ error: "Błąd wewnętrzny serwera", requestId: "req-1" });
+    expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+      event: "user_settings.put_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      goal: 2000,
+    });
 
     consoleError.mockRestore();
   });

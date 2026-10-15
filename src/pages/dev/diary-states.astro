@@ -218,6 +218,10 @@ const fixedFrame = "relative overflow-hidden rounded-lg border border-dashed [tr
           <h3 class={stateTitle}>Bez celu, wszystkie wpisy policzone</h3>
           <DiaryDaySummary entries={summaryEntries.filter((item) => item.calories !== null)} dailyGoal={null} />
         </div>
+        <div class="flex flex-col gap-2">
+          <h3 class={stateTitle}>Błąd odczytu celu (zamiast paska)</h3>
+          <DiaryDaySummary entries={summaryEntries} dailyGoal={null} goalError />
+        </div>
       </div>
     </section>
 

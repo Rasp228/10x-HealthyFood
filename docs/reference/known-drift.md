@@ -203,23 +203,6 @@ skończy się 400. Przy okazji `save-recipe.ts` wypadnie z listy „Routes with 
 Przyjęte świadomie (plan `testing-protected-data-and-limits`, „What We're NOT Doing”: bez zmian
 w sufitach UI; research tej zmiany, Open Question 4).
 
-### `GET /api/recipes` oddaje przy 500 treść błędu w `details`
-
-Od zmiany `testing-protected-data-and-limits` każde 500 tras preferencji oraz `POST /api/recipes`
-i `GET`/`PUT`/`DELETE /api/recipes/:id` ma stałe ciało `{ error: "Błąd wewnętrzny serwera" }`,
-a pełny błąd idzie do `console.error`. Wyjątkiem jest `GET /api/recipes` (lista,
-`src/pages/api/recipes/index.ts`): gałąź `catch` odsyła `details: error.message` i niczego nie
-loguje. Komunikat PostgREST trafia więc do przeglądarki razem z nazwami kolumn i ograniczeń,
-a w logu serwera nie zostaje ślad awarii.
-
-Kierunek naprawy: to samo stałe ciało i `console.error("Error fetching recipes:", error)` co
-w `POST` tego pliku. Test na wzór przypadku „awaria bazy przy insercie → 500 ze stałym ciałem”
-w `tests/unit/recipes-route.test.ts`. Testu, który przypina obecne zachowanie, nie ma.
-
-Odłożone świadomie (plan `testing-protected-data-and-limits`, faza 4: „GET listy … bez zmian”).
-Ten sam kształt mają `GET` i `POST /api/diary-entries`, wyłączone z tej zmiany osobno, bo na złe
-wejście dają już 400.
-
 ## Preferencje
 
 ### Konflikt preferencji w `/profile` pokazuje się jako błąd pola albo ogólny toast

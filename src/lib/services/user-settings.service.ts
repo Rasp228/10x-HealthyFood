@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
+import { dbError } from "../utils/db-error";
 
 /**
  * Serwis obsługujący ustawienia użytkownika - na razie wyłącznie dzienny cel kaloryczny.
@@ -27,7 +28,7 @@ export class UserSettingsService {
       .maybeSingle();
 
     if (error) {
-      throw new Error(error.message);
+      throw dbError(error, "getDailyGoal");
     }
 
     return data?.daily_calorie_goal ?? null;
@@ -55,7 +56,7 @@ export class UserSettingsService {
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      throw dbError(error, "setDailyGoal");
     }
 
     return data.daily_calorie_goal;
