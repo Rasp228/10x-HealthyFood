@@ -91,12 +91,40 @@ describe("POST /api/ai/modify-recipe", () => {
   });
 
   it("cudzy albo nieistniejący przepis daje 404 i nie woła serwisu", async () => {
-    recipeSingle.mockResolvedValue({ data: null, error: { message: "not found" } });
+    // `PGRST116` to jedyny kod, którym `.single()` mówi „brak wiersza”.
+    recipeSingle.mockResolvedValue({
+      data: null,
+      error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" },
+    });
 
     const response = await POST(requestContext());
 
     expect(response.status).toBe(404);
     expect(modifyRecipe).not.toHaveBeenCalled();
+  });
+
+  it("inny błąd odczytu przepisu daje 500 z requestId i linią logu z code, nie 404", async () => {
+    recipeSingle.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "permission denied for table recipes", details: null, hint: null },
+    });
+
+    const response = await POST(requestContext());
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR", requestId: "req-1" });
+    expect(body).not.toContain("permission denied");
+    expect(modifyRecipe).not.toHaveBeenCalled();
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(consoleError.mock.calls[0][0])).toMatchObject({
+      event: "ai.modify_recipe_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      recipeId: 7,
+      error: { name: "DatabaseError", code: "42501" },
+    });
   });
 
   it("OpenRouterError z serwisu daje 502 AI_UNAVAILABLE", async () => {
@@ -148,7 +176,7 @@ describe("POST /api/ai/modify-recipe", () => {
     const body = await response.text();
 
     expect(response.status).toBe(500);
-    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR" });
+    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR", requestId: "req-1" });
     expect(body).not.toContain("logs_insert_own");
   });
 });

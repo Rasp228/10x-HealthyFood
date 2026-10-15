@@ -12,14 +12,18 @@ import { GET, PUT } from "@/pages/api/user-settings";
 const getDailyGoal = jest.spyOn(UserSettingsService.prototype, "getDailyGoal");
 const setDailyGoal = jest.spyOn(UserSettingsService.prototype, "setDailyGoal");
 
-const getUser = jest.fn();
+/**
+ * Użytkownik w kształcie `locals.user` z middleware - trasa nie woła już `getUser()`. `undefined`
+ * udaje żądanie, które dotarło do trasy bez sesji.
+ */
+let sessionUser: { id: string; email: string } | undefined;
 
 type RouteContext = Parameters<typeof PUT>[0];
 
 /** Kontekst żądania w kształcie, którego trasa faktycznie dotyka. */
 const getContext = () =>
   ({
-    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
+    locals: { supabase: {}, user: sessionUser, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const putContext = (body: unknown = { daily_calorie_goal: 2000 }, rawBody?: string) =>
@@ -29,13 +33,13 @@ const putContext = (body: unknown = { daily_calorie_goal: 2000 }, rawBody?: stri
       headers: { "Content-Type": "application/json" },
       body: rawBody ?? JSON.stringify(body),
     }),
-    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
+    locals: { supabase: {}, user: sessionUser, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 beforeEach(() => {
   jest.clearAllMocks();
 
-  getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "test@example.com" } } });
+  sessionUser = { id: "user-1", email: "test@example.com" };
   getDailyGoal.mockResolvedValue(2000);
   setDailyGoal.mockImplementation(async (_userId, goal) => goal);
 });
@@ -46,7 +50,7 @@ afterAll(() => {
 
 describe("GET /api/user-settings", () => {
   it("401 bez sesji", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    sessionUser = undefined;
 
     const response = await GET(getContext());
 
@@ -91,7 +95,7 @@ describe("GET /api/user-settings", () => {
 
 describe("PUT /api/user-settings", () => {
   it("401 bez sesji", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    sessionUser = undefined;
 
     const response = await PUT(putContext());
 

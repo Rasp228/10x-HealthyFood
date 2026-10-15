@@ -1,17 +1,24 @@
 import type { APIRoute } from "astro";
 import { requestResetSchema, confirmResetSchema } from "../../../lib/validations/auth/reset-password.ts";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
+import { authServiceFailure } from "../../../lib/utils/auth-errors.ts";
+import { logError } from "../../../lib/utils/log.ts";
+import type { LogContext } from "../../../lib/utils/log.ts";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals, url }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "auth.reset_password" };
+
   try {
-    const body = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec tras dziennika):
+    // `null` nie ma ani `email`, ani `token`, więc odpowiada 400 „Nieprawidłowe parametry żądania”.
+    const body = await request.json().catch(() => null);
 
     const supabase = locals.supabase;
 
     // Sprawdzenie czy to żądanie resetu (przez email) czy ustawienie nowego hasła
-    if (body.email && !body.token) {
+    if (body?.email && !body.token) {
       // Etap 1: Żądanie resetu hasła
       const validationResult = requestResetSchema.safeParse(body);
       if (!validationResult.success) {
@@ -31,6 +38,10 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
       });
 
       if (error) {
+        // Limit wysyłki e-maili (429) i awaria GoTrue to nie błąd danych - własny status i log.
+        const failure = authServiceFailure(error, { ...logContext, step: "resetPasswordForEmail" });
+        if (failure) return failure;
+
         console.error("Błąd podczas żądania resetu hasła:", error);
         return new Response(JSON.stringify({ error: "Wystąpił błąd podczas wysyłania linku resetującego" }), {
           status: 400,
@@ -43,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
         }),
         { status: 200 }
       );
-    } else if (body.token && body.password) {
+    } else if (body?.token && body.password) {
       // Etap 2: Ustawienie nowego hasła
       const validationResult = confirmResetSchema.safeParse(body);
       if (!validationResult.success) {
@@ -63,6 +74,9 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
       });
 
       if (error) {
+        const failure = authServiceFailure(error, { ...logContext, step: "updateUser" });
+        if (failure) return failure;
+
         let errorMessage = "Wystąpił błąd podczas ustawiania nowego hasła.";
 
         if (error.message.includes("same as the old password")) {
@@ -84,7 +98,9 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
       return new Response(JSON.stringify({ error: "Nieprawidłowe parametry żądania" }), { status: 400 });
     }
   } catch (error) {
-    console.error("Błąd podczas resetowania hasła:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera" }), { status: 500 });
+    logError("auth.reset_password_failed", logContext, error);
+    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera", requestId: locals.requestId }), {
+      status: 500,
+    });
   }
 };

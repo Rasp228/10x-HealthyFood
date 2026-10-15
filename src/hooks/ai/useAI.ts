@@ -95,9 +95,12 @@ async function requestWithRetry(
       // 502 wyłączone: trasa AI daje je po jednej próbie z budżetem 55 s (awaria dostawcy albo
       // nieczytelna odpowiedź modelu). Automatyczne ponowienie mnożyłoby ten czas i liczbę wywołań
       // modelu - ponowienie należy do użytkownika, przycisk „Spróbuj ponownie" w `AIModal`.
+      // 504 z tego samego powodu: to platforma ucinająca funkcję, która wciąż czekała na model -
+      // wywołanie modelu już poszło, a ponowienie zamówiłoby kolejne.
       if (
         retryCount < MAX_RETRY_ATTEMPTS &&
         response.status !== 502 &&
+        response.status !== 504 &&
         (response.status >= 500 || errorData.code === "AI_TIMEOUT" || errorData.code === "NETWORK_ERROR")
       ) {
         // Exponential backoff

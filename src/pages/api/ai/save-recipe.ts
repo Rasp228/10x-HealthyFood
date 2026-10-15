@@ -2,6 +2,9 @@ import { z } from "zod";
 import type { APIRoute } from "astro";
 import { AIService } from "../../../lib/services/ai.service";
 import { zodMessage } from "../../../lib/utils/validation-errors";
+import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
+import { dbError } from "../../../lib/utils/db-error";
 
 export const prerender = false;
 
@@ -34,9 +37,15 @@ interface AIErrorResponse {
   error: string;
   code: "INVALID_INPUT" | "RECIPE_NOT_FOUND" | "UNAUTHORIZED" | "SERVER_ERROR";
   details?: string;
+  /** Identyfikator żądania przy 500 - po nim linię logu z pełnym błędem da się znaleźć. */
+  requestId?: string;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie - zewnętrzny catch loguje go w stanie z chwili
+  // awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "ai.save_recipe" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -84,6 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const { recipe, is_new, logId, replace_existing } = validationResult.data;
+    logContext.userId = user.id;
 
     // Sprawdź czy chcemy zastąpić istniejący przepis
     if (!is_new && replace_existing?.replace) {
@@ -94,6 +104,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .eq("id", replace_existing.recipe_id)
         .eq("user_id", user.id)
         .single();
+
+      logContext.recipeId = replace_existing.recipe_id;
+
+      // 404 tylko dla braku wiersza (`PGRST116` z `.single()`). Każdy inny błąd odczytu - RLS,
+      // sieć, PostgREST - to awaria: zewnętrzny catch loguje ją i odpowiada 500 z `requestId`.
+      if (checkError && checkError.code !== "PGRST116") {
+        throw dbError(checkError, "saveRecipe.lookup");
+      }
 
       if (checkError || !existingRecipe) {
         const errorResponse: AIErrorResponse = {
@@ -138,7 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (logId) {
         const aiService = new AIService(locals.supabase);
-        await aiService.updateAIActionLog(logId, true);
+        await aiService.updateAIActionLog(logId, true, user.id);
       }
 
       return new Response(JSON.stringify(updatedRecipe), {
@@ -172,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (logId) {
       const aiService = new AIService(locals.supabase);
-      await aiService.updateAIActionLog(logId, true);
+      await aiService.updateAIActionLog(logId, true, user.id);
     }
 
     return new Response(JSON.stringify(newRecipe), {
@@ -181,12 +199,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     // Komunikat zostaje na serwerze, jak w `generate-recipe.ts`: błąd bazy niesie nazwy tabel
-    // i polityk RLS - do przeglądarki idzie stała, do logu pełny błąd. Tak samo w obu 500 wyżej.
-    console.error("Nieoczekiwany błąd w save-recipe:", error);
+    // i polityk RLS - do przeglądarki idzie stała i `requestId`, do logu pełny błąd. Tak samo
+    // w obu 500 wyżej.
+    logError("ai.save_recipe_failed", logContext, error);
 
     const errorResponse: AIErrorResponse = {
       error: "Błąd wewnętrzny serwera",
       code: "SERVER_ERROR",
+      requestId: locals.requestId,
     };
 
     return new Response(JSON.stringify(errorResponse), {

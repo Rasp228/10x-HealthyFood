@@ -873,6 +873,23 @@ describe("DiaryService", () => {
       expect(stub.builder.update).not.toHaveBeenCalled();
     });
 
+    it("UPDATE bez wierszy po udanym odczycie: null i ostrzeżenie diary.update_no_rows", async () => {
+      const consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+      const stub = createSupabaseStub(rowRead(estimatedRow), { data: null, error: null });
+
+      const result = await new DiaryService(stub.client).updateEntry("user-1", 1, { calories: 450 });
+
+      expect(result).toBeNull();
+      expect(JSON.parse(consoleWarn.mock.calls[0][0] as string)).toMatchObject({
+        level: "warn",
+        event: "diary.update_no_rows",
+        userId: "user-1",
+        entryId: 1,
+      });
+
+      consoleWarn.mockRestore();
+    });
+
     it("przepuszcza błąd bazy z zapisu", async () => {
       const stub = createSupabaseStub(rowRead(estimatedRow), {
         data: null,

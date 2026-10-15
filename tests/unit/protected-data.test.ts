@@ -186,7 +186,8 @@ const context = (db: Db, init: { method: string; body?: unknown; params?: Record
     }),
     params: init.params ?? {},
     url: new URL("http://localhost/api/test"),
-    locals: { supabase: db.supabase },
+    // `locals.user` jak z middleware: trasy dziennika i celu czytają użytkownika stąd, nie z `getUser()`.
+    locals: { supabase: db.supabase, user: { id: USER_A, email: `${USER_A}@example.com` } },
   }) as unknown as APIContext;
 
 /**

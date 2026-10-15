@@ -1,12 +1,19 @@
 import type { APIRoute } from "astro";
 import { registerSchema } from "../../../lib/validations/auth/register.ts";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
+import { authServiceFailure } from "../../../lib/utils/auth-errors.ts";
+import { logError } from "../../../lib/utils/log.ts";
+import type { LogContext } from "../../../lib/utils/log.ts";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "auth.register" };
+
   try {
-    const body = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec tras dziennika):
+    // `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const body = await request.json().catch(() => null);
 
     // Walidacja danych wejściowych
     const validationResult = registerSchema.safeParse(body);
@@ -28,6 +35,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (error) {
+      // Awaria GoTrue (sieć, 5xx) albo limit prób to nie błąd danych - własny status i linia w logu.
+      const failure = authServiceFailure(error, { ...logContext, step: "signUp" });
+      if (failure) return failure;
+
       let errorMessage = "Wystąpił błąd podczas rejestracji.";
 
       if (error.message.includes("User already registered")) {
@@ -67,7 +78,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Błąd podczas rejestracji:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera" }), { status: 500 });
+    logError("auth.register_failed", logContext, error);
+    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera", requestId: locals.requestId }), {
+      status: 500,
+    });
   }
 };

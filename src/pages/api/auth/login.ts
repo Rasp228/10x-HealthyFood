@@ -1,12 +1,19 @@
 import type { APIRoute } from "astro";
 import { loginSchema } from "../../../lib/validations/auth/login.ts";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
+import { authServiceFailure } from "../../../lib/utils/auth-errors.ts";
+import { logError } from "../../../lib/utils/log.ts";
+import type { LogContext } from "../../../lib/utils/log.ts";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "auth.login" };
+
   try {
-    const body = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec tras dziennika):
+    // `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const body = await request.json().catch(() => null);
 
     // Walidacja danych wejściowych
     const validationResult = loginSchema.safeParse(body);
@@ -28,6 +35,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (error) {
+      // Awaria GoTrue (sieć, 5xx) albo limit prób to nie „złe hasło” - własny status i linia w logu.
+      const failure = authServiceFailure(error, { ...logContext, step: "signInWithPassword" });
+      if (failure) return failure;
+
       let errorMessage = "Nieprawidłowy email lub hasło. Spróbuj ponownie.";
 
       if (error.message.includes("Email not confirmed")) {
@@ -50,7 +61,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Błąd podczas logowania:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera" }), { status: 500 });
+    logError("auth.login_failed", logContext, error);
+    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera", requestId: locals.requestId }), {
+      status: 500,
+    });
   }
 };

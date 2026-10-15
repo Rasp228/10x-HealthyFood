@@ -836,26 +836,26 @@ z middleware w fazie 1. Ciała 500 tracą `details`: jedyny konsument to UI, kt�
 
 #### Automated
 
-- [x] 4.1 Testy helpera błędów bazy przechodzą
-- [x] 4.2 Testy serwisów i tras w obszarze zielone
-- [x] 4.3 Brak „Nieznany błąd” w src/pages/api
-- [x] 4.4 Brak gołego throw error w diary.service.ts
-- [x] 4.5 Cały zestaw Jest, typecheck, lint, format
+- [x] 4.1 Testy helpera błędów bazy przechodzą — e62c1ef
+- [x] 4.2 Testy serwisów i tras w obszarze zielone — e62c1ef
+- [x] 4.3 Brak „Nieznany błąd” w src/pages/api — e62c1ef
+- [x] 4.4 Brak gołego throw error w diary.service.ts — e62c1ef
+- [x] 4.5 Cały zestaw Jest, typecheck, lint, format — e62c1ef
 
 #### Manual
 
-- [ ] 4.6 Harness R5/R6: 500 z requestId bez details i linia JSON z code i stosem
-- [ ] 4.7 Ramka błędu odczytu celu w /dev/diary-states w obu motywach
+- [x] 4.6 Harness R5/R6: 500 z requestId bez details i linia JSON z code i stosem — e62c1ef
+- [x] 4.7 Ramka błędu odczytu celu w /dev/diary-states w obu motywach — e62c1ef
 
 ### Phase 5: 4xx tylko dla błędów klienta + drobne
 
 #### Automated
 
-- [ ] 5.1 Testy tras auth przechodzą (client/rate_limited/unavailable/zły JSON)
-- [ ] 5.2 Testy lookupów, dziennika, ustawień, AI i useAI zielone
-- [ ] 5.3 Brak drugiego auth.getUser() w trasach dziennika i ustawień
-- [ ] 5.4 Cały zestaw Jest, typecheck, lint, format
-- [ ] 5.5 E2E zielone
+- [x] 5.1 Testy tras auth przechodzą (client/rate_limited/unavailable/zły JSON)
+- [x] 5.2 Testy lookupów, dziennika, ustawień, AI i useAI zielone
+- [x] 5.3 Brak drugiego auth.getUser() w trasach dziennika i ustawień
+- [x] 5.4 Cały zestaw Jest, typecheck, lint, format
+- [x] 5.5 E2E zielone
 
 #### Manual
 

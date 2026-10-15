@@ -5,6 +5,8 @@ import { OpenRouterError } from "../../../lib/api/openrouter.types";
 import type { AIErrorResponse, ModifiedRecipeDto } from "../../../types";
 import { zodMessage } from "../../../lib/utils/validation-errors";
 import { logError } from "../../../lib/utils/log";
+import type { LogContext } from "../../../lib/utils/log";
+import { dbError } from "../../../lib/utils/db-error";
 
 export const prerender = false;
 
@@ -15,6 +17,10 @@ const modifyRecipeSchema = z.object({
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Kontekst rośnie razem z tym, co trasa już wie - zewnętrzny catch loguje go w stanie z chwili
+  // awarii.
+  const logContext: LogContext = { requestId: locals.requestId, route: "ai.modify_recipe" };
+
   try {
     // Sprawdź autoryzację
     const {
@@ -58,6 +64,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const parsedRecipeId = parseInt(recipeId);
+    logContext.userId = user.id;
+    logContext.recipeId = parsedRecipeId;
 
     // Sprawdź czy przepis istnieje i należy do użytkownika
     const { data: recipe, error: recipeError } = await locals.supabase
@@ -66,6 +74,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .eq("id", parsedRecipeId)
       .eq("user_id", user.id)
       .single();
+
+    // 404 tylko dla braku wiersza (`PGRST116` z `.single()`). Każdy inny błąd odczytu - RLS,
+    // sieć, PostgREST - to awaria, która ma trafić do logu i dać 500, a nie udawać cudzy przepis.
+    if (recipeError && recipeError.code !== "PGRST116") {
+      throw dbError(recipeError, "modifyRecipe.lookup");
+    }
 
     if (recipeError || !recipe) {
       return new Response(
@@ -135,12 +149,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     // Komunikat zostaje na serwerze: błąd bazy niesie nazwy tabel i polityk RLS - do przeglądarki
-    // idzie stała, do logu pełny błąd.
-    console.error("Błąd podczas modyfikacji przepisu:", error);
+    // idzie stała i `requestId`, po którym linię logu z pełnym błędem da się znaleźć.
+    logError("ai.modify_recipe_failed", logContext, error);
 
     const errorResponse: AIErrorResponse = {
       error: "Błąd wewnętrzny serwera",
       code: "SERVER_ERROR",
+      requestId: locals.requestId,
     };
     return new Response(JSON.stringify(errorResponse), {
       status: 500,

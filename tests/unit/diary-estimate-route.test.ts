@@ -40,7 +40,11 @@ const readOwnRecipeContent = jest.spyOn(DiaryService.prototype, "readOwnRecipeCo
 const applyEstimate = jest.spyOn(DiaryService.prototype, "applyEstimate");
 const getEntry = jest.spyOn(DiaryService.prototype, "getEntry");
 
-const getUser = jest.fn();
+/**
+ * Użytkownik w kształcie `locals.user` z middleware - trasa nie woła już `getUser()`. `undefined`
+ * udaje żądanie, które dotarło do trasy bez sesji.
+ */
+let sessionUser: { id: string; email: string } | undefined;
 
 /**
  * Kontekst żądania w kształcie, którego trasa faktycznie dotyka: `params.id`, klient z `locals`
@@ -49,7 +53,7 @@ const getUser = jest.fn();
 const requestContext = (id = "1", requestId?: string) =>
   ({
     params: { id },
-    locals: { supabase: { auth: { getUser } }, requestId },
+    locals: { supabase: {}, user: sessionUser, requestId },
   }) as unknown as Parameters<typeof POST>[0];
 
 /** Sparsowane linie JSON wypisane przez szpiega konsoli. */
@@ -100,7 +104,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 
   CalorieEstimationServiceMock.mockImplementation(() => ({ estimateFromDescription, estimateFromRecipe }));
-  getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "test@example.com" } } });
+  sessionUser = { id: "user-1", email: "test@example.com" };
   // Atrapa trzyma się kontraktu prawdziwej metody: `null` dla wpisu bez przepisu, treść dla wpisu
   // z przepisem. Stała odpowiedź kierowałaby na gałąź przepisową także wpis opisowy.
   readOwnRecipeContent.mockImplementation(async (_userId, recipeId) => (recipeId === null ? null : RECIPE_CONTENT));
@@ -122,6 +126,15 @@ afterAll(() => {
 });
 
 describe("POST /api/diary-entries/[id]/estimate", () => {
+  it("401 bez `locals.user` i bez stemplowania wpisu", async () => {
+    sessionUser = undefined;
+
+    const response = await POST(requestContext());
+
+    expect(response.status).toBe(401);
+    expect(markEstimationRequested).not.toHaveBeenCalled();
+  });
+
   describe("gałąź przepisowa", () => {
     it("mnoży wartość jednej porcji przez liczbę porcji i zapisuje pochodzenie 'ai_from_recipe'", async () => {
       markEstimationRequested.mockResolvedValue(recipeEntry({ portions: 2 }));

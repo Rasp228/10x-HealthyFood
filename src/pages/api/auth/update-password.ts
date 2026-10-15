@@ -1,6 +1,9 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { zodIssues } from "../../../lib/utils/validation-errors.ts";
+import { authServiceFailure } from "../../../lib/utils/auth-errors.ts";
+import { logError } from "../../../lib/utils/log.ts";
+import type { LogContext } from "../../../lib/utils/log.ts";
 
 export const prerender = false;
 
@@ -20,8 +23,12 @@ const updatePasswordSchema = z
   });
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const logContext: LogContext = { requestId: locals.requestId, route: "auth.update_password" };
+
   try {
-    const body = await request.json();
+    // Body, które nie jest JSON-em, to błąd wejścia, a nie awaria serwera (wzorzec tras dziennika):
+    // `null` nie przechodzi schematu, więc odpowiada ta sama 400.
+    const body = await request.json().catch(() => null);
 
     // Walidacja danych wejściowych
     const validationResult = updatePasswordSchema.safeParse(body);
@@ -45,6 +52,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       error: userError,
     } = await supabase.auth.getUser();
 
+    // Brak sesji to błąd klienta (401 jak dotąd); awaria GoTrue przy jej odczycie - 503 i log.
+    if (userError) {
+      const failure = authServiceFailure(userError, { ...logContext, step: "getUser" });
+      if (failure) return failure;
+    }
+
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Musisz być zalogowany aby zmienić hasło" }), { status: 401 });
     }
@@ -55,6 +68,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (error) {
+      const failure = authServiceFailure(error, { ...logContext, userId: user.id, step: "updateUser" });
+      if (failure) return failure;
+
       console.error("Błąd podczas aktualizacji hasła:", error);
 
       let errorMessage = "Wystąpił błąd podczas ustawiania nowego hasła.";
@@ -77,7 +93,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Błąd podczas aktualizacji hasła:", error);
-    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera" }), { status: 500 });
+    logError("auth.update_password_failed", logContext, error);
+    return new Response(JSON.stringify({ error: "Wystąpił błąd serwera", requestId: locals.requestId }), {
+      status: 500,
+    });
   }
 };

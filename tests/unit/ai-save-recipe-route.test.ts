@@ -37,6 +37,7 @@ const requestContext = (body: unknown) =>
       body: JSON.stringify(body),
     }),
     locals: {
+      requestId: "req-1",
       supabase: {
         auth: { getUser },
         from: () => ({
@@ -93,8 +94,53 @@ describe("POST /api/ai/save-recipe - 500 bez wycieku szczegółów", () => {
 
     expect(response.status).toBe(500);
     const body = await response.text();
-    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR" });
+    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR", requestId: "req-1" });
     expect(body).not.toContain(DB_MESSAGE);
-    expect(consoleError).toHaveBeenCalled();
+    expect(JSON.parse(consoleError.mock.calls[0][0])).toMatchObject({
+      event: "ai.save_recipe_failed",
+      requestId: "req-1",
+      userId: "user-1",
+    });
+  });
+});
+
+describe("POST /api/ai/save-recipe - odczyt zastępowanego przepisu", () => {
+  const replaceBody = { recipe: RECIPE, is_new: false, replace_existing: { recipe_id: 7, replace: true } };
+
+  it("brak wiersza (PGRST116) daje 404 i nic nie zapisuje", async () => {
+    ownerSingle.mockResolvedValue({
+      data: null,
+      error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" },
+    });
+
+    const response = await POST(requestContext(replaceBody));
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ code: "RECIPE_NOT_FOUND" });
+    expect(updateSingle).not.toHaveBeenCalled();
+  });
+
+  it("inny kod błędu daje 500 z requestId i linią logu z code, nie 404", async () => {
+    ownerSingle.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: DB_MESSAGE, details: null, hint: null },
+    });
+
+    const response = await POST(requestContext(replaceBody));
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(JSON.parse(body)).toEqual({ error: "Błąd wewnętrzny serwera", code: "SERVER_ERROR", requestId: "req-1" });
+    expect(body).not.toContain(DB_MESSAGE);
+    expect(updateSingle).not.toHaveBeenCalled();
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(consoleError.mock.calls[0][0])).toMatchObject({
+      event: "ai.save_recipe_failed",
+      requestId: "req-1",
+      userId: "user-1",
+      recipeId: 7,
+      error: { name: "DatabaseError", code: "42501" },
+    });
   });
 });

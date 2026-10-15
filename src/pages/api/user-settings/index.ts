@@ -17,9 +17,9 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     // Sprawdź autoryzację. Żądanie bez sesji zwykle nie dociera tutaj - middleware przekierowuje
     // ścieżki spoza PUBLIC_PATHS na /auth/login - ale 401 zostaje jako druga linia obrony.
-    const {
-      data: { user },
-    } = await locals.supabase.auth.getUser();
+    // Użytkownik z `locals.user`, rozstrzygniętego już w middleware: drugie `getUser()` w trasie
+    // dawało przy czkawce GoTrue 401 bez żadnej przyczyny w logu.
+    const user = locals.user;
 
     if (!user) {
       return new Response(JSON.stringify({ error: "Nieautoryzowany dostęp" }), {
@@ -52,9 +52,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   try {
     // Druga linia obrony za middleware, tak jak w GET.
-    const {
-      data: { user },
-    } = await locals.supabase.auth.getUser();
+    const user = locals.user;
 
     if (!user) {
       return new Response(JSON.stringify({ error: "Nieautoryzowany dostęp" }), {

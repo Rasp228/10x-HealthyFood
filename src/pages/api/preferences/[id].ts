@@ -5,6 +5,7 @@ import { upsertPreferenceSchema } from "../../../lib/validations/preferences/ups
 import { zodIssues, type ValidationIssue } from "../../../lib/utils/validation-errors";
 import { logError } from "../../../lib/utils/log";
 import type { LogContext } from "../../../lib/utils/log";
+import { dbError } from "../../../lib/utils/db-error";
 
 /** Kod Postgresa dla naruszenia unikatu - tu `preferences_unique_user_category_value`. */
 const UNIQUE_VIOLATION = "23505";
@@ -87,6 +88,12 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       .eq("user_id", user.id)
       .single();
 
+    // 404 tylko dla braku wiersza (`PGRST116` z `.single()`). Każdy inny błąd odczytu - RLS,
+    // sieć, PostgREST - to awaria: zewnętrzny catch loguje ją i odpowiada 500 z `requestId`.
+    if (fetchError && fetchError.code !== "PGRST116") {
+      throw dbError(fetchError, "preference.put.lookup");
+    }
+
     if (fetchError || !existingPreference) {
       return new Response(JSON.stringify({ error: "Nie znaleziono preferencji" }), {
         status: 404,
@@ -165,6 +172,12 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       .eq("id", preferenceId)
       .eq("user_id", user.id)
       .single();
+
+    // 404 tylko dla braku wiersza (`PGRST116` z `.single()`). Każdy inny błąd odczytu - RLS,
+    // sieć, PostgREST - to awaria: zewnętrzny catch loguje ją i odpowiada 500 z `requestId`.
+    if (fetchError && fetchError.code !== "PGRST116") {
+      throw dbError(fetchError, "preference.delete.lookup");
+    }
 
     if (fetchError || !existingPreference) {
       return new Response(JSON.stringify({ error: "Nie znaleziono preferencji" }), {

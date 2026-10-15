@@ -77,6 +77,20 @@ const json = async (response: Response) => (await response.json()) as Record<str
 const loggedLines = (spy: jest.SpyInstance) =>
   spy.mock.calls.map((call) => JSON.parse(call[0] as string) as Record<string, unknown>);
 
+/**
+ * Klient, którego odczyt `select().eq().eq().single()` kończy się błędem PostgREST innym niż
+ * `PGRST116` (np. RLS) - lookup właściciela ma wtedy dać 500, a nie 404 „nie znaleziono”.
+ */
+const failingLookupSupabase = (db: Db, code: string, message: string) => {
+  const failure = { data: null, error: { code, message, details: null, hint: null } };
+  const chain = { eq: () => chain, single: async () => failure };
+
+  return {
+    auth: db.supabase.auth,
+    from: (table: string) => Object.assign(db.supabase.from(table), { select: () => chain }),
+  } as unknown as Supabase;
+};
+
 let consoleError: jest.SpyInstance;
 
 beforeEach(() => {
@@ -331,6 +345,30 @@ describe("PUT /api/preferences/:id", () => {
     expect(await json(response)).toEqual({ error: "Taka preferencja już istnieje" });
     expect(db.snapshot()).toEqual(before);
   });
+
+  it("błąd odczytu inny niż PGRST116 → 500 z requestId i kodem w logu, nie 404", async () => {
+    const db = createDb();
+    const before = db.snapshot();
+    const supabase = failingLookupSupabase(db, "42501", "permission denied for table preferences");
+
+    const response = await putPreference(
+      context(supabase, { method: "PUT", params: { id: "1" }, body: { category: "lubiane", value: "kasza" } })
+    );
+
+    expect(response.status).toBe(500);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
+    expect(text).not.toContain("permission denied");
+    expect(db.snapshot()).toEqual(before);
+    expect(loggedLines(consoleError)).toEqual([
+      expect.objectContaining({
+        event: "preference.put_failed",
+        requestId: REQUEST_ID,
+        userId: USER_A,
+        error: expect.objectContaining({ name: "DatabaseError", code: "42501" }),
+      }),
+    ]);
+  });
 });
 
 describe("GET /api/preferences", () => {
@@ -401,5 +439,24 @@ describe("DELETE /api/preferences/:id", () => {
 
     expect(response.status).toBe(204);
     expect(db.tables.preferences.map((row) => row.id)).toEqual([2, 3]);
+  });
+
+  it("błąd odczytu inny niż PGRST116 → 500 z requestId i kodem w logu, nie 404", async () => {
+    const db = createDb();
+    const before = db.snapshot();
+    const supabase = failingLookupSupabase(db, "08006", "connection failure");
+
+    const response = await deletePreference(context(supabase, { method: "DELETE", params: { id: "1" } }));
+
+    expect(response.status).toBe(500);
+    expect(await json(response)).toEqual({ error: "Błąd wewnętrzny serwera", requestId: REQUEST_ID });
+    expect(db.snapshot()).toEqual(before);
+    expect(loggedLines(consoleError)).toEqual([
+      expect.objectContaining({
+        event: "preference.delete_failed",
+        requestId: REQUEST_ID,
+        error: expect.objectContaining({ name: "DatabaseError", code: "08006" }),
+      }),
+    ]);
   });
 });

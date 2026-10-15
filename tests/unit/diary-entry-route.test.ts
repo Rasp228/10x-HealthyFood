@@ -16,7 +16,11 @@ import type { DiaryEntryDto } from "@/types";
 const updateEntry = jest.spyOn(DiaryService.prototype, "updateEntry");
 const deleteEntry = jest.spyOn(DiaryService.prototype, "deleteEntry");
 
-const getUser = jest.fn();
+/**
+ * Użytkownik w kształcie `locals.user` z middleware - trasa nie woła już `getUser()`. `undefined`
+ * udaje żądanie, które dotarło do trasy bez sesji.
+ */
+let sessionUser: { id: string; email: string } | undefined;
 
 type RouteContext = Parameters<typeof PATCH>[0];
 
@@ -29,13 +33,13 @@ const requestContext = (id = "1", body: unknown = { calories: 450 }, rawBody?: s
       headers: { "Content-Type": "application/json" },
       body: rawBody ?? JSON.stringify(body),
     }),
-    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
+    locals: { supabase: {}, user: sessionUser, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const deleteContext = (id = "1") =>
   ({
     params: { id },
-    locals: { supabase: { auth: { getUser } }, requestId: "req-1" },
+    locals: { supabase: {}, user: sessionUser, requestId: "req-1" },
   }) as unknown as RouteContext;
 
 const storedEntry = (overrides: Partial<DiaryEntryDto> = {}): DiaryEntryDto => ({
@@ -66,7 +70,7 @@ const SERVICE_ROW = storedEntry({ calories: 450, calorie_origin: "manual" });
 beforeEach(() => {
   jest.clearAllMocks();
 
-  getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "test@example.com" } } });
+  sessionUser = { id: "user-1", email: "test@example.com" };
   updateEntry.mockResolvedValue(SERVICE_ROW);
   deleteEntry.mockResolvedValue(true);
 });
@@ -77,7 +81,7 @@ afterAll(() => {
 
 describe("PATCH /api/diary-entries/[id]", () => {
   it("401 bez sesji", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    sessionUser = undefined;
 
     const response = await PATCH(requestContext());
 
@@ -163,7 +167,7 @@ describe("PATCH /api/diary-entries/[id]", () => {
 
 describe("DELETE /api/diary-entries/[id]", () => {
   it("401 bez sesji", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    sessionUser = undefined;
 
     const response = await DELETE(deleteContext());
 

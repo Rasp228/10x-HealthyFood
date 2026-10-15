@@ -34,7 +34,7 @@ let inserted: Row[];
  * `from("recipes").select().eq().eq().maybeSingle()` oraz
  * `from("diary_entries").insert().select().single()`.
  */
-const createSupabase = (userId: string) => {
+const createSupabase = () => {
   const from = (table: string) => {
     if (table === "recipes") {
       let rows = [...RECIPES];
@@ -67,11 +67,11 @@ const createSupabase = (userId: string) => {
     throw new Error(`Atrapa nie zna tabeli ${table}`);
   };
 
-  return {
-    auth: { getUser: async () => ({ data: { user: { id: userId, email: `${userId}@example.com` } } }) },
-    from,
-  };
+  return { from };
 };
+
+/** `locals.user` konta A w kształcie z middleware. */
+const USER_A_LOCALS = { id: USER_A, email: `${USER_A}@example.com` };
 
 const requestContext = (body: unknown, userId = USER_B) =>
   ({
@@ -80,7 +80,8 @@ const requestContext = (body: unknown, userId = USER_B) =>
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
-    locals: { supabase: createSupabase(userId) },
+    // Użytkownika rozstrzyga middleware (`locals.user`) - trasa nie woła już `getUser()`.
+    locals: { supabase: createSupabase(), user: { id: userId, email: `${userId}@example.com` } },
   }) as unknown as RouteContext;
 
 const entryFromRecipe = (sourceRecipeId: number, extra: Row = {}) => ({
@@ -239,10 +240,7 @@ describe("diary-entries - awaria bazy", () => {
     chain.single = async () => failure;
     chain.then = (resolve: (value: unknown) => unknown) => resolve(failure);
 
-    return {
-      auth: { getUser: async () => ({ data: { user: { id: USER_A, email: `${USER_A}@example.com` } } }) },
-      from: () => chain,
-    };
+    return { from: () => chain };
   };
 
   const loggedLines = (spy: jest.SpyInstance) =>
@@ -264,7 +262,7 @@ describe("diary-entries - awaria bazy", () => {
 
     const response = await GET({
       url: new URL("http://localhost/api/diary-entries?date=2026-10-06"),
-      locals: { supabase, requestId: REQUEST_ID },
+      locals: { supabase, requestId: REQUEST_ID, user: USER_A_LOCALS },
     } as unknown as RouteContext);
 
     expect(response.status).toBe(500);
@@ -296,7 +294,7 @@ describe("diary-entries - awaria bazy", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(describedEntry()),
       }),
-      locals: { supabase, requestId: REQUEST_ID },
+      locals: { supabase, requestId: REQUEST_ID, user: USER_A_LOCALS },
     } as unknown as RouteContext);
 
     expect(response.status).toBe(500);

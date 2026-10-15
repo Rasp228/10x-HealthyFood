@@ -182,6 +182,8 @@ export interface AIErrorResponse {
     | "UNAUTHORIZED"
     | "RECIPE_NOT_FOUND";
   details?: string;
+  /** Identyfikator żądania przy 500 - po nim linię logu z pełnym błędem da się znaleźć. */
+  requestId?: string;
 }
 
 // Typ dla statystyk użytkownika

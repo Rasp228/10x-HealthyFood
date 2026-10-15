@@ -9,7 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, TablesUpdate } from "../../db/database.types";
 import { resolveRecipeCalories } from "../utils/recipe-nutrition";
 import type { RecipeCalorieReason } from "../utils/recipe-nutrition";
-import { logInfo } from "../utils/log";
+import { logInfo, logWarn } from "../utils/log";
 import { dbError } from "../utils/db-error";
 
 /**
@@ -403,6 +403,13 @@ export class DiaryService {
 
     if (error) {
       throw dbError(error, "updateEntry");
+    }
+
+    // Odczyt chwilę wcześniej widział wiersz, a UPDATE nie trafił w nic. Zwykle to wyścig
+    // z usunięciem, ale tak samo wygląda regresja polityki UPDATE w RLS - linia pozwala je
+    // odróżnić. Odpowiedź zostaje ta sama (`null`, czyli 404), bo serwis nie zna przyczyny.
+    if (data === null) {
+      logWarn("diary.update_no_rows", { userId, entryId });
     }
 
     return data;

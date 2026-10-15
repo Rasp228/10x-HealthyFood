@@ -12,6 +12,7 @@ import type { JSONSchema, ChatResponse } from "../api/openrouter.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
 import { dbError } from "../utils/db-error";
+import { logError, logWarn } from "../utils/log";
 
 /**
  * Model odpowiedział, ale z jego treści nie da się odczytać przepisu (pusta treść, same białe
@@ -669,10 +670,12 @@ export class AIService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw dbError(error, "logAIAction");
       return data.id; // Zwróć ID logu do późniejszej aktualizacji
     } catch (error) {
-      console.error("Błąd podczas zapisywania logu:", error);
+      // Przepis jest ważniejszy niż log - wynik połykamy jak dotąd, ale linia z `code` mówi, czemu
+      // statystyka akceptacji straciła wiersz.
+      logError("ai.log_insert_failed", { userId, actionType }, error);
       return null;
     }
   }
@@ -681,16 +684,28 @@ export class AIService {
    * Aktualizuje log akcji AI po podjęciu decyzji przez użytkownika
    * @param logId - ID logu do aktualizacji
    * @param isAccepted - Czy propozycja została zaakceptowana
+   * @param userId - ID użytkownika, tylko do kontekstu linii logu
    */
-  async updateAIActionLog(logId: number, isAccepted: boolean): Promise<void> {
+  async updateAIActionLog(logId: number, isAccepted: boolean, userId?: string): Promise<void> {
     try {
-      const { error } = await this.supabase.from("logs").update({ is_accepted: isAccepted }).eq("id", logId);
+      // `.select("id")`, bo sam UPDATE nie mówi, czy trafił w wiersz: cudzy albo nieistniejący
+      // `logId` i zablokowana przez RLS aktualizacja kończą się tak samo, bez błędu.
+      const { data, error } = await this.supabase
+        .from("logs")
+        .update({ is_accepted: isAccepted })
+        .eq("id", logId)
+        .select("id");
 
       if (error) {
-        console.error("Błąd podczas aktualizacji logu:", error);
+        throw dbError(error, "updateAIActionLog");
+      }
+
+      if (!data || data.length === 0) {
+        logWarn("ai.log_update_no_rows", { userId, logId, isAccepted });
       }
     } catch (error) {
-      console.error("Błąd podczas aktualizacji logu:", error);
+      // Jak w `logAIAction`: zapis przepisu już się udał, więc błąd logu nie zmienia odpowiedzi.
+      logError("ai.log_update_failed", { userId, logId, isAccepted }, error);
     }
   }
 }

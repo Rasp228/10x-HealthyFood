@@ -217,4 +217,87 @@ describe("AIService", () => {
       await expect(modify()).rejects.toBe(original);
     });
   });
+
+  describe("log akcji AI w tabeli `logs`", () => {
+    /** Atrapa jak `createSupabaseStub`, z podmienioną tylko tabelą `logs`. */
+    const stubWithLogs = (logs: unknown) => {
+      const base = createSupabaseStub();
+      return {
+        from: (table: string) => (table === "logs" ? logs : base.from(table as "preferences")),
+      } as unknown as SupabaseClient<Database>;
+    };
+
+    let consoleError: jest.SpyInstance;
+    let consoleWarn: jest.SpyInstance;
+
+    beforeEach(() => {
+      // W `beforeEach`, bo `jest.setup.ts` podmienia metody `console` w `beforeAll`.
+      consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      consoleError.mockRestore();
+      consoleWarn.mockRestore();
+    });
+
+    it("nieudany zapis logu nie psuje przepisu, ale zostawia linię z code", async () => {
+      sendMessage.mockResolvedValue(chatResponse('{"title": "Owsianka", "content": "Płatki i mleko"}'));
+      const failure = { data: null, error: { code: "42501", message: "permission denied for table logs" } };
+      const supabase = stubWithLogs({ insert: () => ({ select: () => ({ single: async () => failure }) }) });
+
+      const result = await new AIService(supabase).generateRecipe("user-1", {
+        additional_params: null,
+        base_recipe: null,
+      });
+
+      expect(result.recipe.title).toBe("Owsianka");
+      expect(result.logId).toBeNull();
+      expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+        event: "ai.log_insert_failed",
+        userId: "user-1",
+        actionType: "generate_new",
+        error: { name: "DatabaseError", code: "42501" },
+      });
+    });
+
+    it("aktualizacja, która nie trafiła w wiersz, daje ostrzeżenie ai.log_update_no_rows", async () => {
+      const update = jest.fn(() => ({ eq: () => ({ select: async () => ({ data: [], error: null }) }) }));
+
+      await new AIService(stubWithLogs({ update })).updateAIActionLog(42, true, "user-1");
+
+      expect(update).toHaveBeenCalledWith({ is_accepted: true });
+      expect(JSON.parse(consoleWarn.mock.calls[0][0] as string)).toMatchObject({
+        event: "ai.log_update_no_rows",
+        userId: "user-1",
+        logId: 42,
+      });
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it("błąd aktualizacji jest połykany, ale logowany z logId i code", async () => {
+      const failure = { data: null, error: { code: "42501", message: "permission denied for table logs" } };
+      const update = () => ({ eq: () => ({ select: async () => failure }) });
+
+      await expect(
+        new AIService(stubWithLogs({ update })).updateAIActionLog(42, true, "user-1")
+      ).resolves.toBeUndefined();
+
+      expect(JSON.parse(consoleError.mock.calls[0][0] as string)).toMatchObject({
+        event: "ai.log_update_failed",
+        userId: "user-1",
+        logId: 42,
+        error: { name: "DatabaseError", code: "42501" },
+      });
+    });
+
+    it("trafiona aktualizacja nie zostawia żadnej linii", async () => {
+      const update = () => ({ eq: () => ({ select: async () => ({ data: [{ id: 42 }], error: null }) }) });
+
+      await new AIService(stubWithLogs({ update })).updateAIActionLog(42, true, "user-1");
+
+      expect(consoleWarn).not.toHaveBeenCalled();
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+  });
 });
