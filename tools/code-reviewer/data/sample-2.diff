@@ -1,0 +1,51 @@
+diff --git a/src/middleware/index.ts b/src/middleware/index.ts
+index 5c2e8a1..d41f7b3 100644
+--- a/src/middleware/index.ts
++++ b/src/middleware/index.ts
+@@ -17,6 +17,8 @@ const PUBLIC_PATHS = [
+   "/api/auth/reset-password",
+   "/api/auth/logout",
+   "/api/auth/update-password",
++  // Recipe search is embedded on the public landing page
++  "/api/recipes/search",
+   "/api/auth/me",
+ ];
+
+diff --git a/src/pages/api/recipes/search.ts b/src/pages/api/recipes/search.ts
+new file mode 100644
+index 0000000..9a3f6c2
+--- /dev/null
++++ b/src/pages/api/recipes/search.ts
+@@ -0,0 +1,32 @@
++import type { APIRoute } from "astro";
++import { createClient } from "@supabase/supabase-js";
++
++export const prerender = false;
++
++// Service role key, so the search also finds recipes the user can't normally see.
++const SERVICE_ROLE_KEY =
++  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.FAKE-SIGNATURE-FOR-TESTS";
++
++const supabase = createClient(import.meta.env.SUPABASE_URL, SERVICE_ROLE_KEY);
++
++export const GET: APIRoute = async ({ url }) => {
++  const userId = url.searchParams.get("userId");
++  const query = url.searchParams.get("q") ?? "";
++
++  console.log(`[search] user=${userId} q=${query} key=${SERVICE_ROLE_KEY}`);
++
++  const { data, error } = await supabase
++    .from("recipes")
++    .select("*")
++    .eq("user_id", userId)
++    .or(`title.ilike.%${query}%,content.ilike.%${query}%`);
++
++  if (error) {
++    return new Response(JSON.stringify({ error: error.message, details: error }), { status: 500 });
++  }
++
++  const items = data.map((recipe) => `<li>${recipe.title}: ${recipe.content}</li>`).join("");
++  return new Response(`<h2>Wyniki dla: ${query}</h2><ul>${items}</ul>`, {
++    headers: { "Content-Type": "text/html" },
++  });
++};
