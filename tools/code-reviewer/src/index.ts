@@ -6,18 +6,11 @@
 //   npm run review < /dev/null   # falls back to data/sample.diff
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { performance } from "node:perf_hooks";
-import { generateText, isStepCount, Output, type StepResult, type StopCondition, type ToolSet } from "ai";
 import dotenv from "dotenv";
-import { selectModel } from "./provider.js";
-import { REVIEW_SCHEMA, SYSTEM_PROMPT } from "./review-schema.js";
-import { renderSchemaFields } from "./schema-prompt.js";
+import { createReviewer } from "./agent/reviewer.js";
 
 const PACKAGE_DIR = path.resolve(import.meta.dirname, "..");
 const SAMPLE_DIFF_PATH = path.join(PACKAGE_DIR, "data", "sample.diff");
-const DEFAULT_MAX_COST_USD = 0.1;
-// Safety net next to the budget cap; a review without tools needs a single step.
-const MAX_STEPS = 10;
 
 // quiet: dotenv 17 otherwise prints an "injecting env" banner to stdout.
 dotenv.config({ path: path.join(PACKAGE_DIR, ".env"), quiet: true });
@@ -36,77 +29,18 @@ async function readDiff(): Promise<string> {
   return readFile(SAMPLE_DIFF_PATH, "utf8");
 }
 
-function readMaxCost(): number {
-  const raw = process.env.REVIEW_MAX_COST_USD;
-  if (!raw) return DEFAULT_MAX_COST_USD;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`REVIEW_MAX_COST_USD must be a positive number, got "${raw}"`);
-  }
-  return value;
-}
-
-type CostStep = Pick<StepResult<ToolSet>, "providerMetadata">;
-
-// OpenRouter reports the billed cost per step under providerMetadata.openrouter.usage.cost.
-// Other providers (llama.cpp) report none: null, not 0, so "free" and "unknown" stay distinct.
-function stepCost(step: CostStep): number | null {
-  const usage = step.providerMetadata?.openrouter?.usage;
-  if (typeof usage !== "object" || usage === null || !("cost" in usage)) return null;
-  return typeof usage.cost === "number" ? usage.cost : null;
-}
-
-function totalCost(steps: CostStep[]): number | null {
-  const costs = steps.map(stepCost).filter((cost) => cost !== null);
-  return costs.length ? costs.reduce((sum, cost) => sum + cost, 0) : null;
-}
-
-// Hard budget cap: stops the loop as soon as the accumulated cost passes maxCostUsd.
-// It is evaluated between steps, so it bounds the number of further calls, not the
-// cost of the call already in flight. Never trips when the provider reports no cost.
-function costExceeds(maxCostUsd: number): StopCondition<ToolSet> {
-  return ({ steps }) => (totalCost(steps) ?? 0) > maxCostUsd;
-}
-
 async function main(): Promise<void> {
-  const { provider, modelId, model } = selectModel();
-  const maxCostUsd = readMaxCost();
+  // Built before reading stdin, so a misconfigured run fails fast, as before the refactor.
+  const reviewer = createReviewer();
   const diff = await readDiff();
+  const { review: result, metrics } = await reviewer.review(diff);
 
-  // llama-server uses the schema only as a grammar, so the rubrics in the field descriptions
-  // are spelled out in the instructions; providers with native structured output read them there.
-  const instructions = provider === "local" ? `${SYSTEM_PROMPT}\n\n${renderSchemaFields()}` : SYSTEM_PROMPT;
-
-  const startedAt = performance.now();
-  const result = await generateText({
-    model,
-    instructions,
-    prompt: `Oto diff do recenzji:\n\n${diff}`,
-    output: Output.object({ schema: REVIEW_SCHEMA }),
-    stopWhen: [isStepCount(MAX_STEPS), costExceeds(maxCostUsd)],
-  });
-  const durationMs = Math.round(performance.now() - startedAt);
-
-  const cost = totalCost(result.steps);
-  const { inputTokens, outputTokens, totalTokens } = result.totalUsage;
-  console.error(
-    `[review] ${JSON.stringify({
-      provider,
-      model: modelId,
-      steps: result.steps.length,
-      input_tokens: inputTokens ?? null,
-      output_tokens: outputTokens ?? null,
-      total_tokens: totalTokens ?? null,
-      cost,
-      budget: maxCostUsd,
-      duration_ms: durationMs,
-    })}`
-  );
-  if (cost !== null && cost > maxCostUsd) {
-    console.error(`[review] budget exceeded: $${cost.toFixed(6)} > $${maxCostUsd.toFixed(2)}`);
+  console.error(`[review] ${JSON.stringify(metrics)}`);
+  if (metrics.cost !== null && metrics.cost > metrics.budget) {
+    console.error(`[review] budget exceeded: $${metrics.cost.toFixed(6)} > $${metrics.budget.toFixed(2)}`);
   }
 
-  process.stdout.write(`${JSON.stringify(result.output, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
 main().catch((error: unknown) => {

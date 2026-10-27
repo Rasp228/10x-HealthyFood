@@ -2,7 +2,7 @@
 // llama-server turns the JSON schema into a sampling grammar only, so the descriptions never
 // reach a local model; this appends them to the instructions. Generated from REVIEW_JSON_SCHEMA,
 // so review-schema.ts stays the single source of the rubrics.
-import { REVIEW_JSON_SCHEMA } from "./review-schema.js";
+import { REVIEW_JSON_SCHEMA } from "../review-schema.js";
 
 type JsonSchema = typeof REVIEW_JSON_SCHEMA;
 type JsonSchemaProperty = NonNullable<JsonSchema["properties"]>[string];
