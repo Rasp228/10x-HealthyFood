@@ -300,25 +300,25 @@ Nie dotyczy — pakiet wewnętrzny, jedynym konsumentem jest CLI (`npm run revie
 
 #### Automated
 
-- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `tools/code-reviewer`)
-- [x] 1.2 `src/schema-prompt.ts` nie istnieje, a `SYSTEM_PROMPT` nie jest eksportowany z `src/review-schema.ts`
-- [x] 1.3 Import modułu agenta nic nie wypisuje: `npx tsx -e "import('./src/agent/reviewer.ts')" < /dev/null` daje pusty stdout i stderr oraz kod 0
-- [x] 1.4 Kształt `REVIEW_SCHEMA` bez zmian: `git diff <commit sprzed fazy 1> -- tools/code-reviewer/src/review-schema.ts` pokazuje tylko usunięcie `SYSTEM_PROMPT`
+- [x] 1.1 Typecheck przechodzi: `npm run typecheck` (w `tools/code-reviewer`) — b260e99
+- [x] 1.2 `src/schema-prompt.ts` nie istnieje, a `SYSTEM_PROMPT` nie jest eksportowany z `src/review-schema.ts` — b260e99
+- [x] 1.3 Import modułu agenta nic nie wypisuje: `npx tsx -e "import('./src/agent/reviewer.ts')" < /dev/null` daje pusty stdout i stderr oraz kod 0 — b260e99
+- [x] 1.4 Kształt `REVIEW_SCHEMA` bez zmian: `git diff <commit sprzed fazy 1> -- tools/code-reviewer/src/review-schema.ts` pokazuje tylko usunięcie `SYSTEM_PROMPT` — b260e99
 
 #### Manual
 
-- [x] 1.5 `npm run review < /dev/null` (local): stdout to czysty JSON recenzji, na stderr komunikat o fallbacku i jedna linia `[review]` z kluczami w dotychczasowej kolejności, `input_tokens` w okolicach dzisiejszych ~921 dla `sample.diff`
-- [x] 1.6 `npm run review < data/sample-2.diff` działa tak samo (JSON + jedna linia `[review]`)
-- [x] 1.7 `REVIEW_PROVIDER=nope npm run review` kończy się kodem 1 i komunikatem `[review] failed: ...` na stderr
+- [x] 1.5 `npm run review < /dev/null` (local): stdout to czysty JSON recenzji, na stderr komunikat o fallbacku i jedna linia `[review]` z kluczami w dotychczasowej kolejności, `input_tokens` w okolicach dzisiejszych ~921 dla `sample.diff` — b260e99
+- [x] 1.6 `npm run review < data/sample-2.diff` działa tak samo (JSON + jedna linia `[review]`) — b260e99
+- [x] 1.7 `REVIEW_PROVIDER=nope npm run review` kończy się kodem 1 i komunikatem `[review] failed: ...` na stderr — b260e99
 
 ### Phase 2: Testy node:test
 
 #### Automated
 
-- [ ] 2.1 Testy przechodzą: `npm test` (w `tools/code-reviewer`)
-- [ ] 2.2 Typecheck obejmuje testy i przechodzi: `npm run typecheck`
-- [ ] 2.3 `package.json` nie ma nowych wpisów w `dependencies` / `devDependencies`: `git diff <commit sprzed fazy 2> -- tools/code-reviewer/package.json` pokazuje tylko skrypt `test`
+- [x] 2.1 Testy przechodzą: `npm test` (w `tools/code-reviewer`)
+- [x] 2.2 Typecheck obejmuje testy i przechodzi: `npm run typecheck`
+- [x] 2.3 `package.json` nie ma nowych wpisów w `dependencies` / `devDependencies`: `git diff <commit sprzed fazy 2> -- tools/code-reviewer/package.json` pokazuje tylko skrypt `test`
 
 #### Manual
 
-- [ ] 2.4 Celowe zepsucie warunku w `buildInstructions` (np. rubryki dla każdego dostawcy) czerwieni `tests/prompts.test.ts` i `tests/reviewer.test.ts`
+- [x] 2.4 Celowe zepsucie warunku w `buildInstructions` (np. rubryki dla każdego dostawcy) czerwieni `tests/prompts.test.ts` i `tests/reviewer.test.ts`
