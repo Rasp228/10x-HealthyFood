@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { pathToFileURL } from "node:url";
 import { MockLanguageModelV4 } from "ai/test";
-import { createReviewer, review, type ReviewResult } from "../src/agent/reviewer.js";
+import {
+  createReviewer,
+  DEFAULT_MAX_OUTPUT_TOKENS,
+  DEFAULT_TIMEOUT_MS,
+  readMaxOutputTokens,
+  readTimeoutMs,
+  reviewDiff,
+  ReviewError,
+  type ReviewResult,
+} from "../src/agent/reviewer.js";
 import { buildReviewPrompt, renderSchemaFields, SYSTEM_PROMPT } from "../src/prompts/index.js";
 import type { ProviderName } from "../src/provider.js";
 import { REVIEW_SCHEMA, type Review } from "../src/review-schema.js";
@@ -37,10 +47,10 @@ const REVIEW: Review = {
 };
 
 // One step answering with the review JSON; no providerMetadata, as from llama.cpp.
-function mockModel() {
+function mockModel(text = JSON.stringify(REVIEW)) {
   return new MockLanguageModelV4({
     doGenerate: {
-      content: [{ type: "text", text: JSON.stringify(REVIEW) }],
+      content: [{ type: "text", text }],
       finishReason: { unified: "stop", raw: "stop" },
       usage: {
         inputTokens: { total: 120, noCache: 120, cacheRead: undefined, cacheWrite: undefined },
@@ -81,16 +91,17 @@ function assertResultShape(result: ReviewResult): void {
 
 describe("reviewer module", () => {
   it("imports without side effects", () => {
-    // Without REVIEW_* the module must neither throw nor load .env (which may set REVIEW_MODEL).
+    // Without REVIEW_* the module must neither throw nor print. NODE_OPTIONS is dropped so an
+    // inherited flag cannot print a warning to stderr.
     const env = Object.fromEntries(
       Object.entries(process.env).filter(
-        ([key]) => !key.startsWith("REVIEW_") && key !== "OPENROUTER_API_KEY" && key !== "NODE_TEST_CONTEXT"
+        ([key]) =>
+          !key.startsWith("REVIEW_") && !["OPENROUTER_API_KEY", "NODE_TEST_CONTEXT", "NODE_OPTIONS"].includes(key)
       )
     );
     const script = [
       `const mod = await import(${JSON.stringify(REVIEWER_URL)});`,
       `if (typeof mod.createReviewer !== "function") process.exit(2);`,
-      `if (process.env.REVIEW_MODEL !== undefined) process.exit(3);`,
     ].join("\n");
     const child = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
       cwd: PACKAGE_DIR,
@@ -103,6 +114,20 @@ describe("reviewer module", () => {
     assert.equal(child.stdout, "");
     assert.equal(child.stderr, "");
     assert.equal(child.status, 0);
+  });
+
+  it("leaves dotenv to the CLI entry", () => {
+    // A runtime check would only catch a leak when the developer's .env sets a REVIEW_* value,
+    // so this reads the sources: only src/index.ts may import dotenv.
+    const srcDir = path.join(PACKAGE_DIR, "src");
+    const modules = readdirSync(srcDir, { recursive: true, encoding: "utf8" }).filter(
+      (file) => file.endsWith(".ts") && file !== "index.ts"
+    );
+    assert.ok(modules.length > 0);
+    for (const file of modules) {
+      const source = readFileSync(path.join(srcDir, file), "utf8");
+      assert.doesNotMatch(source, /["']dotenv(\/[^"']*)?["']/, `${file} imports dotenv`);
+    }
   });
 });
 
@@ -130,11 +155,84 @@ describe("createReviewer", () => {
     await createReviewer(reviewerOptions("openrouter", model)).review(DIFF);
     assert.equal(systemPrompt(model), SYSTEM_PROMPT);
   });
+
+  for (const provider of ["local", "openrouter"] as const) {
+    it(`caps the output tokens of the call for ${provider}`, async () => {
+      const model = mockModel();
+      await createReviewer({ ...reviewerOptions(provider, model), env: {} }).review(DIFF);
+      assert.equal(model.doGenerateCalls[0]!.maxOutputTokens, DEFAULT_MAX_OUTPUT_TOKENS[provider]);
+    });
+  }
+
+  it("rejects a diff over the size cap before calling the model", async () => {
+    const model = mockModel();
+    const options = { ...reviewerOptions("local", model), maxDiffBytes: Buffer.byteLength(DIFF) - 1 };
+    await assert.rejects(createReviewer(options).review(DIFF), /REVIEW_MAX_DIFF_BYTES/);
+    assert.equal(model.doGenerateCalls.length, 0);
+  });
+
+  it("keeps the metrics of a billed call whose output fails the schema", async () => {
+    const model = mockModel(JSON.stringify({ verdict: "maybe" }));
+    const error = await createReviewer(reviewerOptions("local", model))
+      .review(DIFF)
+      .then(
+        () => assert.fail("expected the review to reject"),
+        (rejection: unknown) => rejection
+      );
+    assert.ok(error instanceof ReviewError);
+    assert.match(error.message, /^AI_NoObjectGeneratedError: /);
+    assert.deepEqual(Object.keys(error.metrics), METRIC_KEYS);
+    assert.equal(error.metrics.steps, 1);
+    assert.equal(error.metrics.input_tokens, 120);
+    assert.equal(error.metrics.output_tokens, 30);
+  });
+
+  it("accepts a diff exactly at the size cap", async () => {
+    const options = { ...reviewerOptions("local"), maxDiffBytes: Buffer.byteLength(DIFF) };
+    assertResultShape(await createReviewer(options).review(DIFF));
+  });
 });
 
-describe("review", () => {
+describe("readTimeoutMs", () => {
+  it("defaults per provider", () => {
+    assert.equal(readTimeoutMs({}, "local"), DEFAULT_TIMEOUT_MS.local);
+    assert.equal(readTimeoutMs({}, "openrouter"), DEFAULT_TIMEOUT_MS.openrouter);
+    assert.ok(DEFAULT_TIMEOUT_MS.local > DEFAULT_TIMEOUT_MS.openrouter);
+  });
+
+  it("lets REVIEW_TIMEOUT_MS override both", () => {
+    assert.equal(readTimeoutMs({ REVIEW_TIMEOUT_MS: "5000" }, "local"), 5000);
+    assert.equal(readTimeoutMs({ REVIEW_TIMEOUT_MS: "5000" }, "openrouter"), 5000);
+  });
+
+  for (const raw of ["0", "-1", "1.5", "abc"]) {
+    it(`rejects "${raw}"`, () => {
+      assert.throws(() => readTimeoutMs({ REVIEW_TIMEOUT_MS: raw }, "local"), /REVIEW_TIMEOUT_MS/);
+    });
+  }
+});
+
+describe("readMaxOutputTokens", () => {
+  it("defaults per provider: 32768 local, 8192 openrouter", () => {
+    assert.equal(readMaxOutputTokens({}, "local"), 32_768);
+    assert.equal(readMaxOutputTokens({}, "openrouter"), 8_192);
+  });
+
+  it("lets REVIEW_MAX_OUTPUT_TOKENS override both", () => {
+    assert.equal(readMaxOutputTokens({ REVIEW_MAX_OUTPUT_TOKENS: "4096" }, "local"), 4096);
+    assert.equal(readMaxOutputTokens({ REVIEW_MAX_OUTPUT_TOKENS: "4096" }, "openrouter"), 4096);
+  });
+
+  for (const raw of ["0", "-1", "1.5", "abc"]) {
+    it(`rejects "${raw}"`, () => {
+      assert.throws(() => readMaxOutputTokens({ REVIEW_MAX_OUTPUT_TOKENS: raw }, "local"), /REVIEW_MAX_OUTPUT_TOKENS/);
+    });
+  }
+});
+
+describe("reviewDiff", () => {
   it("returns the same shape as the reviewer method", async () => {
-    const result = await review(DIFF, reviewerOptions("local"));
+    const result = await reviewDiff(DIFF, reviewerOptions("local"));
     assertResultShape(result);
   });
 });

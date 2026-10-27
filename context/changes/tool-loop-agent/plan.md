@@ -23,7 +23,7 @@ dało się zaimportować bez efektów ubocznych i wywołać z przyszłych evali 
 ## Desired End State
 
 - `src/agent/reviewer.ts` eksportuje `createReviewer(options?)` (zwraca obiekt z `review(diff)`
-  oraz `provider`, `modelId`, `agent`) i skrót `review(diff, options?)`; oba zwracają
+  oraz `provider`, `modelId`, `agent`) i skrót `reviewDiff(diff, options?)` (przemianowany z `review` w triage, F8); oba zwracają
   `{ review: Review, metrics: ReviewMetrics }`. Import modułu nie ładuje `.env`, nie czyta stdin
   i nic nie wypisuje.
 - Prompty w `src/prompts/`, koszt w `src/cost.ts`, `review-schema.ts` bez `SYSTEM_PROMPT`.
@@ -238,7 +238,7 @@ linię dla każdego klucza `REVIEW_JSON_SCHEMA.properties` oraz `"pass" | "fail"
   `cost === null`, `budget === 0.1`, tokeny z mocka.
 - Mock dostaje instrukcje z rubrykami dla `provider: "local"` i bez nich dla `"openrouter"`
   (odczyt promptu z `doGenerateCalls` mocka).
-- Skrót `review(diff, options)` zwraca ten sam kształt co metoda.
+- Skrót `reviewDiff(diff, options)` zwraca ten sam kształt co metoda.
 
 ### Success Criteria:
 

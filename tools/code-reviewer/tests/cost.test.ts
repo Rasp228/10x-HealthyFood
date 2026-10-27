@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { StepResult, ToolSet } from "ai";
-import { costExceeds, DEFAULT_MAX_COST_USD, readMaxCost, stepCost, totalCost } from "../src/cost.js";
+import {
+  costExceeds,
+  DEFAULT_MAX_COST_USD,
+  DEFAULT_MAX_DIFF_BYTES,
+  readMaxCost,
+  readMaxDiffBytes,
+  stepCost,
+  totalCost,
+} from "../src/cost.js";
 
 const withCost = (cost: number) => ({ providerMetadata: { openrouter: { usage: { cost } } } });
 const withoutCost = { providerMetadata: undefined };
@@ -62,6 +70,23 @@ describe("readMaxCost", () => {
   for (const raw of ["0", "-1", "abc"]) {
     it(`rejects "${raw}"`, () => {
       assert.throws(() => readMaxCost({ REVIEW_MAX_COST_USD: raw }), /REVIEW_MAX_COST_USD/);
+    });
+  }
+});
+
+describe("readMaxDiffBytes", () => {
+  it("defaults to 100000 when the variable is missing", () => {
+    assert.equal(readMaxDiffBytes({}), 100_000);
+    assert.equal(DEFAULT_MAX_DIFF_BYTES, 100_000);
+  });
+
+  it("parses a positive integer", () => {
+    assert.equal(readMaxDiffBytes({ REVIEW_MAX_DIFF_BYTES: "2048" }), 2048);
+  });
+
+  for (const raw of ["0", "-1", "1.5", "abc"]) {
+    it(`rejects "${raw}"`, () => {
+      assert.throws(() => readMaxDiffBytes({ REVIEW_MAX_DIFF_BYTES: raw }), /REVIEW_MAX_DIFF_BYTES/);
     });
   }
 });

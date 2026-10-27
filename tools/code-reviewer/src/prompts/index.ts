@@ -12,6 +12,9 @@ export function buildInstructions(provider: ProviderName): string {
   return provider === "local" ? `${SYSTEM_PROMPT}\n\n${renderSchemaFields()}` : SYSTEM_PROMPT;
 }
 
+// The diff is untrusted: fenced in <diff> tags, with any closing tag inside it escaped so the
+// author cannot end the fence early and write text that reads as ours.
 export function buildReviewPrompt(diff: string): string {
-  return `Oto diff do recenzji:\n\n${diff}`;
+  const fenced = diff.replace(/<\/diff>/gi, "<\\/diff>");
+  return `Oto diff do recenzji:\n\n<diff>\n${fenced}\n</diff>`;
 }
