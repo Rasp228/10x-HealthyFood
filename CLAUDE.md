@@ -1,26 +1,26 @@
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## 10xDevs AI Toolkit - Module 5, Lesson 1 (AI Internal Builders)
+## 10xDevs AI Toolkit - Module 5, Lesson 2 (Team Agent with SDKs)
 
-Classify recurring team friction before you build anything for it. The default answer is an existing tool; build only a thin helper where local, cross-system pain justifies it.
+Build a minimal code-review agent: diff in, structured JSON verdict out. The schema and system prompt are the contract everything later (CI gate, evals) depends on.
 
 ```
-/10x-opportunity-map -> /10x-mom-test -> /10x-shape -> /10x-prd -> /10x-roadmap
+review schema + system prompt -> review.ts (ready-made agent SDK or AI SDK ToolLoopAgent) -> git diff | npx tsx review.ts
 ```
 
 ### Task Router - Where to start
 
-| Skill | Use it when |
+| Skill / prompt / template | Use it when |
 | --- | --- |
-| `/10x-opportunity-map` | A team keeps hitting the same friction, or someone says "let's build a dashboard / agent / automation". Writes a build / buy / complement / wait map with a first useful version and a data-risk caveat to `context/team/opportunity-map.md`. |
-| `/10x-mom-test` | You have a candidate and want to know whether the problem is real. Produces a non-leading critique, interview questions, a survey and go/no-go criteria; saves to `context/team/mom-test-validation.md`. |
-| `/10x-shape` -> `/10x-prd` -> `/10x-roadmap` | A validated candidate is worth building. Continue with the usual 10xWorkflow. |
+| `m5l2-review-schema.ts.template` (config templates) | Starting the reviewer. Copy it into your reviewer package: six scored criteria (1-10), verdict and summary as a zod schema plus the system prompt. |
+| `m5l2-agent` (prompts) | Setting up the AI SDK entry point and then planning a modular `ToolLoopAgent` reviewer with `/10x-plan`. |
+| `/10x-plan` -> `/10x-implement` | Turning the single-file reviewer into reusable modules. |
 
 ### Hard rules
 
-- **Buy before you build.** Name the existing or default response first; a helper complements it, it doesn't replace it.
-- **Evidence comes from past behavior.** Ask what people did last time, not whether they would use the tool.
-- **State the data risk.** Every candidate says which data it reads and what could leak or go wrong.
+- **The schema is the contract.** Change criteria, verdict values or field names in the schema first, then in prompts, gates and evals.
+- **Pin major versions.** The lesson code targets AI SDK 7 (`ai@7`, `@openrouter/ai-sdk-provider@3`) and Node 22+.
+- **Track cost per run.** Log usage from every review and set a hard budget cap before the agent runs unattended.
 
 <!-- END @przeprogramowani/10x-cli -->
 

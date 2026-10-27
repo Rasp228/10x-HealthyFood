@@ -117,7 +117,10 @@ export default tseslint.config(
   {
     // Generowany przez `npm run supabase:gen` - styl narzuca CLI, a kazda poprawka
     // znika przy kolejnej regeneracji. Ten sam powod co wpis w .prettierignore.
-    ignores: ["src/db/database.types.ts"],
+    //
+    // tools/code-reviewer to osobny pakiet z wlasnymi zaleznosciami (ai, @openrouter/...),
+    // ktorych CI nie instaluje w korzeniu repo - lintuje sie go z jego katalogu.
+    ignores: ["src/db/database.types.ts", "tools/code-reviewer/**"],
   },
   baseConfig,
   commonjsConfig,
