@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.79",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "ai": "^7.0.154",
     "dotenv": "^17.4.2",

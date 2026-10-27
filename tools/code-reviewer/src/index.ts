@@ -6,14 +6,14 @@
 //   npm run review < /dev/null   # falls back to data/sample.diff
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { performance } from "node:perf_hooks";
 import { generateText, isStepCount, Output, type StepResult, type StopCondition, type ToolSet } from "ai";
 import dotenv from "dotenv";
+import { selectModel } from "./provider.js";
 import { REVIEW_SCHEMA, SYSTEM_PROMPT } from "./review-schema.js";
 
 const PACKAGE_DIR = path.resolve(import.meta.dirname, "..");
 const SAMPLE_DIFF_PATH = path.join(PACKAGE_DIR, "data", "sample.diff");
-const DEFAULT_MODEL = "anthropic/claude-sonnet-5.5";
 const DEFAULT_MAX_COST_USD = 0.1;
 // Safety net next to the budget cap; a review without tools needs a single step.
 const MAX_STEPS = 10;
@@ -45,50 +45,59 @@ function readMaxCost(): number {
   return value;
 }
 
-// OpenRouter reports the billed cost per step under providerMetadata.openrouter.usage.cost
-// (only with usage: { include: true }). providerMetadata is untyped JSON, hence the narrowing.
-function stepCost(step: Pick<StepResult<ToolSet>, "providerMetadata">): number {
+type CostStep = Pick<StepResult<ToolSet>, "providerMetadata">;
+
+// OpenRouter reports the billed cost per step under providerMetadata.openrouter.usage.cost.
+// Other providers (llama.cpp) report none: null, not 0, so "free" and "unknown" stay distinct.
+function stepCost(step: CostStep): number | null {
   const usage = step.providerMetadata?.openrouter?.usage;
-  if (typeof usage !== "object" || usage === null || !("cost" in usage)) return 0;
-  return typeof usage.cost === "number" ? usage.cost : 0;
+  if (typeof usage !== "object" || usage === null || !("cost" in usage)) return null;
+  return typeof usage.cost === "number" ? usage.cost : null;
 }
 
-function totalCost(steps: Pick<StepResult<ToolSet>, "providerMetadata">[]): number {
-  return steps.reduce((sum, step) => sum + stepCost(step), 0);
+function totalCost(steps: CostStep[]): number | null {
+  const costs = steps.map(stepCost).filter((cost) => cost !== null);
+  return costs.length ? costs.reduce((sum, cost) => sum + cost, 0) : null;
 }
 
 // Hard budget cap: stops the loop as soon as the accumulated cost passes maxCostUsd.
 // It is evaluated between steps, so it bounds the number of further calls, not the
-// cost of the call already in flight.
+// cost of the call already in flight. Never trips when the provider reports no cost.
 function costExceeds(maxCostUsd: number): StopCondition<ToolSet> {
-  return ({ steps }) => totalCost(steps) > maxCostUsd;
+  return ({ steps }) => (totalCost(steps) ?? 0) > maxCostUsd;
 }
 
 async function main(): Promise<void> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set (see tools/code-reviewer/.env.example)");
-
-  const modelId = process.env.REVIEW_MODEL || DEFAULT_MODEL;
+  const { provider, modelId, model } = selectModel();
   const maxCostUsd = readMaxCost();
   const diff = await readDiff();
 
-  const openrouter = createOpenRouter({ apiKey });
+  const startedAt = performance.now();
   const result = await generateText({
-    model: openrouter(modelId, { usage: { include: true } }),
+    model,
     instructions: SYSTEM_PROMPT,
     prompt: `Oto diff do recenzji:\n\n${diff}`,
     output: Output.object({ schema: REVIEW_SCHEMA }),
     stopWhen: [isStepCount(MAX_STEPS), costExceeds(maxCostUsd)],
   });
+  const durationMs = Math.round(performance.now() - startedAt);
 
   const cost = totalCost(result.steps);
   const { inputTokens, outputTokens, totalTokens } = result.totalUsage;
   console.error(
-    `[review] model=${modelId} steps=${result.steps.length} ` +
-      `tokens in=${inputTokens ?? "?"} out=${outputTokens ?? "?"} total=${totalTokens ?? "?"} ` +
-      `cost=$${cost.toFixed(6)} budget=$${maxCostUsd.toFixed(2)}`
+    `[review] ${JSON.stringify({
+      provider,
+      model: modelId,
+      steps: result.steps.length,
+      input_tokens: inputTokens ?? null,
+      output_tokens: outputTokens ?? null,
+      total_tokens: totalTokens ?? null,
+      cost,
+      budget: maxCostUsd,
+      duration_ms: durationMs,
+    })}`
   );
-  if (cost > maxCostUsd) {
+  if (cost !== null && cost > maxCostUsd) {
     console.error(`[review] budget exceeded: $${cost.toFixed(6)} > $${maxCostUsd.toFixed(2)}`);
   }
 
