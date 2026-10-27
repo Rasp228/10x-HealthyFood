@@ -13,12 +13,20 @@ Fakty z repo, które ważą na klasyfikacji: brak Dependabota i Renovate; CI sta
 | Signal | Existing / default response | Thin complement | First useful version | Data risk | Direction if valuable |
 |---|---|---|---|---|---|
 | 1. Po pushu ręcznie szukam w Actions, który job padł i dlaczego | Maile GitHuba, `gh run watch`, `gh run view --log-failed` | Alias na te komendy | Skrót w shellu | Read-only, niewrażliwe | Wait / no build |
-| 2. Higiena zależności: wygasająca allowlista, advisory łapane dopiero przy pushu, ręczny research przed bumpem | Dependabot alerts (wyłączone), `npm outdated`, `npm audit`, `expiry` w audit-ci | Raport łączący outdated + audit + allowlistę + lokalne pinezki | Lokalny skrypt Node → Markdown, uruchamiany ręcznie | Publiczny rejestr npm + pliki repo | Internal tool → Async (cotygodniowy job CI) |
+| 2. Bump zależności psuje produkcję bez sygnału przed deployem (pierwotnie: higiena zależności — wygasająca allowlista, advisory przy pushu, research przed bumpem) | Bramki CI (`test:security`, testy, build), `npm audit fix` bez `--force`, procedura z komentarza `audit-ci.jsonc` | Krok w jobie „Build produkcyjny” ładujący zbudowaną funkcję w Node | Jeden krok w istniejącym workflow | Lokalny build, niewrażliwe | Wait / no build — zwalidowane 2026-10-27, patrz `mom-test-validation.md` |
 | 3. Ruleset w UI i `.github/rulesets/master.json` mogą się rozjechać | `gh api .../rulesets/24778393` + ręczny diff | Jednolinijkowy diff | Komenda w notatce | Read-only, token admina | Wait |
 | 4. `contract-surfaces.md` / `known-drift.md` dezaktualizują się po zmianach w kodzie | Brak gotowca; częściowo `/10x-impl-review`, grep | Checker mechanicznych kotwic (ścieżki, identyfikatory, linie, stałe) | Lokalny skrypt → lista martwych odwołań | Lokalne, niewrażliwe | Review / CI gate |
 | 5. Po migracji: `supabase:gen`, ręczne RLS checki z podmianą UUID, sync limitów Zod | `supabase test db` (pgTAP), checklista w AGENTS.md | Niepotrzebny — przejść na natywne narzędzie | Jeden check przepisany na pgTAP przy następnej migracji | Lokalna baza | Wait |
 
-## Recommended First Candidate
+## Validation Update (2026-10-27)
+
+Kandydat `deps-review` odrzucony po `/10x-mom-test` (`context/team/mom-test-validation.md`):
+zbieranie informacji w epizodach z 06.10 i 09.10 trwało ~35 s, realne koszty (złamanie `cookie`,
+awaria produkcji po `npm audit fix` 09.10) leżą poza zasięgiem raportu, a po kursie projekt zostanie
+przebudowany bez Vercela. Sygnał 2 przeformułowany i przeniesiony do „Wait / no build”. Opis
+kandydata poniżej zostaje jako zapis pierwotnej decyzji. Następny kandydat do rozważenia: sygnał 4.
+
+## Recommended First Candidate (odrzucony — patrz Validation Update)
 
 ```text
 Candidate:
