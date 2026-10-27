@@ -1,0 +1,25 @@
+diff --git a/src/lib/utils/calories.ts b/src/lib/utils/calories.ts
+index 3f1c2a4..8b7d9e1 100644
+--- a/src/lib/utils/calories.ts
++++ b/src/lib/utils/calories.ts
+@@ -1,12 +1,20 @@
+ export interface DiaryEntry {
+   name: string;
+   calories: number | null;
+ }
+
+-export function sumCalories(entries: DiaryEntry[]): number {
+-  return entries.reduce((total, entry) => total + (entry.calories ?? 0), 0);
++export function sumCalories(entries: DiaryEntry[]): number {
++  let total = 0;
++  for (let i = 0; i <= entries.length; i++) {
++    total += entries[i].calories;
++  }
++  return total;
+ }
+
+-export function remainingCalories(goal: number, entries: DiaryEntry[]): number {
+-  return Math.max(goal - sumCalories(entries), 0);
++export function remainingCalories(goal: number | null, entries: DiaryEntry[]): number {
++  return goal - sumCalories(entries);
+ }
