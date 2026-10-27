@@ -238,24 +238,27 @@ source, message, stack, at })` line per event. `kind` is a closed enum
   The anonymous REST API shows the rules (`rules/branches/master`) but not `bypass_actors` or a
   PR's `mergeStateStatus`; checking those needs an authenticated `gh` or the UI.
 
-### `GHSA-9wv6-86v2-598j`, `GHSA-vfj7-8cjw-p6xm`, `GHSA-hp3w-g68c-fv3c`
+### `GHSA-9wv6-86v2-598j`, `GHSA-mrhx-c7xc-m3w5` (path-scoped)
 
 - **Declared**: the `allowlist` in `audit-ci.jsonc`, with the reasoning inline; the same file
   carries the `moderate` failure threshold.
   - `GHSA-9wv6-86v2-598j`: transitive `path-to-regexp` pulled in by `@astrojs/vercel`.
-  - `GHSA-vfj7-8cjw-p6xm`: `braces` via `eslint-plugin-astro` (dev only). No patched release.
-  - `GHSA-hp3w-g68c-fv3c`: `sprintf-js` via Jest's coverage chain (dev only). No patched release.
+  - `GHSA-mrhx-c7xc-m3w5`, allowlisted only for the path
+    `@astrojs/vercel>@vercel/functions>@vercel/oidc>@vercel/cli-config>zod`: `@vercel/cli-config`
+    pins `zod@4.1.11` exactly and has no patched release. The direct `zod` is patched and not
+    covered by the entry, so a vulnerable direct `zod` still fails the gate. No `overrides` —
+    forcing a `zod` into the adapter changes the Vercel function, see
+    @context/foundation/lessons.md.
+  - Removed 2026-10-27 as no longer in the tree: `GHSA-vfj7-8cjw-p6xm` (`braces`) and
+    `GHSA-hp3w-g68c-fv3c` (`sprintf-js`).
 - **Contract**: every entry has an inline comment naming its source and its review trigger — an
-  `@astrojs/vercel` bump; an `eslint-plugin-astro` bump or a `braces` release above 3.0.3; a
-  `jest` / `ts-jest` bump. A new entry needs the same kind of comment, or the allowlist stops
-  being reviewable. Every entry is an NSP record with an `expiry` date (3 months out): once it
+  `@astrojs/vercel` bump for both, plus an `@vercel/cli-config` release for the `zod` path. A new
+  entry needs the same kind of comment, or the allowlist stops being reviewable. Every entry is an NSP record with an `expiry` date (3 months out): once it
   passes, the entry stops applying and `test:security` fails again on that advisory alone — a
   scheduled review even when no dependency was bumped. At review, bump and drop the entry if a
   patched release exists; otherwise move `expiry` forward and update the comment's date.
 - **Stale entries**: an allowlisted advisory that is no longer in the tree does not fail the
   gate; `audit-ci` only logs "Consider not allowlisting advisory". Remove such entries.
-- **Breaks**: `npm audit fix --force` proposes a downgrade for each, and none should be taken:
-  - `@astrojs/vercel@8.0.4`, a major downgrade that drops the `x-astro-path` patch and forces a
-    return to Astro 5;
-  - `eslint-plugin-astro@1.5.0`;
-  - `ts-jest@29.1.2`.
+- **Breaks**: `npm audit fix --force` proposes `@astrojs/vercel@8.0.4` for both, and it should
+  not be taken: a major downgrade that drops the `x-astro-path` patch and forces a return to
+  Astro 5.

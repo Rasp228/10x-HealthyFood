@@ -200,9 +200,9 @@ The `code-quality` job's gate scripts and their order are in @docs/reference/con
 - Format the tree with `npm run format`, verify it with `npm run format:check`. Never gate on
   `npm run format -- --check` — @docs/reference/contract-surfaces.md explains why it passes anyway.
 - `npm run test:security` is `audit-ci` driven by `audit-ci.jsonc`, which carries the `moderate`
-  threshold and three allowlisted advisories, each with its review trigger commented inline. The
-  advisories, and what `npm audit fix --force` would do to each, are in
-  @docs/reference/contract-surfaces.md.
+  threshold and two allowlisted advisories (one scoped to a single dependency path), each with
+  its review trigger commented inline. The advisories, and what `npm audit fix --force` would do
+  to each, are in @docs/reference/contract-surfaces.md.
 
 Prettier 3 reads `.gitignore` as well as `.prettierignore`. Agent-written documents (`.ai/`,
 `context/`, `CLAUDE.md`) are excluded there — the formatter pads markdown tables to aligned

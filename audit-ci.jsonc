@@ -9,20 +9,18 @@
   // @vercel/routing-utils w @astrojs/vercel. Adapter jest już w najnowszej wersji,
   // a `npm audit fix --force` proponuje cofnięcie do @astrojs/vercel@8.0.4, co zabrałoby
   // łatkę CVE `x-astro-path` i wymusiłoby powrót do Astro 5. Przeglądać przy każdym
-  // bumpie @astrojs/vercel. Stan na 2026-10-09 (@astrojs/vercel 11.0.13).
+  // bumpie @astrojs/vercel. Stan na 2026-10-27 (@astrojs/vercel 11.0.12).
   //
-  // GHSA-vfj7-8cjw-p6xm (braces, high) przychodzi tylko w narzędziach deweloperskich:
-  // eslint-plugin-astro > astro-eslint-parser > fast-glob > micromatch > braces. Advisory obejmuje
-  // <=3.0.3, a 3.0.3 to najnowsza wersja - łatki nie ma. `npm audit fix --force` proponuje
-  // cofnięcie do eslint-plugin-astro@1.5.0 (major w dół). Do zbudowanej aplikacji nie trafia.
-  // Przeglądać przy każdym bumpie eslint-plugin-astro i przy wydaniu braces > 3.0.3.
-  // Stan na 2026-10-06.
+  // GHSA-mrhx-c7xc-m3w5 (zod, high) - tylko dla ścieżki przez adapter Vercela:
+  // @astrojs/vercel > @vercel/functions > @vercel/oidc > @vercel/cli-config, który przypina
+  // zod dokładnie na 4.1.11 (także w najnowszym 0.3.4), więc łatki nie ma. cli-config parsuje
+  // lokalny config Vercela, nie dane od użytkownika. Bezpośredni zod jest załatany (>= 4.6.6) i
+  // ten wpis go nie obejmuje. Override zostawiamy - zmieniłby zawartość funkcji Vercel (lekcja
+  // z 2026-10-09). Przeglądać przy każdym bumpie @astrojs/vercel / @vercel/cli-config.
+  // Stan na 2026-10-27.
   //
-  // GHSA-hp3w-g68c-fv3c (sprintf-js, moderate) przychodzi tylko w łańcuchu pokrycia Jest:
-  // @jest/transform > babel-plugin-istanbul > @istanbuljs/load-nyc-config > js-yaml > argparse >
-  // sprintf-js. Advisory obejmuje <=1.1.3, a 1.1.3 to najnowsza wersja - łatki nie ma.
-  // `npm audit fix --force` proponuje cofnięcie do ts-jest@29.1.2. Do zbudowanej aplikacji nie
-  // trafia. Przeglądać przy każdym bumpie jest / ts-jest. Stan na 2026-10-09 (ts-jest 29.4.14).
+  // GHSA-vfj7-8cjw-p6xm (braces) i GHSA-hp3w-g68c-fv3c (sprintf-js) usunięte 2026-10-27:
+  // nie ma ich już w drzewie zależności (audit-ci: "Consider not allowlisting").
   //
   // Każdy wpis ma `expiry`: po tej dacie przestaje działać i bramka znów się wywraca. To
   // wymusza przegląd, nawet gdy nikt nie podbijał zależności - łatka mogła już wyjść. Przy
@@ -37,17 +35,10 @@
       }
     },
     {
-      "GHSA-vfj7-8cjw-p6xm": {
+      "GHSA-mrhx-c7xc-m3w5|@astrojs/vercel>@vercel/functions>@vercel/oidc>@vercel/cli-config>zod": {
         "active": true,
-        "expiry": "2027-01-06",
-        "notes": "braces przez eslint-plugin-astro, tylko dev, brak łatki"
-      }
-    },
-    {
-      "GHSA-hp3w-g68c-fv3c": {
-        "active": true,
-        "expiry": "2027-01-06",
-        "notes": "sprintf-js przez pokrycie Jest, tylko dev, brak łatki"
+        "expiry": "2027-01-27",
+        "notes": "zod 4.1.11 przypięty w @vercel/cli-config, brak łatki"
       }
     }
   ]
