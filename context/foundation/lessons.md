@@ -15,3 +15,17 @@
   never through `Astro.cookies`. Wrap every return from the middleware in it — each `redirect()`
   and the awaited `next()`.
 - **Applies to**: plan, implement, impl-review
+
+## Treat a direct-dependency bump from npm audit fix as its own change
+
+- **Context**: Any change that runs `npm audit fix` (with or without `--force`) — typically when
+  `test:security` turns red on an unrelated push — and any phase touching `package.json` /
+  `package-lock.json`.
+- **Problem**: `npm audit fix` resolves within `^` ranges and silently bumps direct dependencies
+  alongside the transitive fix. On 2026-10-09 it moved `@astrojs/vercel` 11.0.10 → 11.0.13, which
+  pulled `rolldown` into the bundle; every Vercel function crashed at start ("Cannot find native
+  binding") while lint, typecheck, Jest and E2E stayed green, and production stayed down for up
+  to ~3.5 h until noticed by hand (`93c420b` → `8617661`).
+- **Rule**: `npm audit fix` may bump a direct dependency within its `^` range as a side effect.
+  Treat every such bump as a separate change and verify the built artifact before pushing.
+- **Applies to**: implement, impl-review
