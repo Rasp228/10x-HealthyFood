@@ -11,6 +11,7 @@ import { generateText, isStepCount, Output, type StepResult, type StopCondition,
 import dotenv from "dotenv";
 import { selectModel } from "./provider.js";
 import { REVIEW_SCHEMA, SYSTEM_PROMPT } from "./review-schema.js";
+import { renderSchemaFields } from "./schema-prompt.js";
 
 const PACKAGE_DIR = path.resolve(import.meta.dirname, "..");
 const SAMPLE_DIFF_PATH = path.join(PACKAGE_DIR, "data", "sample.diff");
@@ -72,10 +73,14 @@ async function main(): Promise<void> {
   const maxCostUsd = readMaxCost();
   const diff = await readDiff();
 
+  // llama-server uses the schema only as a grammar, so the rubrics in the field descriptions
+  // are spelled out in the instructions; providers with native structured output read them there.
+  const instructions = provider === "local" ? `${SYSTEM_PROMPT}\n\n${renderSchemaFields()}` : SYSTEM_PROMPT;
+
   const startedAt = performance.now();
   const result = await generateText({
     model,
-    instructions: SYSTEM_PROMPT,
+    instructions,
     prompt: `Oto diff do recenzji:\n\n${diff}`,
     output: Output.object({ schema: REVIEW_SCHEMA }),
     stopWhen: [isStepCount(MAX_STEPS), costExceeds(maxCostUsd)],
