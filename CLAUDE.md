@@ -1,26 +1,26 @@
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## 10xDevs AI Toolkit - Module 4, Lesson 2 (Project Map)
+## 10xDevs AI Toolkit - Module 5, Lesson 1 (AI Internal Builders)
 
-Get up to speed in an unfamiliar or legacy repo from evidence, not from directory trees: **Wide Scan first, Deep Focus later.**
+Classify recurring team friction before you build anything for it. The default answer is an existing tool; build only a thin helper where local, cross-system pain justifies it.
 
 ```
-git history + dependency graph + contributors -> context/map/repo-map.md -> focused /10x-research
+/10x-opportunity-map -> /10x-mom-test -> /10x-shape -> /10x-prd -> /10x-roadmap
 ```
 
 ### Task Router - Where to start
 
-| Skill / prompt | Use it when |
+| Skill | Use it when |
 | --- | --- |
-| `/10x-repo-map` | One-run Project Map. It ranks business capabilities by criticality × buzz, keeps its evidence in `context/map/evidence/`, and writes `context/map/repo-map.md` with risk zones, a first-day reading list and explicit unknowns. Use `--replace` to refresh; the previous run moves to `context/archive/`. |
-| `m4l2-1-territory-git-history` -> `m4l2-2-structure-dependency-cruiser` -> `m4l2-3-contributors-git` -> `m4l2-repo-map-synthesis` | The same map built step by step, one artifact at a time, so you can see what each evidence source adds. |
-| `/10x-research` | A question about one feature or area. The map covers breadth and takes no target; depth belongs to research. |
+| `/10x-opportunity-map` | A team keeps hitting the same friction, or someone says "let's build a dashboard / agent / automation". Writes a build / buy / complement / wait map with a first useful version and a data-risk caveat to `context/team/opportunity-map.md`. |
+| `/10x-mom-test` | You have a candidate and want to know whether the problem is real. Produces a non-leading critique, interview questions, a survey and go/no-go criteria; saves to `context/team/mom-test-validation.md`. |
+| `/10x-shape` -> `/10x-prd` -> `/10x-roadmap` | A validated candidate is worth building. Continue with the usual 10xWorkflow. |
 
 ### Hard rules
 
-- **Let tools collect evidence outside the context window.** Use git, the forge and graph tools to gather data, then interpret only their condensed output. Never read the repo file by file.
-- **Exclude the noise.** Leave out lockfiles, generated code, bulk formatting commits, bot commits and agent-authored commits when ranking activity.
-- **Unknowns are part of the map.** Mark what the evidence can't show as unknown instead of filling the gap with a guess.
+- **Buy before you build.** Name the existing or default response first; a helper complements it, it doesn't replace it.
+- **Evidence comes from past behavior.** Ask what people did last time, not whether they would use the tool.
+- **State the data risk.** Every candidate says which data it reads and what could leak or go wrong.
 
 <!-- END @przeprogramowani/10x-cli -->
 
