@@ -1,7 +1,7 @@
 ---
 change_id: tool-loop-agent
 title: Modularny recenzent kodu na ToolLoopAgent (AI SDK 7)
-status: implementing
+status: implemented
 created: 2026-10-27
 updated: 2026-10-27
 ---

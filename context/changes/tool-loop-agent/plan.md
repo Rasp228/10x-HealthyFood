@@ -315,10 +315,10 @@ Nie dotyczy — pakiet wewnętrzny, jedynym konsumentem jest CLI (`npm run revie
 
 #### Automated
 
-- [x] 2.1 Testy przechodzą: `npm test` (w `tools/code-reviewer`)
-- [x] 2.2 Typecheck obejmuje testy i przechodzi: `npm run typecheck`
-- [x] 2.3 `package.json` nie ma nowych wpisów w `dependencies` / `devDependencies`: `git diff <commit sprzed fazy 2> -- tools/code-reviewer/package.json` pokazuje tylko skrypt `test`
+- [x] 2.1 Testy przechodzą: `npm test` (w `tools/code-reviewer`) — 13b1ceb
+- [x] 2.2 Typecheck obejmuje testy i przechodzi: `npm run typecheck` — 13b1ceb
+- [x] 2.3 `package.json` nie ma nowych wpisów w `dependencies` / `devDependencies`: `git diff <commit sprzed fazy 2> -- tools/code-reviewer/package.json` pokazuje tylko skrypt `test` — 13b1ceb
 
 #### Manual
 
-- [x] 2.4 Celowe zepsucie warunku w `buildInstructions` (np. rubryki dla każdego dostawcy) czerwieni `tests/prompts.test.ts` i `tests/reviewer.test.ts`
+- [x] 2.4 Celowe zepsucie warunku w `buildInstructions` (np. rubryki dla każdego dostawcy) czerwieni `tests/prompts.test.ts` i `tests/reviewer.test.ts` — 13b1ceb
