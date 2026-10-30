@@ -1,0 +1,261 @@
+name: "AI Code Reviewer"
+description: "Review diffu PR-a przez tools/code-reviewer: sticky komentarz, etykieta ai-cr:passed/failed i bramka"
+
+# Niezaufane dane (tytuł, opis, nazwa gałęzi bazowej) i sekrety trafiają do skryptów wyłącznie przez env:,
+# nigdy jako wyrażenie w treści run:.
+#
+# Wynik przebiegu idzie między krokami przez $GITHUB_ENV, pod nazwami czytanymi przez CLI komentarza
+# (tools/code-reviewer/src/comment/cli.ts):
+#   AI_CR_OUTCOME      missing-model | daily-cap | empty-diff | review | error (brak = przygotowanie się wywróciło)
+#   AI_CR_EXCLUDED     ścieżki wykluczone z diffa, rozdzielone przecinkiem
+#   AI_CR_REVIEW_FILE  stdout `npm run review` (JSON werdyktu)
+#   AI_CR_STDERR_FILE  stderr `npm run review` (linia metryk "[review] {...}")
+#   AI_CR_EXIT_CODE    kod wyjścia `npm run review`: 0 review, 2 review ponad budżetem, 1 błąd
+#   AI_CR_VERDICT      pass | fail, tylko dla review (wszystko poza "pass" zapisane jako "fail")
+
+inputs:
+  github-token:
+    description: "Token do komentarza, etykiet i licznika runów (github.token)"
+    required: true
+  openrouter-api-key:
+    description: "Klucz OpenRoutera; trafia wyłącznie do env kroku review"
+    required: false
+    default: ""
+  review-model:
+    description: "Id modelu OpenRoutera (vars.REVIEW_MODEL); pusty = czerwony job bez wywołania modelu"
+    required: false
+    default: ""
+  pr-number:
+    description: "Numer pull requesta"
+    required: true
+  pr-title:
+    description: "Tytuł pull requesta (niezaufane dane)"
+    required: false
+    default: ""
+  pr-body:
+    description: "Opis pull requesta (niezaufane dane)"
+    required: false
+    default: ""
+  base-ref:
+    description: "Gałąź bazowa pull requesta (niezaufane dane)"
+    required: true
+  daily-cap:
+    description: "Maksymalna liczba nie-pominiętych runów review.yml na dobę UTC"
+    required: false
+    default: "5"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js Environment
+      uses: ./.github/actions/setup-node
+      with:
+        working-directory: tools/code-reviewer
+
+    - name: Etykiety ai-cr
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        gh label create "ai-cr:passed" --color 2DA44E --description "AI code review: pass" --force
+        gh label create "ai-cr:failed" --color D73A4A --description "AI code review: fail lub błąd" --force
+        gh label create "ai-cr:review" --color 1D76DB --description "Dodaj, aby ponowić AI code review" --force
+
+    # Bez kosztu: brak modelu albo wyczerpany limit kończą przebieg przed wywołaniem modelu.
+    # Licznik obejmuje dzisiejsze (UTC) runy review.yml poza bieżącym i poza pominiętymi (fork, inna
+    # etykieta); równoległe runy z różnych PR-ów mogą przekroczyć limit o 1.
+    - name: Warunki wstępne
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REVIEW_MODEL: ${{ inputs.review-model }}
+        DAILY_CAP: ${{ inputs.daily-cap }}
+      run: |
+        if [[ -z "${REVIEW_MODEL//[[:space:]]/}" ]]; then
+          echo "Brak vars.REVIEW_MODEL, model nie zostanie wywołany."
+          echo "AI_CR_OUTCOME=missing-model" >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        if [[ ! "$DAILY_CAP" =~ ^[1-9][0-9]*$ ]]; then
+          echo "::error::daily-cap musi być dodatnią liczbą całkowitą"
+          exit 1
+        fi
+
+        today="$(date -u +%Y-%m-%d)"
+        # --paginate z --jq wypisuje jedną liczbę na stronę, jq -s sumuje strony.
+        runs_today="$(
+          gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/review.yml/runs?created=%3E%3D$today&per_page=100" \
+            --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID and .conclusion != \"skipped\")] | length" |
+            jq -s 'add // 0'
+        )"
+        echo "Runy review.yml dzisiaj (UTC, bez bieżącego i pominiętych): $runs_today / limit $DAILY_CAP"
+
+        if (( runs_today >= DAILY_CAP )); then
+          echo "AI_CR_OUTCOME=daily-cap" >> "$GITHUB_ENV"
+        fi
+
+    - name: Diff PR-a
+      if: env.AI_CR_OUTCOME == ''
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/ai-cr"
+        diff_file="$RUNNER_TEMP/ai-cr/diff.patch"
+
+        # Pliki generowane: duże, bez wartości dla review, liczyłyby się do REVIEW_MAX_DIFF_BYTES.
+        echo "AI_CR_EXCLUDED=**/package-lock.json,src/db/database.types.ts" >> "$GITHUB_ENV"
+        git diff "origin/$BASE_REF...HEAD" -- . \
+          ':(exclude,glob)**/package-lock.json' \
+          ':(exclude)src/db/database.types.ts' > "$diff_file"
+
+        if [[ ! -s "$diff_file" ]]; then
+          echo "Diff po wykluczeniach jest pusty, model nie zostanie wywołany."
+          echo "AI_CR_OUTCOME=empty-diff" >> "$GITHUB_ENV"
+        else
+          echo "Diff do review: $(wc -c < "$diff_file") B"
+        fi
+
+    # Krok sam się nie wywraca: kod wyjścia zapisuje, a o kolorze joba decyduje bramka na końcu.
+    - name: Review modelu
+      if: env.AI_CR_OUTCOME == ''
+      shell: bash
+      working-directory: tools/code-reviewer
+      env:
+        REVIEW_PROVIDER: openrouter
+        REVIEW_MODEL: ${{ inputs.review-model }}
+        OPENROUTER_API_KEY: ${{ inputs.openrouter-api-key }}
+        REVIEW_PR_TITLE: ${{ inputs.pr-title }}
+        REVIEW_PR_BODY: ${{ inputs.pr-body }}
+      run: |
+        out_dir="$RUNNER_TEMP/ai-cr"
+        review_file="$out_dir/review.json"
+        stderr_file="$out_dir/review.stderr"
+
+        set +e
+        npm run --silent review < "$out_dir/diff.patch" > "$review_file" 2> "$stderr_file"
+        exit_code=$?
+        set -e
+
+        # Linia metryk "[review] {...}" i ewentualny błąd w logu joba.
+        cat "$stderr_file"
+
+        verdict=""
+        if [[ "$exit_code" == 0 || "$exit_code" == 2 ]]; then
+          outcome=review
+          verdict="$(jq -r '.verdict // empty' "$review_file" 2> /dev/null || true)"
+          [[ "$verdict" == "pass" ]] || verdict=fail
+        else
+          outcome=error
+        fi
+        echo "Kod wyjścia review: $exit_code, wynik: $outcome${verdict:+, werdykt: $verdict}"
+
+        {
+          echo "AI_CR_OUTCOME=$outcome"
+          echo "AI_CR_EXIT_CODE=$exit_code"
+          echo "AI_CR_VERDICT=$verdict"
+          echo "AI_CR_REVIEW_FILE=$review_file"
+          echo "AI_CR_STDERR_FILE=$stderr_file"
+        } >> "$GITHUB_ENV"
+
+    # Jeden komentarz na PR: aktualizowany po znaczniku STICKY_MARKER z src/comment/render.ts.
+    - name: Komentarz w PR-ze
+      if: always()
+      shell: bash
+      working-directory: tools/code-reviewer
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        AI_CR_DAILY_CAP: ${{ inputs.daily-cap }}
+      run: |
+        [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::pr-number nie jest liczbą"; exit 1; }
+
+        # Brak wyniku = któryś krok przed review się wywrócił.
+        export AI_CR_OUTCOME="${AI_CR_OUTCOME:-error}"
+        export AI_CR_RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        mkdir -p "$RUNNER_TEMP/ai-cr"
+        comment_file="$RUNNER_TEMP/ai-cr/comment.md"
+        npm run --silent comment > "$comment_file"
+
+        comment_ids="$(
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- ai-cr:sticky -->"))) | .id'
+        )"
+        comment_id="${comment_ids%%$'\n'*}"
+
+        payload="$(jq -n --rawfile body "$comment_file" '{body: $body}')"
+        if [[ -n "$comment_id" ]]; then
+          echo "Aktualizacja komentarza $comment_id"
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input - <<< "$payload" > /dev/null
+        else
+          echo "Nowy komentarz"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input - <<< "$payload" > /dev/null
+        fi
+
+    # Dokładnie jedna z ai-cr:passed / ai-cr:failed; pusty diff zostawia je bez zmian.
+    - name: Etykiety PR-a
+      if: always()
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+      run: |
+        [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::pr-number nie jest liczbą"; exit 1; }
+        labels_url="repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels"
+
+        add_label() {
+          gh api -X POST "$labels_url" -f "labels[]=$1" > /dev/null
+        }
+        # Zdjęcie nieobecnej etykiety to 404, który nie może wywrócić kroku.
+        remove_label() {
+          gh api -X DELETE "$labels_url/${1//:/%3A}" > /dev/null 2>&1 || echo "Etykieta $1 nie była nadana."
+        }
+
+        outcome="${AI_CR_OUTCOME:-error}"
+        if [[ "$outcome" == "empty-diff" ]]; then
+          echo "Pusty diff: etykiety ai-cr:passed / ai-cr:failed bez zmian."
+        elif [[ "$outcome" == "review" && "${AI_CR_VERDICT:-}" == "pass" && "${AI_CR_EXIT_CODE:-}" == "0" ]]; then
+          add_label "ai-cr:passed"
+          remove_label "ai-cr:failed"
+        else
+          add_label "ai-cr:failed"
+          remove_label "ai-cr:passed"
+        fi
+        remove_label "ai-cr:review"
+
+    - name: Bramka AI code review
+      if: always()
+      shell: bash
+      env:
+        DAILY_CAP: ${{ inputs.daily-cap }}
+      run: |
+        outcome="${AI_CR_OUTCOME:-}"
+        exit_code="${AI_CR_EXIT_CODE:-}"
+        verdict="${AI_CR_VERDICT:-}"
+
+        case "$outcome" in
+          empty-diff)
+            echo "Brak zmian do review."
+            exit 0
+            ;;
+          review)
+            if [[ "$exit_code" == "2" ]]; then
+              reason="Koszt review przekroczył budżet REVIEW_MAX_COST_USD"
+            elif [[ "$exit_code" == "0" && "$verdict" == "pass" ]]; then
+              echo "AI code review: pass"
+              exit 0
+            else
+              reason="AI code review: verdict fail"
+            fi
+            ;;
+          missing-model) reason="Brak zmiennej repozytorium REVIEW_MODEL, model nie został wywołany" ;;
+          daily-cap) reason="Wyczerpany dzienny limit $DAILY_CAP przebiegów review (doba UTC)" ;;
+          error) reason="Review zakończone błędem (kod wyjścia $exit_code), szczegóły w kroku Review modelu" ;;
+          *) reason="Przygotowanie review nie powiodło się, szczegóły we wcześniejszych krokach" ;;
+        esac
+
+        echo "::error::$reason"
+        exit 1

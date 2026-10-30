@@ -1,0 +1,44 @@
+name: AI Code Review
+
+# Permissions dla GITHUB_TOKEN: komentarz i etykiety w PR-ze, odczyt runów do dziennego limitu
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
+# Uruchomienie workflow: pull request do mastera; ponowne review przez etykietę ai-cr:review
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  review:
+    name: AI code review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # PR z forka nie ma sekretów; inna etykieta niż ai-cr:review nie odpala płatnego review.
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.action != 'labeled' || github.event.label.name == 'ai-cr:review')
+    # Concurrency przy jobie, nie przy workflow: run pominięty przez if nie anuluje trwającego review.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: AI code review
+        uses: ./.github/actions/ai-reviewer
+        with:
+          github-token: ${{ github.token }}
+          openrouter-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          review-model: ${{ vars.REVIEW_MODEL }}
+          pr-number: ${{ github.event.pull_request.number }}
+          pr-title: ${{ github.event.pull_request.title }}
+          pr-body: ${{ github.event.pull_request.body }}
+          base-ref: ${{ github.event.pull_request.base.ref }}

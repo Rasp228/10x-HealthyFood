@@ -6,16 +6,23 @@ inputs:
     description: "Path to .nvmrc file"
     required: false
     default: ".nvmrc"
+  # Domyślne "." to katalog główny repo, od którego zależą cztery wymagane joby ci-cd.yml.
+  working-directory:
+    description: "Katalog z package.json i package-lock.json, w którym działa npm ci"
+    required: false
+    default: "."
 
 runs:
   using: "composite"
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version-file: ${{ inputs.node-version-file }}
         cache: "npm"
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
     - name: Instalacja zależności
       run: npm ci
       shell: bash
+      working-directory: ${{ inputs.working-directory }}

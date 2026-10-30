@@ -397,24 +397,24 @@ zgodna i może zostać.
 
 #### Automated
 
-- [x] 1.1 Testy pakietu przechodzą: `cd tools/code-reviewer && npm test`
-- [x] 1.2 Typecheck pakietu przechodzi: `cd tools/code-reviewer && npm run typecheck`
-- [x] 1.3 Formatowanie repo przechodzi: `npm run format:check`
-- [x] 1.4 `git diff -- tools/code-reviewer/src/review-schema.ts` jest pusty (schemat bez zmian)
+- [x] 1.1 Testy pakietu przechodzą: `cd tools/code-reviewer && npm test` — 6c1abbe
+- [x] 1.2 Typecheck pakietu przechodzi: `cd tools/code-reviewer && npm run typecheck` — 6c1abbe
+- [x] 1.3 Formatowanie repo przechodzi: `npm run format:check` — 6c1abbe
+- [x] 1.4 `git diff -- tools/code-reviewer/src/review-schema.ts` jest pusty (schemat bez zmian) — 6c1abbe
 
 #### Manual
 
-- [x] 1.5 Lokalny przebieg z REVIEW_PR_TITLE/REVIEW_PR_BODY (model lokalny) zwraca poprawny JSON, a podsumowanie odnosi się do opisu
-- [x] 1.6 Wyrenderowany komentarz dla przykładowego review czytelnie wyświetla się w podglądzie Markdown
+- [x] 1.5 Lokalny przebieg z REVIEW_PR_TITLE/REVIEW_PR_BODY (model lokalny) zwraca poprawny JSON, a podsumowanie odnosi się do opisu — 6c1abbe
+- [x] 1.6 Wyrenderowany komentarz dla przykładowego review czytelnie wyświetla się w podglądzie Markdown — 6c1abbe
 
 ### Phase 2: CI — `setup-node`, akcja `ai-reviewer`, workflow `review.yml`
 
 #### Automated
 
-- [ ] 2.1 Formatowanie przechodzi (YAML akcji i workflowu): `npm run format:check`
-- [ ] 2.2 Lint, typecheck i testy repo bez zmian: `npm run lint`, `npm run typecheck`, `npm run test`
-- [ ] 2.3 Żaden krok `run:` w ai-reviewer/action.yml i review.yml nie zawiera `${{`
-- [ ] 2.4 Każde `uses:` zewnętrznej akcji w nowych/zmienionych plikach jest przypięte 40-znakowym SHA
+- [x] 2.1 Formatowanie przechodzi (YAML akcji i workflowu): `npm run format:check`
+- [x] 2.2 Lint, typecheck i testy repo bez zmian: `npm run lint`, `npm run typecheck`, `npm run test`
+- [x] 2.3 Żaden krok `run:` w ai-reviewer/action.yml i review.yml nie zawiera `${{`
+- [x] 2.4 Każde `uses:` zewnętrznej akcji w nowych/zmienionych plikach jest przypięte 40-znakowym SHA
 
 #### Manual
 
