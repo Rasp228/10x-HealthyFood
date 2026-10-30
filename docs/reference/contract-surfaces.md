@@ -262,3 +262,120 @@ source, message, stack, at })` line per event. `kind` is a closed enum
 - **Breaks**: `npm audit fix --force` proposes `@astrojs/vercel@8.0.4` for both, and it should
   not be taken: a major downgrade that drops the `x-astro-path` patch and forces a return to
   Astro 5.
+
+## AI code review
+
+The `AI code review` job (`.github/workflows/review.yml`) runs the composite action
+`.github/actions/ai-reviewer` on every pull request into `master`; the action drives the package in
+`tools/code-reviewer`. Its names are spread over YAML, Bash and TypeScript, so no type check or test
+catches a rename that reaches only one of them.
+
+### Labels — `ai-cr:passed`, `ai-cr:failed`, `ai-cr:review`
+
+- **Defined**: created (`gh label create --force`) in `.github/actions/ai-reviewer/action.yml:61-63`
+  and set or removed in its "Etykiety PR-a" step (`action.yml:199-227`); `ai-cr:review` is also
+  spelled in the job's `if:` in `.github/workflows/review.yml:23`.
+- **Contract**: after a non-skipped run a PR carries exactly one of `ai-cr:passed` / `ai-cr:failed`
+  — `passed` only for verdict `pass` with exit code 0, `failed` for everything else (verdict
+  `fail`, over budget, missing model, daily cap, error). An empty diff leaves both unchanged.
+  `ai-cr:review` is the re-run trigger: a person adds it, the `labeled` event passes the `if:`
+  filter, and the action removes it again after every non-skipped run. Any other label skips the
+  job. Labels the action sets through `GITHUB_TOKEN` trigger no new run, so setting
+  `ai-cr:passed` does not loop the workflow.
+- **Breaks**: renaming `ai-cr:review` in the action and not in the `if:` (or the reverse) makes
+  adding the label skip the job, so a re-review can only be forced by a push, and the label is
+  never removed. Dropping the label filter from the `if:` turns every label a person adds into a
+  paid run. Renaming `ai-cr:passed` / `ai-cr:failed` leaves the old label on existing PRs next to
+  the new one — the action removes only the names it knows.
+
+### `<!-- ai-cr:sticky -->`
+
+- **Defined**: `STICKY_MARKER` in `tools/code-reviewer/src/comment/render.ts:9`; every comment
+  variant starts with it. Searched for as a literal string in the "Komentarz w PR-ze" step,
+  `.github/actions/ai-reviewer/action.yml:185`.
+- **Contract**: one comment per PR, updated in place: the action takes the first issue comment
+  whose author is `github-actions[bot]` and whose body starts with the marker, PATCHes it, and
+  POSTs a new one only when none matches.
+- **Breaks**: changing the marker in one of the two places, or in both without migrating existing
+  comments, makes the next run post a second comment instead of updating the first. The author
+  filter is part of the contract too — a comment a person pastes with the marker is never updated.
+
+### `vars.REVIEW_MODEL`
+
+- **Defined**: a repository variable (Settings → Secrets and variables → Actions → Variables),
+  passed in `.github/workflows/review.yml:40` as `review-model`, read as `REVIEW_MODEL` in
+  `tools/code-reviewer/src/provider.ts:35`.
+- **Contract**: in CI an empty or whitespace-only value ends the run in "Warunki wstępne"
+  (`.github/actions/ai-reviewer/action.yml:75-79`) before any model call: outcome `missing-model`,
+  a comment naming the missing variable, `ai-cr:failed` and a red job. Locally an empty
+  `REVIEW_MODEL` still means the package's default model — the CI check deliberately does not.
+- **Breaks**: renaming the variable on one side only reads as "not set": every PR gets a red job
+  without a model call.
+
+### `OPENROUTER_API_KEY` (GitHub Actions secret)
+
+- **Defined**: a repository secret, passed in `.github/workflows/review.yml:39` as
+  `openrouter-api-key` and exposed only in the `env:` of the "Review modelu" step
+  (`.github/actions/ai-reviewer/action.yml:130`); read in `tools/code-reviewer/src/provider.ts:38`.
+- **Contract**: the same key as the application's `OPENROUTER_API_KEY` in Vercel
+  (`src/env.d.ts`), so CI and the app spend from one key and one limit. A pull request from a fork
+  gets no secrets, so the job's `if:` skips it (`review.yml:23`) instead of failing it. The key
+  never goes into `run:` text, into another step's `env:`, or behind `pull_request_target`.
+- **Breaks**: rotation is manual and now covers two places — Vercel and this secret. Rotating only
+  in Vercel turns every review into `error` (red job, `ai-cr:failed`); a key leaked from CI
+  invalidates the app's key as well.
+
+### `REVIEW_PR_TITLE` / `REVIEW_PR_BODY`, `<pr_title>` / `<pr_description>`, `MAX_PR_BODY_BYTES`
+
+- **Defined**: env names set in `.github/actions/ai-reviewer/action.yml:131-132` (from
+  `review.yml:42-43`) and read in `tools/code-reviewer/src/index.ts:51-52`. Fence tags in
+  `FENCE_TAGS` and `buildReviewPrompt` (`tools/code-reviewer/src/prompts/index.ts:19,57-63`),
+  named in `SYSTEM_PROMPT` (`src/prompts/system-prompt.ts:16-17`). `MAX_PR_BODY_BYTES = 4000` in
+  `src/prompts/index.ts:17`.
+- **Contract**: the PR title and description are untrusted data that reach a script only through
+  `env:`. Each is fenced in its own tag before the `<diff>`, every fence tag's closing form is
+  escaped inside both, and the system prompt declares the fenced text data, not instructions. An
+  empty field is treated as absent. The description is cut, not rejected, at `MAX_PR_BODY_BYTES`
+  UTF-8 bytes on a character boundary and does not count toward `REVIEW_MAX_DIFF_BYTES`. The title
+  has no cap.
+- **Breaks**: renaming an env var on one side silently drops the PR context — the review still
+  runs, on the diff alone. Renaming a tag in `buildReviewPrompt` without `SYSTEM_PROMPT` leaves the
+  model told about fences that are not there; adding a fence without listing it in `FENCE_TAGS`
+  lets the author close it early from the title or description. Interpolating `${{ ... }}` of the
+  title or body into `run:` text is a script injection.
+
+### `working-directory` input of `.github/actions/setup-node`
+
+- **Defined**: `.github/actions/setup-node/action.yml:10-13`, default `"."`; it sets both the npm
+  cache dependency path and the directory `npm ci` runs in.
+- **Contract**: the four required jobs in `.github/workflows/ci-cd.yml` (`:41`, `:69`, `:95`,
+  `:127`) call the action without it and rely on the default — the repo root. Only the reviewer
+  passes `tools/code-reviewer` (`.github/actions/ai-reviewer/action.yml:51-53`).
+- **Breaks**: changing the default, or renaming the input, installs the wrong package (or none) in
+  all four required jobs at once and turns every one of them red.
+
+### Daily run cap
+
+- **Defined**: the "Warunki wstępne" step of `.github/actions/ai-reviewer/action.yml:86-98`, with
+  the `daily-cap` input (`:42-45`, default `5`).
+- **Contract**: the action counts runs of the workflow file `review.yml` created since 00:00 UTC
+  (`created=>=<UTC date>`), excluding the current run and runs with `conclusion == "skipped"`
+  (fork PRs, other labels). At or above the cap the run ends before the model call: outcome
+  `daily-cap`, a comment, `ai-cr:failed` and a red job. Runs that ended without a model call
+  (empty diff, missing model, an earlier cap hit) are still counted. Concurrency is per PR, so two
+  runs from different PRs that start together can both see `cap - 1` and pass — the cap can be
+  exceeded by one.
+- **Breaks**: renaming `.github/workflows/review.yml` without the file name in the API path makes
+  the query return 404 and the step fail, so every run is red. Raising the cap is a cost decision,
+  not a fix for a red job.
+
+### `AI code review` is not a required check
+
+- **Defined**: the job `name:` in `.github/workflows/review.yml:19`; deliberately absent from
+  `required_status_checks` in `.github/rulesets/master.json` (see "Job names — required-check
+  contexts" under CI gates).
+- **Contract**: the review is advisory. A missing model, an exhausted daily cap or a provider
+  error must not block a merge into `master`.
+- **Breaks**: adding it as a required context blocks every merge on a day the cap is reached or
+  `REVIEW_MODEL` is unset — and a skipped job (fork PR) counts as passed, so it would not gate
+  those PRs anyway.

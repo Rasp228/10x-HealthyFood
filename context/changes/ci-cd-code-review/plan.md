@@ -411,26 +411,26 @@ zgodna i może zostać.
 
 #### Automated
 
-- [x] 2.1 Formatowanie przechodzi (YAML akcji i workflowu): `npm run format:check`
-- [x] 2.2 Lint, typecheck i testy repo bez zmian: `npm run lint`, `npm run typecheck`, `npm run test`
-- [x] 2.3 Żaden krok `run:` w ai-reviewer/action.yml i review.yml nie zawiera `${{`
-- [x] 2.4 Każde `uses:` zewnętrznej akcji w nowych/zmienionych plikach jest przypięte 40-znakowym SHA
+- [x] 2.1 Formatowanie przechodzi (YAML akcji i workflowu): `npm run format:check` — da1a4fa
+- [x] 2.2 Lint, typecheck i testy repo bez zmian: `npm run lint`, `npm run typecheck`, `npm run test` — da1a4fa
+- [x] 2.3 Żaden krok `run:` w ai-reviewer/action.yml i review.yml nie zawiera `${{` — da1a4fa
+- [x] 2.4 Każde `uses:` zewnętrznej akcji w nowych/zmienionych plikach jest przypięte 40-znakowym SHA — da1a4fa
 
 #### Manual
 
-- [ ] 2.5 Po pushu na `master` cztery wymagane joby „Test & Build Master” są zielone
+- [x] 2.5 Po pushu na `master` cztery wymagane joby „Test & Build Master” są zielone — da1a4fa
 
 ### Phase 3: Kontrakt i testowy PR
 
 #### Automated
 
-- [ ] 3.1 Formatowanie przechodzi po edycji dokumentacji: `npm run format:check`
+- [x] 3.1 Formatowanie przechodzi po edycji dokumentacji: `npm run format:check`
 
 #### Manual
 
-- [ ] 3.2 Run bez `vars.REVIEW_MODEL`: czerwony job, komentarz z przyczyną, `ai-cr:failed`, brak wywołania modelu
-- [ ] 3.3 Run z modelem: komentarz z ocenami, werdyktem i metrykami; etykieta zgodna z werdyktem; linia metryk w logach; kolor joba zgodny z werdyktem
-- [ ] 3.4 Push kolejnego commita aktualizuje ten sam komentarz
-- [ ] 3.5 Etykieta `ai-cr:review` uruchamia ponowne review i zostaje zdjęta po runie
-- [ ] 3.6 Zrzuty: pipeline, logi joba, komentarz LLM
-- [ ] 3.7 Wpisy w `contract-surfaces.md` opisują wszystkie nowe nazwy nośne
+- [x] 3.2 Run bez `vars.REVIEW_MODEL`: czerwony job, komentarz z przyczyną, `ai-cr:failed`, brak wywołania modelu
+- [x] 3.3 Run z modelem: komentarz z ocenami, werdyktem i metrykami; etykieta zgodna z werdyktem; linia metryk w logach; kolor joba zgodny z werdyktem
+- [x] 3.4 Push kolejnego commita aktualizuje ten sam komentarz
+- [x] 3.5 Etykieta `ai-cr:review` uruchamia ponowne review i zostaje zdjęta po runie
+- [x] 3.6 Zrzuty: pipeline, logi joba, komentarz LLM
+- [x] 3.7 Wpisy w `contract-surfaces.md` opisują wszystkie nowe nazwy nośne
