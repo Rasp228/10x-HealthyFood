@@ -424,13 +424,13 @@ zgodna i może zostać.
 
 #### Automated
 
-- [x] 3.1 Formatowanie przechodzi po edycji dokumentacji: `npm run format:check`
+- [x] 3.1 Formatowanie przechodzi po edycji dokumentacji: `npm run format:check` — 5013bfd
 
 #### Manual
 
-- [x] 3.2 Run bez `vars.REVIEW_MODEL`: czerwony job, komentarz z przyczyną, `ai-cr:failed`, brak wywołania modelu
-- [x] 3.3 Run z modelem: komentarz z ocenami, werdyktem i metrykami; etykieta zgodna z werdyktem; linia metryk w logach; kolor joba zgodny z werdyktem
-- [x] 3.4 Push kolejnego commita aktualizuje ten sam komentarz
-- [x] 3.5 Etykieta `ai-cr:review` uruchamia ponowne review i zostaje zdjęta po runie
-- [x] 3.6 Zrzuty: pipeline, logi joba, komentarz LLM
-- [x] 3.7 Wpisy w `contract-surfaces.md` opisują wszystkie nowe nazwy nośne
+- [x] 3.2 Run bez `vars.REVIEW_MODEL`: czerwony job, komentarz z przyczyną, `ai-cr:failed`, brak wywołania modelu — 5013bfd
+- [x] 3.3 Run z modelem: komentarz z ocenami, werdyktem i metrykami; etykieta zgodna z werdyktem; linia metryk w logach; kolor joba zgodny z werdyktem — 5013bfd
+- [x] 3.4 Push kolejnego commita aktualizuje ten sam komentarz — 5013bfd
+- [x] 3.5 Etykieta `ai-cr:review` uruchamia ponowne review i zostaje zdjęta po runie — 5013bfd
+- [x] 3.6 Zrzuty: pipeline, logi joba, komentarz LLM — 5013bfd
+- [x] 3.7 Wpisy w `contract-surfaces.md` opisują wszystkie nowe nazwy nośne — 5013bfd
