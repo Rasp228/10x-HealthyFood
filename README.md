@@ -129,3 +129,4 @@ The project is currently in MVP development phase.
 ## License
 
 MIT
+Test AI code review.
