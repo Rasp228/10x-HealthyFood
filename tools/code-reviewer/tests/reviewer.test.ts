@@ -144,6 +144,14 @@ describe("createReviewer", () => {
     assert.deepEqual(user?.content, [{ type: "text", text: buildReviewPrompt(DIFF) }]);
   });
 
+  it("sends the PR context with the diff", async () => {
+    const model = mockModel();
+    const context = { title: "Dodaj odpowiedź", body: "Zwraca 42." };
+    await createReviewer(reviewerOptions("local", model)).review(DIFF, context);
+    const user = model.doGenerateCalls[0]!.prompt.find((message) => message.role === "user");
+    assert.deepEqual(user?.content, [{ type: "text", text: buildReviewPrompt(DIFF, context) }]);
+  });
+
   it("gives the local model the schema rubrics", async () => {
     const model = mockModel();
     await createReviewer(reviewerOptions("local", model)).review(DIFF);

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "review": "tsx src/index.ts",
+    "comment": "tsx src/comment/cli.ts",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },

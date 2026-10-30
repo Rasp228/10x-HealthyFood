@@ -8,6 +8,10 @@
 // Empty stdin without REVIEW_SAMPLE=1 is an error, so a CI job with a wrong diff range
 // fails instead of reviewing the sample.
 //
+// Optional PR context, each fenced in its own tags before the diff (empty = absent):
+//   REVIEW_PR_TITLE  PR title
+//   REVIEW_PR_BODY   PR description, cut to MAX_PR_BODY_BYTES; not counted in REVIEW_MAX_DIFF_BYTES
+//
 // Exit codes: 0 review printed, 1 failure (config, oversized diff, model error),
 // 2 review printed but the run ended over REVIEW_MAX_COST_USD.
 import { readFile } from "node:fs/promises";
@@ -43,7 +47,11 @@ async function main(): Promise<void> {
   // Built before reading stdin, so a misconfigured run fails fast, as before the refactor.
   const reviewer = createReviewer();
   const diff = await readDiff();
-  const { review: result, metrics } = await reviewer.review(diff);
+  const context = {
+    title: process.env.REVIEW_PR_TITLE || undefined,
+    body: process.env.REVIEW_PR_BODY || undefined,
+  };
+  const { review: result, metrics } = await reviewer.review(diff, context);
 
   console.error(`[review] ${JSON.stringify(metrics)}`);
   if (metrics.cost !== null && metrics.cost > metrics.budget) {

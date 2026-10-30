@@ -4,7 +4,7 @@
 import { performance } from "node:perf_hooks";
 import { isStepCount, Output, ToolLoopAgent, type LanguageModelUsage, type StepResult } from "ai";
 import { costExceeds, readMaxCost, readMaxDiffBytes, totalCost } from "../cost.js";
-import { buildInstructions, buildReviewPrompt } from "../prompts/index.js";
+import { buildInstructions, buildReviewPrompt, type PrContext } from "../prompts/index.js";
 import { selectModel, type ProviderName, type ReviewModel } from "../provider.js";
 import { REVIEW_SCHEMA, type Review } from "../review-schema.js";
 
@@ -114,7 +114,9 @@ export function createReviewer(options: ReviewerOptions = {}) {
     stopWhen: [isStepCount(MAX_STEPS), costExceeds(maxCostUsd)],
   });
 
-  async function review(diff: string): Promise<ReviewResult> {
+  // The PR context does not count toward the diff cap; the description has its own cap
+  // (MAX_PR_BODY_BYTES), applied when the prompt is built.
+  async function review(diff: string, context?: PrContext): Promise<ReviewResult> {
     // Checked before the request, so an oversized diff costs nothing.
     const diffBytes = Buffer.byteLength(diff, "utf8");
     if (diffBytes > maxDiffBytes) {
@@ -140,7 +142,7 @@ export function createReviewer(options: ReviewerOptions = {}) {
     let output: Review;
     try {
       const result = await agent.generate({
-        prompt: buildReviewPrompt(diff),
+        prompt: buildReviewPrompt(diff, context),
         timeout: timeoutMs,
         onStepEnd: (step) => {
           steps.push(step);
