@@ -19,6 +19,17 @@
   // z 2026-10-09). Przeglądać przy każdym bumpie @astrojs/vercel / @vercel/cli-config.
   // Stan na 2026-10-27.
   //
+  // GHSA-3g3m-2fjr-6pw4 (glob, moderate) i GHSA-g3hv-75wg-m249 (minimatch, moderate) - DoS
+  // na złośliwym wzorcu glob. Łatki są tylko w nowych majorach (glob >= 14.0.2, minimatch >= 11.0.1),
+  // a żaden konsument w drzewie ich nie dopuszcza: eslint 9 / jsx-a11y / react (minimatch ^3),
+  // typescript-eslint (^10), jest 30 i test-exclude (glob ^13 / ^10), @vercel/nft 1.11 (glob ^13).
+  // Wszystkie to narzędzia dev/build, wzorce pochodzą z configu repo, nie od użytkownika; src/ nie
+  // importuje ani glob, ani minimatch. Do bundla produkcyjnego trafia tylko @vercel/nft, który
+  // śledzi pliki w czasie builda. Bez `overrides`: minimatch 3 -> 11 zmienia API (brak default
+  // exportu) i wywraca ESLint, a override pod adapterem zmienia funkcję Vercel (lekcja
+  // z 2026-10-09). Przeglądać przy bumpie eslint / typescript-eslint / jest / @astrojs/vercel.
+  // Stan na 2026-11-02.
+  //
   // GHSA-vfj7-8cjw-p6xm (braces) i GHSA-hp3w-g68c-fv3c (sprintf-js) usunięte 2026-10-27:
   // nie ma ich już w drzewie zależności (audit-ci: "Consider not allowlisting").
   //
@@ -39,6 +50,20 @@
         "active": true,
         "expiry": "2027-01-27",
         "notes": "zod 4.1.11 przypięty w @vercel/cli-config, brak łatki"
+      }
+    },
+    {
+      "GHSA-3g3m-2fjr-6pw4": {
+        "active": true,
+        "expiry": "2027-02-02",
+        "notes": "glob 10/13 przez jest, test-exclude i @vercel/nft; łatka tylko w glob 14"
+      }
+    },
+    {
+      "GHSA-g3hv-75wg-m249": {
+        "active": true,
+        "expiry": "2027-02-02",
+        "notes": "minimatch 3/9/10 przez eslint, typescript-eslint, jest i @vercel/nft; łatka tylko w minimatch 11"
       }
     }
   ]

@@ -238,7 +238,7 @@ source, message, stack, at })` line per event. `kind` is a closed enum
   The anonymous REST API shows the rules (`rules/branches/master`) but not `bypass_actors` or a
   PR's `mergeStateStatus`; checking those needs an authenticated `gh` or the UI.
 
-### `GHSA-9wv6-86v2-598j`, `GHSA-mrhx-c7xc-m3w5` (path-scoped)
+### `GHSA-9wv6-86v2-598j`, `GHSA-mrhx-c7xc-m3w5` (path-scoped), `GHSA-3g3m-2fjr-6pw4`, `GHSA-g3hv-75wg-m249`
 
 - **Declared**: the `allowlist` in `audit-ci.jsonc`, with the reasoning inline; the same file
   carries the `moderate` failure threshold.
@@ -249,6 +249,14 @@ source, message, stack, at })` line per event. `kind` is a closed enum
     covered by the entry, so a vulnerable direct `zod` still fails the gate. No `overrides` —
     forcing a `zod` into the adapter changes the Vercel function, see
     @context/foundation/lessons.md.
+  - `GHSA-3g3m-2fjr-6pw4` (`glob`) and `GHSA-g3hv-75wg-m249` (`minimatch`), added 2026-11-02:
+    patched only in new majors (`glob` ≥ 14.0.2, `minimatch` ≥ 11.0.1) that no consumer in the
+    tree accepts — ESLint 9 and its plugins, `typescript-eslint`, Jest 30 and `@vercel/nft`. All
+    dev/build tooling fed patterns from repo config; `src/` imports neither. Allowlisted by ID, not
+    path, so a new runtime dependency pulling either would also pass — check `npm ls glob
+minimatch --omit=dev` at review. No `overrides`: `minimatch` 3 → 11 drops the default export
+    ESLint relies on. Review trigger: a bump of `eslint`, `typescript-eslint`, `jest` or
+    `@astrojs/vercel`.
   - Removed 2026-10-27 as no longer in the tree: `GHSA-vfj7-8cjw-p6xm` (`braces`) and
     `GHSA-hp3w-g68c-fv3c` (`sprintf-js`).
 - **Contract**: every entry has an inline comment naming its source and its review trigger — an
