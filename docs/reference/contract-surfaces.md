@@ -379,3 +379,31 @@ catches a rename that reaches only one of them.
 - **Breaks**: adding it as a required context blocks every merge on a day the cap is reached or
   `REVIEW_MODEL` is unset — and a skipped job (fork PR) counts as passed, so it would not gate
   those PRs anyway.
+
+### Evals — `evals/promptfooconfig.yaml`, `gradeReview`, `EVAL_MAX_CALLS`
+
+- **Defined**: the cases and their `vars` (`expectedVerdict`, `maxScores`, `minScore`) in
+  `tools/code-reviewer/evals/promptfooconfig.yaml`; `gradeReview` and `CRITERIA` in
+  `tools/code-reviewer/evals/assertions.ts`; the `:free` check (`assertFreeModel`), the call
+  counter and `EVAL_MAX_CALLS` (default `DEFAULT_EVAL_MAX_CALLS = 10`) in
+  `tools/code-reviewer/evals/provider.ts`. Run with `npm run eval:local` / `eval:openrouter` in
+  `tools/code-reviewer`; not part of CI.
+- **Contract**: the `maxScores` keys and the `expectedVerdict` values are field names and enum
+  values of `REVIEW_SCHEMA` (`src/review-schema.ts`); `CRITERIA` is read from its shape, so
+  `minScore` covers every scored criterion. An unknown key, a missing `expectedVerdict` or a
+  non-numeric threshold fails the case with the reason instead of skipping the check. The
+  `openrouter` provider runs only on a `REVIEW_MODEL` ending in `:free` — an empty value would
+  fall back to the paid default model, so it is refused too — and checks it before any call. The
+  counter is per process, shared by every provider instance, and counts reviews, not HTTP
+  requests: with `MAX_RETRIES = 1` (`src/agent/reviewer.ts`) one review can be two requests. A
+  slot is reserved before the call is awaited, so a failed call still uses it. The first
+  OpenRouter call that reports `metrics.cost > 0` ends its case with an error and refuses every
+  later OpenRouter case of the run; `cost: null` (llama.cpp) is not a violation. `local` has
+  none of these limits.
+- **Breaks**: renaming a criterion or a verdict value in the schema without the YAML turns the
+  affected cases red with "is not a criterion of REVIEW_SCHEMA" — the intended signal, not a
+  flaky model. Dropping the `:free` check or the counter lets an eval run spend on the paid
+  default model. The OpenRouter key is the CI secret's key (see `OPENROUTER_API_KEY` above), so
+  eval runs and the "Daily run cap" of `AI code review` draw on the same daily free-model limit:
+  up to `2 × EVAL_MAX_CALLS` requests per run can leave CI reviews of that day failing with a
+  provider error. Raising `EVAL_MAX_CALLS` is a cost decision, as with `daily-cap`.

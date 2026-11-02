@@ -11,7 +11,10 @@
     "review": "tsx src/index.ts",
     "comment": "tsx src/comment/cli.ts",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval": "promptfoo eval -c evals/promptfooconfig.yaml --no-cache",
+    "eval:local": "promptfoo eval -c evals/promptfooconfig.yaml --no-cache --filter-providers local",
+    "eval:openrouter": "promptfoo eval -c evals/promptfooconfig.yaml --no-cache --filter-providers openrouter"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.79",
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "promptfoo": "^0.125.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }

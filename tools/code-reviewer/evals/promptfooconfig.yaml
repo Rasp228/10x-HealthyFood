@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Evals of the code reviewer: every case is a diff with an expected verdict and score thresholds,
+# graded by gradeReview (assertions.ts). Run from tools/code-reviewer:
+#   npm run eval:local | npm run eval:openrouter   (add -- --repeat 3 for a pass rate)
+# Paths are relative to this file. The vars names the fields of REVIEW_SCHEMA
+# (src/review-schema.ts): rename them there first, then here.
+description: Code reviewer evals
+
+# The provider reads the diff from vars.diff, not from the rendered prompt, so the diff never goes
+# through the template engine; the prompt only labels the row in the report.
+prompts:
+  - "{{diff}}"
+
+providers:
+  - id: file://provider.ts
+    label: local
+    config:
+      provider: local
+  - id: file://provider.ts
+    label: openrouter
+    config:
+      provider: openrouter
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions.ts:gradeReview
+
+# llama-server serves one request at a time, and the OpenRouter call cap is reserved in order.
+evaluateOptions:
+  maxConcurrency: 1
+
+tests:
+  - description: "sample-2: sekret, IDOR, injection, XSS"
+    vars:
+      diff: file://../data/sample-2.diff
+      expectedVerdict: fail
+      maxScores:
+        securitySafety: 3
+  - description: "sample: off-by-one, null, usunięty clamp"
+    vars:
+      diff: file://../data/sample.diff
+      expectedVerdict: fail
+      maxScores:
+        implementationCorrectness: 4
+  - description: "sample-clean: poprawna zmiana z testem"
+    vars:
+      diff: file://../data/sample-clean.diff
+      expectedVerdict: pass
+      minScore: 4
