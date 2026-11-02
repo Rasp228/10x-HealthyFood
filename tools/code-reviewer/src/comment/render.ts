@@ -11,6 +11,10 @@ export const STICKY_MARKER = "<!-- ai-cr:sticky -->";
 // Cap on a rendered error message; a provider error can carry a whole response body.
 export const MAX_ERROR_MESSAGE_CHARS = 2000;
 
+// Cap on the model's summary; the schema sets no length, and GitHub rejects a comment body over
+// 65 536 characters with 422, which would leave the PR without a comment.
+export const MAX_SUMMARY_CHARS = 4000;
+
 interface OutcomeCommon {
   runUrl?: string;
   // Pathspecs left out of the diff sent to the model (e.g. lockfiles, generated types).
@@ -23,6 +27,8 @@ export type CommentOutcome = OutcomeCommon &
     | { kind: "error"; message: string; metrics: ReviewMetrics | null }
     | { kind: "empty-diff" }
     | { kind: "missing-model" }
+    // A job step before the review (preconditions, diff) failed, so the model never ran.
+    | { kind: "setup-failed" }
     | { kind: "daily-cap"; limit: number }
   );
 
@@ -71,6 +77,22 @@ function truncateMessage(message: string): string {
   return trimmed.length > MAX_ERROR_MESSAGE_CHARS ? `${trimmed.slice(0, MAX_ERROR_MESSAGE_CHARS)}…` : trimmed;
 }
 
+const ZERO_WIDTH_SPACE = "​";
+
+// The summary is model output the PR author can steer through the diff, title and description.
+// Markdown formatting stays; a zero-width space breaks what would act beyond the text: @mentions
+// (pings sent by the bot), raw HTML and HTML comments (<details>, a fake sticky marker) and images
+// loading external URLs. It is invisible, so code spans keep reading the same.
+function sanitizeSummary(summary: string): string {
+  const neutralized = summary
+    .replace(/@(?=[\w-])/g, `@${ZERO_WIDTH_SPACE}`)
+    .replace(/<(?=[a-zA-Z/!?])/g, `<${ZERO_WIDTH_SPACE}`)
+    .replace(/!\[/g, `!${ZERO_WIDTH_SPACE}[`);
+  return neutralized.length > MAX_SUMMARY_CHARS
+    ? `${neutralized.slice(0, MAX_SUMMARY_CHARS)}… _(podsumowanie przycięte do ${MAX_SUMMARY_CHARS} znaków)_`
+    : neutralized;
+}
+
 function renderBody(outcome: CommentOutcome): string[] {
   switch (outcome.kind) {
     case "review": {
@@ -80,7 +102,7 @@ function renderBody(outcome: CommentOutcome): string[] {
       const blocks = [
         `${HEADING}: ${verdict}`,
         ["| Kryterium | Ocena |", "| --- | ---: |", ...rows].join("\n"),
-        review.summary,
+        sanitizeSummary(review.summary),
       ];
       if (budgetExceeded) {
         blocks.push(
@@ -106,6 +128,11 @@ function renderBody(outcome: CommentOutcome): string[] {
       return [
         `${HEADING}: ❌ brak modelu`,
         "Zmienna repozytorium `REVIEW_MODEL` nie jest ustawiona (Settings → Secrets and variables → Actions → Variables), więc model nie został wywołany.",
+      ];
+    case "setup-failed":
+      return [
+        `${HEADING}: ❌ błąd przygotowania`,
+        "Krok joba przed review (warunki wstępne albo diff) zakończył się błędem, więc model nie został wywołany. Szczegóły w logach przebiegu.",
       ];
     case "daily-cap":
       return [

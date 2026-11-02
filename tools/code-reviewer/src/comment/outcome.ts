@@ -7,7 +7,7 @@ import { REVIEW_SCHEMA } from "../review-schema.js";
 import type { CommentOutcome } from "./render.js";
 
 export interface CommentInputs {
-  // AI_CR_OUTCOME: review | error | empty-diff | missing-model | daily-cap.
+  // AI_CR_OUTCOME: review | error | empty-diff | missing-model | daily-cap | setup-failed.
   outcome: string;
   // Contents of AI_CR_REVIEW_FILE / AI_CR_STDERR_FILE; null when the review step never ran.
   reviewStdout: string | null;
@@ -87,6 +87,7 @@ export function buildOutcome(inputs: CommentInputs): CommentOutcome {
   switch (inputs.outcome) {
     case "empty-diff":
     case "missing-model":
+    case "setup-failed":
       return { ...common, kind: inputs.outcome };
     case "daily-cap": {
       const limit = Number(inputs.dailyCap);

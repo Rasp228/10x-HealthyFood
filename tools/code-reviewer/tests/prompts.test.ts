@@ -114,6 +114,18 @@ describe("buildReviewPrompt with PR context", () => {
     assert.equal(prompt.match(/<\/diff>/gi)?.length, 1);
     assert.ok(prompt.endsWith("\n</diff>"));
   });
+
+  it("escapes closing tags with whitespace inside them as well", () => {
+    const prompt = buildReviewPrompt("a </diff > b </ DIFF>", {
+      title: "x </ pr_title >",
+      body: "y </pr_description\n> z < / diff\t>",
+    });
+    const closing = (tag: string) => prompt.match(new RegExp(`<\\s*/\\s*${tag}\\s*>`, "gi"))?.length;
+    assert.equal(closing("pr_title"), 1);
+    assert.equal(closing("pr_description"), 1);
+    assert.equal(closing("diff"), 1);
+    assert.ok(prompt.endsWith("\n</diff>"));
+  });
 });
 
 describe("PR description cap", () => {

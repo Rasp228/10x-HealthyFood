@@ -144,12 +144,15 @@ runs:
         cat "$stderr_file"
 
         verdict=""
+        outcome=error
         if [[ "$exit_code" == 0 || "$exit_code" == 2 ]]; then
-          outcome=review
           verdict="$(jq -r '.verdict // empty' "$review_file" 2> /dev/null || true)"
-          [[ "$verdict" == "pass" ]] || verdict=fail
-        else
-          outcome=error
+          # Bez werdyktu pass/fail stdout nie jest review: błąd, nie "verdict fail".
+          if [[ "$verdict" == "pass" || "$verdict" == "fail" ]]; then
+            outcome=review
+          else
+            verdict=""
+          fi
         fi
         echo "Kod wyjścia review: $exit_code, wynik: $outcome${verdict:+, werdykt: $verdict}"
 
@@ -163,7 +166,7 @@ runs:
 
     # Jeden komentarz na PR: aktualizowany po znaczniku STICKY_MARKER z src/comment/render.ts.
     - name: Komentarz w PR-ze
-      if: always()
+      if: ${{ !cancelled() }}
       shell: bash
       working-directory: tools/code-reviewer
       env:
@@ -173,8 +176,8 @@ runs:
       run: |
         [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::pr-number nie jest liczbą"; exit 1; }
 
-        # Brak wyniku = któryś krok przed review się wywrócił.
-        export AI_CR_OUTCOME="${AI_CR_OUTCOME:-error}"
+        # Brak wyniku = któryś krok przed review (warunki wstępne, diff) się wywrócił.
+        export AI_CR_OUTCOME="${AI_CR_OUTCOME:-setup-failed}"
         export AI_CR_RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         mkdir -p "$RUNNER_TEMP/ai-cr"
         comment_file="$RUNNER_TEMP/ai-cr/comment.md"
@@ -197,7 +200,7 @@ runs:
 
     # Dokładnie jedna z ai-cr:passed / ai-cr:failed; pusty diff zostawia je bez zmian.
     - name: Etykiety PR-a
-      if: always()
+      if: ${{ !cancelled() }}
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
@@ -227,7 +230,7 @@ runs:
         remove_label "ai-cr:review"
 
     - name: Bramka AI code review
-      if: always()
+      if: ${{ !cancelled() }}
       shell: bash
       env:
         DAILY_CAP: ${{ inputs.daily-cap }}

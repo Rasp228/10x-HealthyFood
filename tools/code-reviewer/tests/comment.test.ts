@@ -9,7 +9,13 @@ import {
   parseMetricsLine,
   type CommentInputs,
 } from "../src/comment/outcome.js";
-import { CRITERIA, renderComment, STICKY_MARKER, type CommentOutcome } from "../src/comment/render.js";
+import {
+  CRITERIA,
+  MAX_SUMMARY_CHARS,
+  renderComment,
+  STICKY_MARKER,
+  type CommentOutcome,
+} from "../src/comment/render.js";
 import { REVIEW_SCHEMA, type Review } from "../src/review-schema.js";
 
 const REVIEW: Review = {
@@ -43,6 +49,7 @@ const OUTCOMES: CommentOutcome[] = [
   { kind: "error", message: "boom", metrics: null },
   { kind: "empty-diff" },
   { kind: "missing-model" },
+  { kind: "setup-failed" },
   { kind: "daily-cap", limit: 5 },
 ];
 
@@ -87,6 +94,33 @@ describe("renderComment", () => {
     assert.ok(comment.includes("1200 wej. / 300 wyj."));
     assert.ok(comment.includes("$0.012300 / budżet $0.10"));
     assert.ok(!comment.includes("przekroczył budżet"));
+  });
+
+  it("neutralizes mentions, raw HTML, HTML comments and images in the summary", () => {
+    const summary = "cc @octocat @org/team <details>x</details> <!-- ai-cr:sticky --> ![t](https://evil/x.png) a < b";
+    const comment = renderComment({
+      kind: "review",
+      review: { ...REVIEW, summary },
+      metrics: METRICS,
+      budgetExceeded: false,
+    });
+    assert.ok(!/@[\w-]/.test(comment));
+    assert.ok(!/<[a-zA-Z/!?]/.test(comment.slice(STICKY_MARKER.length)));
+    assert.ok(!comment.includes("!["));
+    assert.equal(comment.split(STICKY_MARKER).length, 2);
+    // Only zero-width spaces are added, so the visible text stays the same.
+    assert.ok(comment.replaceAll("​", "").includes(summary));
+  });
+
+  it("caps a long summary", () => {
+    const comment = renderComment({
+      kind: "review",
+      review: { ...REVIEW, summary: "x".repeat(MAX_SUMMARY_CHARS + 500) },
+      metrics: METRICS,
+      budgetExceeded: false,
+    });
+    assert.ok(comment.includes(`${"x".repeat(MAX_SUMMARY_CHARS)}… _(podsumowanie przycięte`));
+    assert.ok(!comment.includes("x".repeat(MAX_SUMMARY_CHARS + 1)));
   });
 
   it("renders a failing verdict", () => {
@@ -137,6 +171,9 @@ describe("renderComment", () => {
   it("states the reason of the outcomes that skip the model", () => {
     assert.match(renderComment({ kind: "empty-diff" }), /diff jest pusty/);
     assert.match(renderComment({ kind: "missing-model" }), /`REVIEW_MODEL` nie jest ustawiona/);
+    const setupFailed = renderComment({ kind: "setup-failed" });
+    assert.match(setupFailed, /przed review .* zakończył się błędem/);
+    assert.ok(!setupFailed.includes("code unknown"));
     assert.match(renderComment({ kind: "daily-cap", limit: 5 }), /już 5 przebiegów review/);
   });
 
@@ -262,6 +299,10 @@ describe("buildOutcome", () => {
   it("passes the outcomes that skip the model through", () => {
     assert.equal(buildOutcome({ ...base, outcome: "empty-diff" }).kind, "empty-diff");
     assert.equal(buildOutcome({ ...base, outcome: "missing-model" }).kind, "missing-model");
+    assert.equal(
+      buildOutcome({ ...base, outcome: "setup-failed", reviewStdout: null, stderr: null, exitCode: null }).kind,
+      "setup-failed"
+    );
     assert.deepEqual(buildOutcome({ ...base, outcome: "daily-cap", dailyCap: "5", excluded: [] }), {
       kind: "daily-cap",
       limit: 5,

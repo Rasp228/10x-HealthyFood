@@ -4,7 +4,7 @@
 //     AI_CR_EXIT_CODE=0 npm run --silent comment > comment.md
 //
 // Env, all set by .github/actions/ai-reviewer:
-//   AI_CR_OUTCOME      review | error | empty-diff | missing-model | daily-cap
+//   AI_CR_OUTCOME      review | error | empty-diff | missing-model | daily-cap | setup-failed
 //   AI_CR_REVIEW_FILE  stdout of `npm run review` (the review JSON)
 //   AI_CR_STDERR_FILE  stderr of `npm run review` (the "[review] {...}" metrics, "[review] failed: ...")
 //   AI_CR_EXIT_CODE    exit code of `npm run review`

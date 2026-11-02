@@ -25,7 +25,8 @@ export function buildInstructions(provider: ProviderName): string {
 }
 
 function escapeClosingTag(text: string, tag: string): string {
-  return text.replace(new RegExp(`</${tag}>`, "gi"), `<\\/${tag}>`);
+  // Whitespace variants ("</diff >", "< / diff>") would read as a closing tag to the model too.
+  return text.replace(new RegExp(`<\\s*/\\s*${tag}\\s*>`, "gi"), `<\\/${tag}>`);
 }
 
 // The title and the description are written by the PR author too, so every fence tag is escaped

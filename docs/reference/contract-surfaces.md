@@ -273,7 +273,7 @@ catches a rename that reaches only one of them.
 ### Labels — `ai-cr:passed`, `ai-cr:failed`, `ai-cr:review`
 
 - **Defined**: created (`gh label create --force`) in `.github/actions/ai-reviewer/action.yml:61-63`
-  and set or removed in its "Etykiety PR-a" step (`action.yml:199-227`); `ai-cr:review` is also
+  and set or removed in its "Etykiety PR-a" step (`action.yml:202-230`); `ai-cr:review` is also
   spelled in the job's `if:` in `.github/workflows/review.yml:23`.
 - **Contract**: after a non-skipped run a PR carries exactly one of `ai-cr:passed` / `ai-cr:failed`
   — `passed` only for verdict `pass` with exit code 0, `failed` for everything else (verdict
@@ -292,7 +292,7 @@ catches a rename that reaches only one of them.
 
 - **Defined**: `STICKY_MARKER` in `tools/code-reviewer/src/comment/render.ts:9`; every comment
   variant starts with it. Searched for as a literal string in the "Komentarz w PR-ze" step,
-  `.github/actions/ai-reviewer/action.yml:185`.
+  `.github/actions/ai-reviewer/action.yml:188`.
 - **Contract**: one comment per PR, updated in place: the action takes the first issue comment
   whose author is `github-actions[bot]` and whose body starts with the marker, PATCHes it, and
   POSTs a new one only when none matches.
@@ -320,7 +320,11 @@ catches a rename that reaches only one of them.
 - **Contract**: the same key as the application's `OPENROUTER_API_KEY` in Vercel
   (`src/env.d.ts`), so CI and the app spend from one key and one limit. A pull request from a fork
   gets no secrets, so the job's `if:` skips it (`review.yml:23`) instead of failing it. The key
-  never goes into `run:` text, into another step's `env:`, or behind `pull_request_target`.
+  never goes into `run:` text, into another step's `env:`, or behind `pull_request_target`. This
+  narrows where the key appears, not who can read it: the step runs `tools/code-reviewer` (and the
+  action itself) from the PR's own checkout, so anyone who can push a branch to this repository can
+  change that code and read the key — and the `GH_TOKEN` of the comment and label steps. The trust
+  boundary is write access to the repository; grant it accordingly.
 - **Breaks**: rotation is manual and now covers two places — Vercel and this secret. Rotating only
   in Vercel turns every review into `error` (red job, `ai-cr:failed`); a key leaked from CI
   invalidates the app's key as well.
@@ -362,7 +366,11 @@ catches a rename that reaches only one of them.
   (`created=>=<UTC date>`), excluding the current run and runs with `conclusion == "skipped"`
   (fork PRs, other labels). At or above the cap the run ends before the model call: outcome
   `daily-cap`, a comment, `ai-cr:failed` and a red job. Runs that ended without a model call
-  (empty diff, missing model, an earlier cap hit) are still counted. Concurrency is per PR, so two
+  (empty diff, missing model, an earlier cap hit) are still counted, and so are runs cancelled by a
+  newer push (`cancel-in-progress`) and runs still queued or in progress (`conclusion: null`) —
+  including a `labeled` run whose job the `if:` will skip, since it has no conclusion yet. Frequent
+  pushes during a review can therefore exhaust the cap with fewer model calls; the count errs
+  toward less spending on purpose. Concurrency is per PR, so two
   runs from different PRs that start together can both see `cap - 1` and pass — the cap can be
   exceeded by one.
 - **Breaks**: renaming `.github/workflows/review.yml` without the file name in the API path makes
