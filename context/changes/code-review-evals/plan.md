@@ -347,25 +347,25 @@ Timeout recenzenta (600 s lokalnie) ogranicza pojedynczy przypadek.
 
 #### Automated
 
-- [x] 1.1 Testy pakietu przechodzą: `npm test` w `tools/code-reviewer`
-- [x] 1.2 Typy pakietu bez błędów: `npm run typecheck` w `tools/code-reviewer`
-- [x] 1.3 Format repo zielony: `npm run format:check` w katalogu głównym
-- [x] 1.4 Konfiguracja się ładuje i provider odmawia bez wywołania modelu: `REVIEW_MODEL=x/paid npm run eval:openrouter` daje trzy przypadki z błędem o braku `:free` i zero wywołań modelu
-- [x] 1.5 Przebieg lokalny bez działającego llama-server kończy się błędami połączenia per przypadek, a nie awarią ładowania providera ani konfiguracji: `npm run eval:local`
+- [x] 1.1 Testy pakietu przechodzą: `npm test` w `tools/code-reviewer` — a204a73
+- [x] 1.2 Typy pakietu bez błędów: `npm run typecheck` w `tools/code-reviewer` — a204a73
+- [x] 1.3 Format repo zielony: `npm run format:check` w katalogu głównym — a204a73
+- [x] 1.4 Konfiguracja się ładuje i provider odmawia bez wywołania modelu: `REVIEW_MODEL=x/paid npm run eval:openrouter` daje trzy przypadki z błędem o braku `:free` i zero wywołań modelu — a204a73
+- [x] 1.5 Przebieg lokalny bez działającego llama-server kończy się błędami połączenia per przypadek, a nie awarią ładowania providera ani konfiguracji: `npm run eval:local` — a204a73
 
 #### Manual
 
-- [x] 1.6 `npm run eval:local` z uruchomionym llama-server daje tabelę promptfoo z 3 przypadkami, powodami z `gradeReview` i metrykami w `metadata`
-- [x] 1.7 `npx promptfoo view` pokazuje ostatni przebieg z czytelnymi powodami PASS/FAIL
+- [x] 1.6 `npm run eval:local` z uruchomionym llama-server daje tabelę promptfoo z 3 przypadkami, powodami z `gradeReview` i metrykami w `metadata` — a204a73
+- [x] 1.7 `npx promptfoo view` pokazuje ostatni przebieg z czytelnymi powodami PASS/FAIL — a204a73
 
 ### Phase 2: Baseline
 
 #### Automated
 
-- [ ] 2.1 `context/changes/code-review-evals/baseline.md` istnieje i zawiera wyniki dla `local` i `openrouter` dla wszystkich trzech przypadków
+- [x] 2.1 `context/changes/code-review-evals/baseline.md` istnieje i zawiera wyniki dla `local` i `openrouter` dla wszystkich trzech przypadków
 
 #### Manual
 
-- [ ] 2.2 Użytkownik uruchomił `npm run eval:local` na swoim modelu lokalnym i wyniki są w baseline
-- [ ] 2.3 Użytkownik uruchomił `npm run eval:openrouter` na swoim modelu `:free`, przebieg zmieścił się w `EVAL_MAX_CALLS` i zgłoszony koszt to 0
-- [ ] 2.4 Baseline potwierdza albo obala obserwację, że lokalny model nie łapie `sample-2.diff`
+- [x] 2.2 Użytkownik uruchomił `npm run eval:local` na swoim modelu lokalnym i wyniki są w baseline
+- [x] 2.3 Użytkownik uruchomił `npm run eval:openrouter` na swoim modelu `:free`, przebieg zmieścił się w `EVAL_MAX_CALLS` i zgłoszony koszt to 0
+- [x] 2.4 Baseline potwierdza albo obala obserwację, że lokalny model nie łapie `sample-2.diff`
