@@ -27,6 +27,8 @@ defaultTest:
       value: file://assertions.ts:gradeReview
 
 # llama-server serves one request at a time, and the OpenRouter call cap is reserved in order.
+# The OpenRouter cost alarm stops the rest of the run only at 1: it is set after a call returns,
+# so with more, the calls already in flight still go out. Do not raise it (or pass -j) for openrouter.
 evaluateOptions:
   maxConcurrency: 1
 

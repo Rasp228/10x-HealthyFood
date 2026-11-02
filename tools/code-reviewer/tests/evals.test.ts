@@ -44,10 +44,10 @@ function mockModel(text = JSON.stringify(REVIEW), cost?: number) {
   });
 }
 
-function provider(name: ProviderName, model: MockLanguageModelV4, env: NodeJS.ProcessEnv = {}) {
+function provider(name: ProviderName, model: MockLanguageModelV4, env: NodeJS.ProcessEnv = {}, modelId = FREE_MODEL) {
   return new ReviewerProvider(
     { label: name, config: { provider: name } },
-    { reviewModel: { provider: name, modelId: "mock", model }, env: { REVIEW_MODEL: FREE_MODEL, ...env } }
+    { reviewModel: { provider: name, modelId, model }, env: { REVIEW_MODEL: FREE_MODEL, ...env } }
   );
 }
 
@@ -131,8 +131,21 @@ describe("gradeReview", () => {
   it("fails on a non-numeric threshold", () => {
     const result = gradeReview(REVIEW, vars({ expectedVerdict: "pass", minScore: "4" }));
     assert.equal(result.pass, false);
-    assert.match(result.reason, /minScore must be a number/);
+    assert.match(result.reason, /minScore must be an integer 1-10/);
   });
+
+  for (const [name, extra] of [
+    ["maxScores above the scale", { maxScores: { securitySafety: 30 } }],
+    ["maxScores below the scale", { maxScores: { securitySafety: 0 } }],
+    ["minScore above the scale", { minScore: 11 }],
+    ["a fractional minScore", { minScore: 3.5 }],
+  ] as const) {
+    it(`fails on ${name} instead of passing or failing silently`, () => {
+      const result = gradeReview(REVIEW, vars({ expectedVerdict: "pass", ...extra }));
+      assert.equal(result.pass, false);
+      assert.match(result.reason, /must be an integer 1-10/);
+    });
+  }
 });
 
 describe("eval provider helpers", () => {
@@ -168,10 +181,10 @@ describe("eval provider", () => {
     assert.throws(() => new ReviewerProvider({ config: { provider: "cloud" } }), /config\.provider/);
   });
 
-  for (const model of ["anthropic/claude-sonnet-5.5", ""]) {
-    it(`refuses openrouter with REVIEW_MODEL "${model}" without calling the model`, async () => {
+  for (const model of ["anthropic/claude-sonnet-5.5", "", ` ${FREE_MODEL} `]) {
+    it(`refuses openrouter on model "${model}" without calling the model`, async () => {
       const mock = mockModel();
-      const response = await provider("openrouter", mock, { REVIEW_MODEL: model }).callApi(DIFF);
+      const response = await provider("openrouter", mock, {}, model).callApi(DIFF);
       assert.match(response.error ?? "", /must end with ":free"/);
       assert.equal(response.output, undefined);
       assert.equal(mock.doGenerateCalls.length, 0);
@@ -179,8 +192,17 @@ describe("eval provider", () => {
     });
   }
 
-  it("refuses openrouter calls over EVAL_MAX_CALLS, counted across instances", async () => {
+  it("checks the model the reviewer calls, not REVIEW_MODEL", async () => {
     const mock = mockModel();
+    const paid = provider("openrouter", mock, { REVIEW_MODEL: FREE_MODEL }, "anthropic/claude-sonnet-5.5");
+    const response = await paid.callApi(DIFF);
+    assert.match(response.error ?? "", /got "anthropic\/claude-sonnet-5\.5"/);
+    assert.equal(mock.doGenerateCalls.length, 0);
+    assert.equal(openrouterCallsUsed(), 0);
+  });
+
+  it("refuses openrouter calls over EVAL_MAX_CALLS, counted across instances", async () => {
+    const mock = mockModel(JSON.stringify(REVIEW), 0);
     const env = { EVAL_MAX_CALLS: "2" };
     assert.equal((await provider("openrouter", mock, env).callApi(DIFF)).error, undefined);
     assert.equal((await provider("openrouter", mock, env).callApi(DIFF)).error, undefined);
@@ -208,6 +230,27 @@ describe("eval provider", () => {
     const second = await provider("openrouter", next).callApi(DIFF);
     assert.match(second.error ?? "", /reported a cost/);
     assert.equal(next.doGenerateCalls.length, 0);
+  });
+
+  it("stops the run when a completed openrouter review reports no cost", async () => {
+    const first = await provider("openrouter", mockModel()).callApi(DIFF);
+    assert.match(first.error ?? "", /reported no cost/);
+    assert.deepEqual(first.metadata?.review, REVIEW);
+    assert.equal(first.metadata?.metrics.cost, null);
+
+    const next = mockModel(JSON.stringify(REVIEW), 0);
+    const second = await provider("openrouter", next).callApi(DIFF);
+    assert.match(second.error ?? "", /reported no cost/);
+    assert.equal(next.doGenerateCalls.length, 0);
+  });
+
+  it("does not stop the run on a failed openrouter call without a cost", async () => {
+    const failed = await provider("openrouter", mockModel(JSON.stringify({ verdict: "maybe" }))).callApi(DIFF);
+    assert.match(failed.error ?? "", /^AI_NoObjectGeneratedError: /);
+    assert.doesNotMatch(failed.error ?? "", /later OpenRouter cases are refused/);
+
+    const next = await provider("openrouter", mockModel(JSON.stringify(REVIEW), 0)).callApi(DIFF);
+    assert.equal(next.error, undefined);
   });
 
   it("keeps a reported cost of 0 and goes on", async () => {

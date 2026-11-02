@@ -362,10 +362,10 @@ Timeout recenzenta (600 s lokalnie) ogranicza pojedynczy przypadek.
 
 #### Automated
 
-- [x] 2.1 `context/changes/code-review-evals/baseline.md` istnieje i zawiera wyniki dla `local` i `openrouter` dla wszystkich trzech przypadków
+- [x] 2.1 `context/changes/code-review-evals/baseline.md` istnieje i zawiera wyniki dla `local` i `openrouter` dla wszystkich trzech przypadków — e4d8294
 
 #### Manual
 
-- [x] 2.2 Użytkownik uruchomił `npm run eval:local` na swoim modelu lokalnym i wyniki są w baseline
-- [x] 2.3 Użytkownik uruchomił `npm run eval:openrouter` na swoim modelu `:free`, przebieg zmieścił się w `EVAL_MAX_CALLS` i zgłoszony koszt to 0
-- [x] 2.4 Baseline potwierdza albo obala obserwację, że lokalny model nie łapie `sample-2.diff`
+- [x] 2.2 Użytkownik uruchomił `npm run eval:local` na swoim modelu lokalnym i wyniki są w baseline — e4d8294
+- [x] 2.3 Użytkownik uruchomił `npm run eval:openrouter` na swoim modelu `:free`, przebieg zmieścił się w `EVAL_MAX_CALLS` i zgłoszony koszt to 0 — e4d8294
+- [x] 2.4 Baseline potwierdza albo obala obserwację, że lokalny model nie łapie `sample-2.diff` — e4d8294

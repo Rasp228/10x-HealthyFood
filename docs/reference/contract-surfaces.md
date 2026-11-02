@@ -398,8 +398,11 @@ catches a rename that reaches only one of them.
   requests: with `MAX_RETRIES = 1` (`src/agent/reviewer.ts`) one review can be two requests. A
   slot is reserved before the call is awaited, so a failed call still uses it. The first
   OpenRouter call that reports `metrics.cost > 0` ends its case with an error and refuses every
-  later OpenRouter case of the run; `cost: null` (llama.cpp) is not a violation. `local` has
-  none of these limits.
+  later OpenRouter case of the run. A completed OpenRouter review with `cost: null` does the
+  same: with `usage.include` (`src/provider.ts`) OpenRouter reports a cost for every completed
+  review, 0 on a free model, so `null` means the limit cannot be checked. A failed call
+  (overloaded provider, timeout) may carry no cost and is not a violation. `local` has none of
+  these limits; llama.cpp never reports a cost.
 - **Breaks**: renaming a criterion or a verdict value in the schema without the YAML turns the
   affected cases red with "is not a criterion of REVIEW_SCHEMA" — the intended signal, not a
   flaky model. Dropping the `:free` check or the counter lets an eval run spend on the paid

@@ -13,6 +13,17 @@ export const CRITERIA = Object.keys(REVIEW_SCHEMA.shape).filter(
 
 const VERDICTS = REVIEW_SCHEMA.shape.verdict.options;
 
+// The 1-10 scale of every criterion. REVIEW_SCHEMA carries it only in the field descriptions
+// (plain z.number(), see src/review-schema.ts), so it cannot be read from the shape; change both
+// together. A threshold outside it would always pass (maxScores) or always fail (minScore).
+const SCORE_RANGE = { min: 1, max: 10 } as const;
+
+function isScore(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= SCORE_RANGE.min && (value as number) <= SCORE_RANGE.max;
+}
+
+const SCORE_RANGE_TEXT = `an integer ${SCORE_RANGE.min}-${SCORE_RANGE.max}`;
+
 interface Expectations {
   verdict: Review["verdict"];
   maxScores: [Criterion, number][];
@@ -45,8 +56,8 @@ function readExpectations(vars: Record<string, unknown>): Expectations | string[
       for (const [key, max] of Object.entries(vars.maxScores)) {
         if (!(CRITERIA as string[]).includes(key)) {
           problems.push(`vars.maxScores.${key} is not a criterion of REVIEW_SCHEMA (${CRITERIA.join(", ")})`);
-        } else if (typeof max !== "number" || !Number.isFinite(max)) {
-          problems.push(`vars.maxScores.${key} must be a number, got ${JSON.stringify(max)}`);
+        } else if (!isScore(max)) {
+          problems.push(`vars.maxScores.${key} must be ${SCORE_RANGE_TEXT}, got ${JSON.stringify(max)}`);
         } else {
           maxScores.push([key as Criterion, max]);
         }
@@ -55,8 +66,8 @@ function readExpectations(vars: Record<string, unknown>): Expectations | string[
   }
 
   const minScore = vars.minScore;
-  if (minScore !== undefined && (typeof minScore !== "number" || !Number.isFinite(minScore))) {
-    problems.push(`vars.minScore must be a number, got ${JSON.stringify(minScore)}`);
+  if (minScore !== undefined && !isScore(minScore)) {
+    problems.push(`vars.minScore must be ${SCORE_RANGE_TEXT}, got ${JSON.stringify(minScore)}`);
   }
 
   if (problems.length) return problems;
