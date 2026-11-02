@@ -498,7 +498,7 @@ wynik pomiaru flaky z fazy 1.
 
 #### Automated
 
-- [ ] 1.1 `gh auth status` kończy się kodem 0, a `gh api repos/Rasp228/10x-HealthyFood --jq .permissions.admin` zwraca `true`
+- [x] 1.1 `gh auth status` kończy się kodem 0, a `gh api repos/Rasp228/10x-HealthyFood --jq .permissions.admin` zwraca `true`
 - [x] 1.2 `git log origin/master..master --oneline` jest puste — d989499
 - [x] 1.3 Ostatni przebieg „Test & Build Master” na HEAD `master` ma `conclusion: success` — d989499
 - [x] 1.4 Log „Testy jednostkowe” zawiera `Tests: 640 passed, 640 total` (albo liczbę równą lokalnemu `npx jest`) — d989499
